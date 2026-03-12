@@ -17,9 +17,30 @@ Full-stack platform for recording and tracking thermoplastic pipe welding operat
 - **API framework**: Express 5
 - **Database**: PostgreSQL (Supabase) + Drizzle ORM (schema only)
 - **Auth**: Supabase Auth (JWT bearer tokens)
-- **Validation**: Zod (`zod/v4`), `drizzle-zod`
+- **Validation**: Zod v3.25+ (`zod/v4` compat path), field-level error responses
 - **API codegen**: Orval (from OpenAPI spec)
 - **Build**: esbuild (CJS bundle)
+
+## API Architecture
+
+The API follows a layered architecture:
+
+```text
+routes/          → thin routing only, no business logic
+controllers/     → all business logic and Supabase queries
+lib/validation.ts → all Zod schemas for request validation
+lib/errors.ts    → ApiError, NotFoundError, sendError(), unwrap()
+types/index.ts   → shared TypeScript interfaces for the entire API
+middlewares/auth.ts → JWT verification, role guards
+```
+
+### Error Response Format
+
+All errors return `{ error: string, code?: string, details?: unknown }`.
+
+Validation errors (400) include `details: [{ path, message }]` for field-level messages.
+
+HTTP codes in use: 200, 201, 204, 207 (multi-status sync), 400, 401, 403, 404, 409, 500.
 
 ## Environment Variables Required
 
