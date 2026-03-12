@@ -44,7 +44,7 @@ class AppDatabase extends _$AppDatabase {
   AppDatabase([QueryExecutor? executor]) : super(executor ?? _openConnection());
 
   @override
-  int get schemaVersion => 2;
+  int get schemaVersion => 3;
 
   @override
   MigrationStrategy get migration => MigrationStrategy(
@@ -56,6 +56,11 @@ class AppDatabase extends _$AppDatabase {
             // v1 → v2: welding_standards and welding_parameters tables added
             await m.createTable(weldingStandardsTable);
             await m.createTable(weldingParametersTable);
+          }
+          if (from < 3) {
+            // v2 → v3: hydraulicCylinderAreaMm2 column added to machines
+            await m.addColumn(
+                machinesTable, machinesTable.hydraulicCylinderAreaMm2);
           }
         },
       );

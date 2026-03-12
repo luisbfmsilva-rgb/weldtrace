@@ -2,13 +2,15 @@ import 'package:drift/drift.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:uuid/uuid.dart';
 
-import '../../core/errors/app_exception.dart';
 import '../../core/utils/result.dart';
 import '../../data/local/database/app_database.dart';
 import '../../data/local/tables/welds_table.dart';
 import '../../data/local/tables/welding_standards_table.dart';
 import '../../data/local/tables/welding_parameters_table.dart';
 import '../../data/repositories/weld_parameters_repository.dart';
+import '../../services/welding/pipe_spec.dart';
+import '../../services/welding/welding_table.dart';
+import '../../services/welding/welding_table_generator.dart';
 import '../../workflow/welding_phase.dart';
 
 /// Immutable form state for the weld setup screen.
@@ -29,9 +31,16 @@ class WeldSetupState {
     this.ambientTemperature,
     this.notes,
 
+    // Machine hydraulics (loaded when machine is selected)
+    this.machineHydraulicAreaMm2,
+    this.dragPressureBar = 0.0,
+
     // Result of parameter lookup
     this.matchedParameters,
     this.lookupError,
+
+    // Computed welding table (machine gauge pressures)
+    this.weldingTable,
 
     // Submission
     this.isSubmitting = false,
@@ -53,13 +62,29 @@ class WeldSetupState {
   final double? ambientTemperature;
   final String? notes;
 
+  /// Hydraulic cylinder area of the selected machine [mm²].
+  /// Null when the machine record does not have this value yet.
+  final double? machineHydraulicAreaMm2;
+
+  /// Drag pressure measured by the operator before welding [bar].
+  /// Defaults to 0 (no drag) when not entered.
+  final double dragPressureBar;
+
   final WeldingParameterRecord? matchedParameters;
   final String? lookupError;
+
+  /// Fully computed welding table with machine gauge pressures.
+  /// Null until all inputs (pipe, machine, parameters) are resolved.
+  final WeldingTable? weldingTable;
 
   final bool isSubmitting;
   final String? submitError;
   final String? createdWeldId;
   final List<PhaseParameters>? createdPhases;
+
+  /// True when machine has a hydraulic cylinder area entered.
+  bool get machineHasCylinderArea =>
+      machineHydraulicAreaMm2 != null && machineHydraulicAreaMm2! > 0;
 
   bool get isReadyToStart =>
       selectedProjectId != null &&
@@ -85,8 +110,11 @@ class WeldSetupState {
     String? selectedStandardId,
     double? ambientTemperature,
     String? notes,
+    double? machineHydraulicAreaMm2,
+    double? dragPressureBar,
     WeldingParameterRecord? matchedParameters,
     String? lookupError,
+    WeldingTable? weldingTable,
     bool? isSubmitting,
     String? submitError,
     String? createdWeldId,
@@ -94,9 +122,11 @@ class WeldSetupState {
     bool clearDiameter = false,
     bool clearSdr = false,
     bool clearParams = false,
+    bool clearTable = false,
     bool clearLookupError = false,
     bool clearSubmitError = false,
     bool clearCreatedWeld = false,
+    bool clearMachineHydraulics = false,
   }) =>
       WeldSetupState(
         standards: standards ?? this.standards,
@@ -107,15 +137,25 @@ class WeldSetupState {
         selectedProjectId: selectedProjectId ?? this.selectedProjectId,
         selectedMachineId: selectedMachineId ?? this.selectedMachineId,
         pipeMaterial: pipeMaterial ?? this.pipeMaterial,
-        pipeDiameterMm: clearDiameter ? null : (pipeDiameterMm ?? this.pipeDiameterMm),
-        sdrRating: (clearDiameter || clearSdr) ? null : (sdrRating ?? this.sdrRating),
+        pipeDiameterMm:
+            clearDiameter ? null : (pipeDiameterMm ?? this.pipeDiameterMm),
+        sdrRating: (clearDiameter || clearSdr)
+            ? null
+            : (sdrRating ?? this.sdrRating),
         selectedStandardId: selectedStandardId ?? this.selectedStandardId,
         ambientTemperature: ambientTemperature ?? this.ambientTemperature,
         notes: notes ?? this.notes,
+        machineHydraulicAreaMm2: clearMachineHydraulics
+            ? null
+            : (machineHydraulicAreaMm2 ?? this.machineHydraulicAreaMm2),
+        dragPressureBar: dragPressureBar ?? this.dragPressureBar,
         matchedParameters:
             clearParams ? null : (matchedParameters ?? this.matchedParameters),
         lookupError:
             clearLookupError ? null : (lookupError ?? this.lookupError),
+        weldingTable: (clearTable || clearParams)
+            ? null
+            : (weldingTable ?? this.weldingTable),
         isSubmitting: isSubmitting ?? this.isSubmitting,
         submitError:
             clearSubmitError ? null : (submitError ?? this.submitError),
@@ -129,7 +169,9 @@ class WeldSetupState {
 /// Manages all state transitions for the WeldSetupScreen:
 ///   1. Loading standards from DB
 ///   2. Cascading dropdown updates (diameter → SDR → parameter lookup)
-///   3. Creating the weld record in SQLite on "Start Weld"
+///   3. Loading machine hydraulic cylinder area on machine selection
+///   4. Computing machine gauge pressures via [WeldingTableGenerator]
+///   5. Creating the weld record in SQLite on "Start Weld"
 class WeldSetupNotifier extends StateNotifier<WeldSetupState> {
   WeldSetupNotifier({
     required this.paramsRepo,
@@ -156,8 +198,21 @@ class WeldSetupNotifier extends StateNotifier<WeldSetupState> {
   void selectProject(String projectId) =>
       state = state.copyWith(selectedProjectId: projectId);
 
-  void selectMachine(String machineId) =>
-      state = state.copyWith(selectedMachineId: machineId);
+  /// Selects the machine and loads its hydraulic cylinder area from the DB.
+  Future<void> selectMachine(String machineId) async {
+    state = state.copyWith(
+      selectedMachineId: machineId,
+      clearMachineHydraulics: true,
+      clearTable: true,
+    );
+    final machine = await db.machinesDao.getById(machineId);
+    if (machine != null) {
+      state = state.copyWith(
+        machineHydraulicAreaMm2: machine.hydraulicCylinderAreaMm2,
+      );
+    }
+    _regenerateWeldingTable();
+  }
 
   Future<void> selectStandard(String standardId) async {
     state = state.copyWith(
@@ -165,6 +220,7 @@ class WeldSetupNotifier extends StateNotifier<WeldSetupState> {
       clearDiameter: true,
       clearSdr: true,
       clearParams: true,
+      clearTable: true,
     );
     await _refreshDiameters();
   }
@@ -175,6 +231,7 @@ class WeldSetupNotifier extends StateNotifier<WeldSetupState> {
       clearDiameter: true,
       clearSdr: true,
       clearParams: true,
+      clearTable: true,
     );
     await _refreshDiameters();
   }
@@ -184,12 +241,13 @@ class WeldSetupNotifier extends StateNotifier<WeldSetupState> {
       pipeDiameterMm: diameterMm,
       clearSdr: true,
       clearParams: true,
+      clearTable: true,
     );
     await _refreshSdrRatings();
   }
 
   Future<void> selectSdr(String sdr) async {
-    state = state.copyWith(sdrRating: sdr, clearParams: true);
+    state = state.copyWith(sdrRating: sdr, clearParams: true, clearTable: true);
     await _lookupParameters();
   }
 
@@ -197,6 +255,12 @@ class WeldSetupNotifier extends StateNotifier<WeldSetupState> {
       state = state.copyWith(ambientTemperature: temp);
 
   void setNotes(String notes) => state = state.copyWith(notes: notes);
+
+  /// Updates the measured drag pressure and recomputes machine gauge pressures.
+  void setDragPressure(double bar) {
+    state = state.copyWith(dragPressureBar: bar, clearTable: true);
+    _regenerateWeldingTable();
+  }
 
   // ── Cascading refresh ─────────────────────────────────────────────────────
 
@@ -228,8 +292,7 @@ class WeldSetupNotifier extends StateNotifier<WeldSetupState> {
       pipeDiameterMm: diameter,
     );
     result.when(
-      success: (sdrs) =>
-          state = state.copyWith(availableSdrRatings: sdrs),
+      success: (sdrs) => state = state.copyWith(availableSdrRatings: sdrs),
       failure: (_) {},
     );
   }
@@ -239,7 +302,10 @@ class WeldSetupNotifier extends StateNotifier<WeldSetupState> {
     final material = state.pipeMaterial;
     final diameter = state.pipeDiameterMm;
     final sdr = state.sdrRating;
-    if (standardId == null || material == null || diameter == null || sdr == null) return;
+    if (standardId == null ||
+        material == null ||
+        diameter == null ||
+        sdr == null) return;
 
     state = state.copyWith(clearLookupError: true);
 
@@ -250,17 +316,67 @@ class WeldSetupNotifier extends StateNotifier<WeldSetupState> {
       sdrRating: sdr,
     );
     result.when(
-      success: (params) =>
-          state = state.copyWith(matchedParameters: params),
+      success: (params) {
+        state = state.copyWith(matchedParameters: params);
+        _regenerateWeldingTable();
+      },
       failure: (e) =>
           state = state.copyWith(lookupError: e.message, clearParams: true),
     );
+  }
+
+  // ── Welding table generation ───────────────────────────────────────────────
+
+  /// Recomputes [WeldingTable] whenever any input changes.
+  ///
+  /// Silently does nothing if the required inputs are not yet available.
+  void _regenerateWeldingTable() {
+    final params = state.matchedParameters;
+    final diameter = state.pipeDiameterMm;
+    final sdr = state.sdrRating;
+    final material = state.pipeMaterial;
+
+    if (params == null || diameter == null || sdr == null || material == null) {
+      return;
+    }
+
+    final sdrRatio = double.tryParse(sdr);
+    if (sdrRatio == null || sdrRatio <= 1) return;
+
+    final standard = state.standards
+        .where((s) => s.id == state.selectedStandardId)
+        .firstOrNull;
+    final weldType = standard?.weldType ?? 'butt_fusion';
+
+    final pipeSpec = PipeSpec(
+      outerDiameterMm: diameter,
+      sdrRatio: sdrRatio,
+      material: material,
+    );
+
+    final machineSpec = MachineSpec(
+      hydraulicCylinderAreaMm2: state.machineHydraulicAreaMm2,
+      dragPressureBar: state.dragPressureBar,
+    );
+
+    final table = WeldingTableGenerator.generate(
+      record: params,
+      pipeSpec: pipeSpec,
+      machineSpec: machineSpec,
+      weldType: weldType,
+    );
+
+    state = state.copyWith(weldingTable: table);
   }
 
   // ── Start weld ────────────────────────────────────────────────────────────
 
   /// Creates a weld record in the local database, builds [PhaseParameters],
   /// and stores the result in state for the calling screen to navigate with.
+  ///
+  /// If a [WeldingTable] has been computed (machine cylinder area known),
+  /// its machine-gauge [PhaseParameters] are used.  Otherwise falls back to
+  /// the repository's interfacial-pressure phases.
   Future<void> startWeld() async {
     if (!state.isReadyToStart) return;
 
@@ -271,8 +387,7 @@ class WeldSetupNotifier extends StateNotifier<WeldSetupState> {
       final standard = state.standards
           .where((s) => s.id == state.selectedStandardId)
           .firstOrNull;
-      final weldType =
-          standard?.weldType ?? 'butt_fusion';
+      final weldType = standard?.weldType ?? 'butt_fusion';
 
       // 2. Validate ambient temperature
       final params = state.matchedParameters!;
@@ -283,18 +398,24 @@ class WeldSetupNotifier extends StateNotifier<WeldSetupState> {
         state = state.copyWith(
           isSubmitting: false,
           submitError:
-              'Ambient temperature $ambient°C is outside the allowed range '
+              'Ambient temperature ${ambient.toStringAsFixed(1)}°C is outside '
+              'the allowed range '
               '(${params.ambientTempMinCelsius}–${params.ambientTempMaxCelsius}°C) '
               'for this standard.',
         );
         return;
       }
 
-      // 3. Get current user from auth stored user (rehydrated from secure storage)
-      //    We use a placeholder UUID if the user isn't available.
+      // 3. Placeholder operator id (replaced by real auth in a later sprint)
       const operatorId = 'unknown-operator';
 
-      // 4. Create local weld record
+      // 4. Resolve wall thickness for the DB record
+      final sdrRatio = double.tryParse(state.sdrRating ?? '');
+      final wallThickness = (sdrRatio != null && sdrRatio > 1 && state.pipeDiameterMm != null)
+          ? state.pipeDiameterMm! / sdrRatio
+          : params.wallThicknessMm;
+
+      // 5. Create local weld record
       final weldId = const Uuid().v4();
       final now = DateTime.now();
       await db.weldsDao.insertWeld(WeldsTableCompanion(
@@ -307,7 +428,7 @@ class WeldSetupNotifier extends StateNotifier<WeldSetupState> {
         pipeMaterial: Value(state.pipeMaterial!),
         pipeDiameter: Value(state.pipeDiameterMm!),
         pipeSdr: Value(state.sdrRating),
-        pipeWallThickness: Value(params.wallThicknessMm),
+        pipeWallThickness: Value(wallThickness),
         ambientTemperature: Value(state.ambientTemperature),
         standardId: Value(state.selectedStandardId),
         standardUsed: Value(standard?.code),
@@ -318,11 +439,9 @@ class WeldSetupNotifier extends StateNotifier<WeldSetupState> {
         syncStatus: const Value('pending'),
       ));
 
-      // 5. Build phase parameters from the matched record
-      final phases = WeldParametersRepository.buildPhaseParameters(
-        params,
-        weldType,
-      );
+      // 6. Use machine-gauge phases when available, else interfacial fallback
+      final phases = state.weldingTable?.phases ??
+          WeldParametersRepository.buildPhaseParameters(params, weldType);
 
       state = state.copyWith(
         isSubmitting: false,

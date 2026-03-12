@@ -6,6 +6,7 @@ import 'package:go_router/go_router.dart';
 import '../../data/local/tables/projects_table.dart';
 import '../../data/local/tables/machines_table.dart';
 import '../../data/local/tables/welding_parameters_table.dart';
+import '../../services/welding/welding_table.dart';
 import '../../di/providers.dart';
 import 'weld_setup_notifier.dart';
 import 'welding_session_screen.dart';
@@ -31,6 +32,7 @@ class WeldSetupScreen extends ConsumerStatefulWidget {
 class _WeldSetupScreenState extends ConsumerState<WeldSetupScreen> {
   final _formKey = GlobalKey<FormState>();
   final _ambientController = TextEditingController();
+  final _dragPressureController = TextEditingController();
   final _notesController = TextEditingController();
 
   @override
@@ -49,6 +51,7 @@ class _WeldSetupScreenState extends ConsumerState<WeldSetupScreen> {
   @override
   void dispose() {
     _ambientController.dispose();
+    _dragPressureController.dispose();
     _notesController.dispose();
     super.dispose();
   }
@@ -143,7 +146,8 @@ class _WeldSetupScreenState extends ConsumerState<WeldSetupScreen> {
                               if (v != null) {
                                 ref
                                     .read(weldSetupProvider.notifier)
-                                    .selectMachine(v);
+                                    .selectMachine(v)
+                                    .ignore();
                               }
                             },
                       validator: (v) =>
@@ -228,8 +232,45 @@ class _WeldSetupScreenState extends ConsumerState<WeldSetupScreen> {
             _buildSdrSelector(setup, ref),
             const SizedBox(height: 24),
 
+            // ── Drag pressure input (machine with known cylinder area) ────
+            if (setup.machineHasCylinderArea) ...[
+              _SectionHeader(title: 'Machine Pressure Calculation'),
+              _SectionLabel(label: 'Measured Drag Pressure (bar)'),
+              TextFormField(
+                controller: _dragPressureController,
+                keyboardType: const TextInputType.numberWithOptions(decimal: true),
+                inputFormatters: [
+                  FilteringTextInputFormatter.allow(RegExp(r'^\d{0,3}(\.\d{0,2})?')),
+                ],
+                decoration: InputDecoration(
+                  hintText: 'e.g. 0.25',
+                  suffixText: 'bar',
+                  helperText:
+                      'Hydraulic pressure to move the carriage with no load '
+                      '(friction only). Read from the machine gauge before welding.',
+                  helperMaxLines: 2,
+                ),
+                onChanged: (v) {
+                  final d = double.tryParse(v);
+                  ref
+                      .read(weldSetupProvider.notifier)
+                      .setDragPressure(d ?? 0.0);
+                },
+                validator: (v) {
+                  if (v == null || v.isEmpty) return null;
+                  final d = double.tryParse(v);
+                  if (d == null || d < 0) return 'Enter a non-negative number';
+                  if (d > 20) return 'Drag pressure seems too high (> 20 bar)';
+                  return null;
+                },
+              ),
+              const SizedBox(height: 8),
+            ],
+
             // ── Parameter preview ────────────────────────────────────────
-            if (setup.matchedParameters != null)
+            if (setup.weldingTable != null)
+              _WeldingTableCard(table: setup.weldingTable!)
+            else if (setup.matchedParameters != null)
               _ParameterPreviewCard(params: setup.matchedParameters!),
             if (setup.lookupError != null)
               _ErrorCard(message: setup.lookupError!),
@@ -538,8 +579,143 @@ class _ErrorCard extends StatelessWidget {
   }
 }
 
+/// Displays the computed [WeldingTable] with machine gauge pressures
+/// when the machine's hydraulic cylinder area is known.
+class _WeldingTableCard extends StatelessWidget {
+  const _WeldingTableCard({required this.table});
+  final WeldingTable table;
+
+  @override
+  Widget build(BuildContext context) {
+    const blue = Color(0xFF0052CC);
+    final row = table.row;
+    final pipe = table.pipeSpec;
+    final machine = table.machineSpec;
+    final hasMachine = row.isMachinePressure;
+
+    String fmtBar(double? v) =>
+        v != null ? '${v.toStringAsFixed(2)} bar' : '—';
+    String fmtMm(double v) => '${v.toStringAsFixed(2)} mm';
+    String fmtMm2(double v) => '${v.toStringAsFixed(0)} mm²';
+
+    return Container(
+      margin: const EdgeInsets.only(bottom: 16),
+      decoration: BoxDecoration(
+        color: blue.withOpacity(0.04),
+        borderRadius: BorderRadius.circular(12),
+        border: Border.all(color: blue.withOpacity(0.35)),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          // ── Header ──────────────────────────────────────────────────────
+          Container(
+            padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
+            decoration: BoxDecoration(
+              color: blue.withOpacity(0.08),
+              borderRadius: const BorderRadius.vertical(top: Radius.circular(11)),
+            ),
+            child: Row(
+              children: [
+                const Icon(Icons.calculate_outlined, color: blue, size: 16),
+                const SizedBox(width: 8),
+                Text(
+                  hasMachine
+                      ? 'Machine Gauge Pressures — Calculated'
+                      : 'Interfacial Pressures (no cylinder area on file)',
+                  style: const TextStyle(
+                      color: blue, fontWeight: FontWeight.w700, fontSize: 13),
+                ),
+              ],
+            ),
+          ),
+
+          Padding(
+            padding: const EdgeInsets.all(16),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                // ── Geometry ─────────────────────────────────────────────
+                _TableSection(label: 'Pipe geometry'),
+                _ParamRow('OD', '${pipe.outerDiameterMm.toStringAsFixed(0)} mm'),
+                _ParamRow('SDR', pipe.sdrRatio.toStringAsFixed(1)),
+                _ParamRow('Wall thickness  e', fmtMm(row.wallThicknessMm)),
+                _ParamRow('Pipe annulus area  A', fmtMm2(row.pipeAnnulusAreaMm2)),
+                _ParamRow('Min bead height', fmtMm(row.minBeadHeightMm)),
+                const SizedBox(height: 12),
+
+                // ── Machine inputs ────────────────────────────────────────
+                if (hasMachine) ...[
+                  _TableSection(label: 'Machine inputs'),
+                  _ParamRow('Cylinder area',
+                      fmtMm2(machine.hydraulicCylinderAreaMm2!)),
+                  _ParamRow('Drag pressure',
+                      fmtBar(machine.dragPressureBar)),
+                  const SizedBox(height: 12),
+                ],
+
+                // ── Phase pressures ───────────────────────────────────────
+                _TableSection(
+                    label: hasMachine
+                        ? 'Machine gauge pressures'
+                        : 'Interfacial pressures'),
+                if (row.heatingUpPressureBar != null)
+                  _ParamRow('Heating-up', fmtBar(row.heatingUpPressureBar)),
+                if (row.heatingPressureBar != null)
+                  _ParamRow('Heating', fmtBar(row.heatingPressureBar)),
+                if (row.fusionPressureBar != null) ...[
+                  _ParamRow('Fusion (nominal)', fmtBar(row.fusionPressureBar)),
+                  if (row.fusionPressureMinBar != null)
+                    _ParamRow('  — min',
+                        fmtBar(row.fusionPressureMinBar),
+                        dimLabel: true),
+                  if (row.fusionPressureMaxBar != null)
+                    _ParamRow('  — max',
+                        fmtBar(row.fusionPressureMaxBar),
+                        dimLabel: true),
+                ],
+                if (row.coolingPressureBar != null)
+                  _ParamRow('Cooling', fmtBar(row.coolingPressureBar)),
+                const SizedBox(height: 12),
+
+                // ── Phase times ───────────────────────────────────────────
+                _TableSection(label: 'Phase durations'),
+                _ParamRow('Heating-up', '${row.heatingUpTimeS} s'),
+                _ParamRow('Heating', '${row.heatingTimeS} s'),
+                _ParamRow('Changeover (max)', '${row.changeoverTimeMaxS} s'),
+                _ParamRow('Build-up', '${row.buildupTimeS} s'),
+                _ParamRow('Fusion', '${row.fusionTimeS} s'),
+                _ParamRow('Cooling', '${row.coolingTimeS} s'),
+              ],
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+class _TableSection extends StatelessWidget {
+  const _TableSection({required this.label});
+  final String label;
+
+  @override
+  Widget build(BuildContext context) => Padding(
+        padding: const EdgeInsets.only(bottom: 6),
+        child: Text(
+          label.toUpperCase(),
+          style: TextStyle(
+            fontSize: 9,
+            fontWeight: FontWeight.w700,
+            letterSpacing: 0.8,
+            color: Theme.of(context).colorScheme.onSurface.withOpacity(0.45),
+          ),
+        ),
+      );
+}
+
 /// Displays a summary of the resolved welding parameters
-/// so the welder can confirm before starting.
+/// so the welder can confirm before starting (interfacial fallback).
 class _ParameterPreviewCard extends StatelessWidget {
   const _ParameterPreviewCard({required this.params});
   final WeldingParameterRecord params;
@@ -603,32 +779,36 @@ class _ParameterPreviewCard extends StatelessWidget {
 }
 
 class _ParamRow extends StatelessWidget {
-  const _ParamRow(this.label, this.value);
+  const _ParamRow(this.label, this.value, {this.dimLabel = false});
   final String label;
   final String value;
+  final bool dimLabel;
 
   @override
-  Widget build(BuildContext context) => Padding(
-        padding: const EdgeInsets.symmetric(vertical: 3),
-        child: Row(
-          children: [
-            Expanded(
-              child: Text(label,
-                  style: Theme.of(context)
-                      .textTheme
-                      .bodySmall
-                      ?.copyWith(
-                          color: Theme.of(context)
-                              .colorScheme
-                              .onSurface
-                              .withOpacity(0.6))),
+  Widget build(BuildContext context) {
+    final dimColor = Theme.of(context).colorScheme.onSurface.withOpacity(0.55);
+    final veryDimColor = Theme.of(context).colorScheme.onSurface.withOpacity(0.38);
+    return Padding(
+      padding: const EdgeInsets.symmetric(vertical: 3),
+      child: Row(
+        children: [
+          Expanded(
+            child: Text(
+              label,
+              style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                    color: dimLabel ? veryDimColor : dimColor,
+                  ),
             ),
-            Text(value,
-                style: Theme.of(context)
-                    .textTheme
-                    .bodySmall
-                    ?.copyWith(fontWeight: FontWeight.w600)),
-          ],
-        ),
-      );
+          ),
+          Text(
+            value,
+            style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                  fontWeight: dimLabel ? FontWeight.w400 : FontWeight.w600,
+                  color: dimLabel ? veryDimColor : null,
+                ),
+          ),
+        ],
+      ),
+    );
+  }
 }

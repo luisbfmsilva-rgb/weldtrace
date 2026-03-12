@@ -20,6 +20,13 @@ class MachinesTable extends Table {
   TextColumn get approvedBy => text().nullable()();
   DateTimeColumn get approvedAt => dateTime().nullable()();
 
+  /// Hydraulic cylinder piston area [mm²].
+  ///
+  /// Stamped on the machine data plate or from the calibration certificate.
+  /// Used to convert standard interfacial pressures to machine gauge pressures.
+  /// Null means the value has not been entered for this machine.
+  RealColumn get hydraulicCylinderAreaMm2 => real().nullable()();
+
   TextColumn get lastCalibrationDate => text().nullable()();
   TextColumn get nextCalibrationDate => text().nullable()();
   TextColumn get notes => text().nullable()();
