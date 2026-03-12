@@ -8,6 +8,8 @@ import '../../services/sensor/sensor_service.dart';
 import '../../services/sensor/sensor_reading.dart';
 import '../../workflow/weld_workflow_engine.dart';
 import '../../workflow/welding_phase.dart';
+import 'nominal_curve_builder.dart';
+import 'pressure_time_graph.dart';
 
 /// Arguments passed via GoRouter [extra] from WeldSetupScreen.
 class WeldSessionArgs {
@@ -59,11 +61,22 @@ class _WeldingSessionScreenState extends ConsumerState<WeldingSessionScreen> {
   Timer? _phaseTimer;
   int _phaseElapsedSeconds = 0;
 
+  // ── Chart state ─────────────────────────────────────────────────────────────
+  /// Accumulated 1-Hz readings for the actual pressure curve.
+  final List<SensorReading> _sensorReadings = [];
+
+  /// Timestamp when the first phase started — used as chart x=0.
+  DateTime? _weldStartedAt;
+
+  /// Pre-computed nominal curve data derived from [widget.phases].
+  late NominalCurveData _nominalData;
+
   final List<StreamSubscription> _subs = [];
 
   @override
   void initState() {
     super.initState();
+    _nominalData = NominalCurveBuilder.build(widget.phases);
     _initEngine();
     _listenToSensor();
   }
@@ -93,6 +106,12 @@ class _WeldingSessionScreenState extends ConsumerState<WeldingSessionScreen> {
         setState(() {
           _latestPressure = r.pressureBar;
           _latestTemperature = r.temperatureCelsius;
+          // Accumulate readings for the chart only during an active weld.
+          if (_weldStartedAt != null &&
+              _workflowState != WeldWorkflowState.completed &&
+              _workflowState != WeldWorkflowState.cancelled) {
+            _sensorReadings.add(r);
+          }
         });
       }
     }));
@@ -116,15 +135,24 @@ class _WeldingSessionScreenState extends ConsumerState<WeldingSessionScreen> {
   Future<void> _startNextPhase() async {
     await _engine?.advancePhase();
     if (!mounted) return;
+    final now = DateTime.now();
     setState(() {
       _currentPhaseIndex = _engine != null
           ? (_engine!.state == WeldWorkflowState.completed
               ? widget.phases.length
               : widget.phases.length - 1)
           : 0;
-      _phaseStartedAt = DateTime.now();
+      _phaseStartedAt = now;
       _phaseElapsedSeconds = 0;
       _violations.clear();
+      // Record the weld-level start time the very first time a phase begins.
+      _weldStartedAt ??= now;
+      // Refresh phase marker highlight on the nominal curve.
+      _nominalData = NominalCurveBuilder.updateActivePhase(
+        _nominalData,
+        widget.phases,
+        _currentPhaseIndex,
+      );
     });
     _startPhaseTimer();
   }
@@ -136,6 +164,12 @@ class _WeldingSessionScreenState extends ConsumerState<WeldingSessionScreen> {
     setState(() {
       _currentPhaseIndex++;
       _phaseElapsedSeconds = 0;
+      // Update active-phase highlight on the chart.
+      _nominalData = NominalCurveBuilder.updateActivePhase(
+        _nominalData,
+        widget.phases,
+        _currentPhaseIndex,
+      );
     });
   }
 
@@ -244,6 +278,29 @@ class _WeldingSessionScreenState extends ConsumerState<WeldingSessionScreen> {
                     ],
                   ),
                   const SizedBox(height: 12),
+
+                  // ── Pressure / time chart ────────────────────────────────
+                  if (_weldStartedAt != null ||
+                      _workflowState == WeldWorkflowState.phaseActive ||
+                      _workflowState == WeldWorkflowState.parameterViolation ||
+                      _workflowState == WeldWorkflowState.completed) ...[
+                    PressureGraphLegend(
+                      currentPhaseName: currentPhase?.phase.displayName ??
+                          (_workflowState == WeldWorkflowState.completed
+                              ? 'Complete'
+                              : 'Idle'),
+                      readingCount: _sensorReadings.length,
+                    ),
+                    PressureTimeGraph(
+                      phases: widget.phases,
+                      nominalData: _nominalData,
+                      readings: _sensorReadings,
+                      weldStartedAt:
+                          _weldStartedAt ?? DateTime.now(),
+                      currentPhaseIndex: _currentPhaseIndex,
+                    ),
+                    const SizedBox(height: 16),
+                  ],
 
                   // ── Violations log ───────────────────────────────────────
                   if (_violations.isNotEmpty)
