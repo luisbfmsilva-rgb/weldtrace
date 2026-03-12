@@ -1,8 +1,12 @@
-# Workspace
+# WeldTrace — Industrial Weld Traceability System
 
 ## Overview
 
-pnpm workspace monorepo using TypeScript. Each package manages its own dependencies.
+Full-stack platform for recording and tracking thermoplastic pipe welding operations (PE, PP and similar materials). Supports welding standards DVS 2207, ISO 21307, and ASTM F2620. Designed for three-component deployment:
+
+1. **Flutter Mobile App** — field tablets, offline-first
+2. **Cloud Backend** — Supabase + Express API
+3. **Fusion Cloud** — React/Next.js web dashboard (planned)
 
 ## Stack
 
@@ -11,86 +15,176 @@ pnpm workspace monorepo using TypeScript. Each package manages its own dependenc
 - **Package manager**: pnpm
 - **TypeScript version**: 5.9
 - **API framework**: Express 5
-- **Database**: PostgreSQL + Drizzle ORM
+- **Database**: PostgreSQL (Supabase) + Drizzle ORM (schema only)
+- **Auth**: Supabase Auth (JWT bearer tokens)
 - **Validation**: Zod (`zod/v4`), `drizzle-zod`
 - **API codegen**: Orval (from OpenAPI spec)
 - **Build**: esbuild (CJS bundle)
 
+## Environment Variables Required
+
+| Secret | Description |
+|--------|-------------|
+| `SUPABASE_URL` | Supabase project URL (e.g. https://xxxx.supabase.co) |
+| `SUPABASE_SERVICE_ROLE_KEY` | Service role key — full admin access |
+| `SUPABASE_ANON_KEY` | Anon/public key — used by clients |
+
 ## Structure
 
 ```text
-artifacts-monorepo/
-├── artifacts/              # Deployable applications
-│   └── api-server/         # Express API server
-├── lib/                    # Shared libraries
-│   ├── api-spec/           # OpenAPI spec + Orval codegen config
-│   ├── api-client-react/   # Generated React Query hooks
-│   ├── api-zod/            # Generated Zod schemas from OpenAPI
-│   └── db/                 # Drizzle ORM schema + DB connection
-├── scripts/                # Utility scripts (single workspace package)
-│   └── src/                # Individual .ts scripts, run via `pnpm --filter @workspace/scripts run <script>`
-├── pnpm-workspace.yaml     # pnpm workspace (artifacts/*, lib/*, lib/integrations/*, scripts)
-├── tsconfig.base.json      # Shared TS options (composite, bundler resolution, es2022)
-├── tsconfig.json           # Root TS project references
-└── package.json            # Root package with hoisted devDeps
+workspace/
+├── artifacts/
+│   └── api-server/               # Express 5 API server
+│       └── src/
+│           ├── lib/
+│           │   └── supabase.ts   # Supabase admin + user clients
+│           ├── middlewares/
+│           │   └── auth.ts       # JWT auth middleware + role guards
+│           └── routes/
+│               ├── health.ts     # GET /api/healthz
+│               ├── auth.ts       # /api/auth/* (login, register, refresh, me)
+│               ├── projects.ts   # /api/projects/* CRUD + user/machine assignment
+│               ├── machines.ts   # /api/machines/* + calibrations + maintenance
+│               ├── welds.ts      # /api/welds/* + steps + errors
+│               ├── sensor_logs.ts # /api/welds/:id/sensor-logs/batch
+│               ├── standards.ts  # /api/welding-standards/* (read-only reference)
+│               └── sync.ts       # /api/sync/upload + /api/sync/download
+│
+├── lib/
+│   ├── db/src/schema/            # Drizzle ORM schema (mirrors Supabase)
+│   │   ├── companies.ts
+│   │   ├── users.ts
+│   │   ├── projects.ts
+│   │   ├── machines.ts
+│   │   ├── welding_standards.ts
+│   │   ├── welds.ts
+│   │   └── sensors.ts
+│   ├── api-spec/openapi.yaml     # OpenAPI 3.1 contract
+│   ├── api-client-react/         # Generated React Query hooks
+│   └── api-zod/                  # Generated Zod schemas
+│
+├── supabase/
+│   └── migrations/
+│       ├── 001_initial_schema.sql   # All 17 tables + enums + indexes + triggers
+│       ├── 002_rls_policies.sql     # Row Level Security policies per role
+│       ├── 003_seed_welding_standards.sql  # DVS 2207, ISO 21307, ASTM F2620 data
+│       └── FULL_MIGRATION.sql       # Combined file for one-shot SQL Editor paste
+│
+└── scripts/src/
+    └── migrate-supabase.ts          # Migration helper + instructions
 ```
 
-## TypeScript & Composite Projects
+## Database Tables (Supabase/PostgreSQL)
 
-Every package extends `tsconfig.base.json` which sets `composite: true`. The root `tsconfig.json` lists all packages as project references. This means:
+| Table | Purpose |
+|-------|---------|
+| `companies` | Top-level tenant |
+| `users` | Linked to auth.users, role-based |
+| `projects` | Construction projects |
+| `project_users` | User-to-project assignments |
+| `machines` | Welding machines (must be approved) |
+| `project_machines` | Machine-to-project assignments |
+| `welding_standards` | DVS 2207 / ISO 21307 / ASTM F2620 definitions |
+| `welding_parameters` | Phase limits per standard, diameter, SDR |
+| `welds` | Individual weld records (immutable after completion) |
+| `weld_steps` | Per-phase records within a weld |
+| `weld_photos` | Photos attached to welds |
+| `weld_signatures` | Digital signatures (future certification) |
+| `sensor_logs` | 1 Hz pressure + temperature readings (batch uploaded) |
+| `weld_errors` | Auto-cancellation parameter violations |
+| `machine_maintenance` | Maintenance history |
+| `sensor_calibrations` | Sensor calibration records (RBC-certified) |
+| `weld_certificates` | Future digital certification system |
 
-- **Always typecheck from the root** — run `pnpm run typecheck` (which runs `tsc --build --emitDeclarationOnly`). This builds the full dependency graph so that cross-package imports resolve correctly. Running `tsc` inside a single package will fail if its dependencies haven't been built yet.
-- **`emitDeclarationOnly`** — we only emit `.d.ts` files during typecheck; actual JS bundling is handled by esbuild/tsx/vite...etc, not `tsc`.
-- **Project references** — when package A depends on package B, A's `tsconfig.json` must list B in its `references` array. `tsc --build` uses this to determine build order and skip up-to-date packages.
+## API Routes
 
-## Root Scripts
+### Auth
+- `POST /api/auth/register` — Create user (admin)
+- `POST /api/auth/login` — Login, returns JWT + refresh token
+- `POST /api/auth/refresh` — Refresh access token
+- `GET /api/auth/me` — Current user profile
+- `POST /api/auth/logout` — Invalidate session
 
-- `pnpm run build` — runs `typecheck` first, then recursively runs `build` in all packages that define it
-- `pnpm run typecheck` — runs `tsc --build --emitDeclarationOnly` using project references
+### Projects
+- `GET /api/projects` — List projects (company-scoped via RLS)
+- `GET /api/projects/:id` — Project detail with users + machines
+- `POST /api/projects` — Create (manager/supervisor only)
+- `PATCH /api/projects/:id` — Update
+- `POST /api/projects/:id/users` — Assign user to project
+- `DELETE /api/projects/:id/users/:userId` — Remove user
+- `POST /api/projects/:id/machines` — Assign machine
 
-## Packages
+### Machines
+- `GET /api/machines` — List machines
+- `GET /api/machines/:id` — Detail with maintenance + calibrations
+- `POST /api/machines` — Register machine
+- `PATCH /api/machines/:id` — Update
+- `PATCH /api/machines/:id/approve` — Approve for use
+- `POST /api/machines/:id/maintenance` — Log maintenance
+- `POST /api/machines/:id/calibrations` — Log sensor calibration
+- `GET /api/machines/:id/calibrations` — Calibration history
 
-### `artifacts/api-server` (`@workspace/api-server`)
+### Welds
+- `GET /api/welds` — List welds (filterable by project, status)
+- `GET /api/welds/:id` — Full weld detail
+- `POST /api/welds` — Start new weld
+- `PATCH /api/welds/:id/complete` — Mark completed (immutable after)
+- `PATCH /api/welds/:id/cancel` — Cancel with reason
+- `POST /api/welds/:id/steps` — Record phase step
+- `POST /api/welds/:id/errors` — Record parameter violation
 
-Express 5 API server. Routes live in `src/routes/` and use `@workspace/api-zod` for request and response validation and `@workspace/db` for persistence.
+### Sensor Logs (batch upload)
+- `POST /api/welds/:weldId/sensor-logs/batch` — Batch upload (max 500 records)
+- `GET /api/welds/:weldId/sensor-logs` — Retrieve for graph rendering
 
-- Entry: `src/index.ts` — reads `PORT`, starts Express
-- App setup: `src/app.ts` — mounts CORS, JSON/urlencoded parsing, routes at `/api`
-- Routes: `src/routes/index.ts` mounts sub-routers; `src/routes/health.ts` exposes `GET /health` (full path: `/api/health`)
-- Depends on: `@workspace/db`, `@workspace/api-zod`
-- `pnpm --filter @workspace/api-server run dev` — run the dev server
-- `pnpm --filter @workspace/api-server run build` — production esbuild bundle (`dist/index.cjs`)
-- Build bundles an allowlist of deps (express, cors, pg, drizzle-orm, zod, etc.) and externalizes the rest
+### Standards
+- `GET /api/welding-standards` — List standards (DVS, ISO, ASTM)
+- `GET /api/welding-standards/:id/parameters` — Phase parameters
 
-### `lib/db` (`@workspace/db`)
+### Sync (offline-first mobile support)
+- `POST /api/sync/upload` — Push pending local records to cloud
+- `GET /api/sync/download` — Pull project/machine/standard updates
 
-Database layer using Drizzle ORM with PostgreSQL. Exports a Drizzle client instance and schema models.
+## User Roles & Permissions
 
-- `src/index.ts` — creates a `Pool` + Drizzle instance, exports schema
-- `src/schema/index.ts` — barrel re-export of all models
-- `src/schema/<modelname>.ts` — table definitions with `drizzle-zod` insert schemas (no models definitions exist right now)
-- `drizzle.config.ts` — Drizzle Kit config (requires `DATABASE_URL`, automatically provided by Replit)
-- Exports: `.` (pool, db, schema), `./schema` (schema only)
+| Role | Projects | Machines | Welds | Standards | Reports |
+|------|----------|----------|-------|-----------|---------|
+| Manager | Full CRUD | Full + Approve | Full | Read | Full |
+| Supervisor | Full CRUD | Full + Approve | Full | Read | Full |
+| Welder | Read (assigned) | Read | Create + own welds | Read | — |
+| Auditor | Read | Read | Read (completed) | Read | Read |
 
-Production migrations are handled by Replit when publishing. In development, we just use `pnpm --filter @workspace/db run push`, and we fallback to `pnpm --filter @workspace/db run push-force`.
+## Row Level Security
 
-### `lib/api-spec` (`@workspace/api-spec`)
+All tables have RLS enabled. Key rules:
+- Users can only access data within their `company_id`
+- Welders can only access projects they are assigned to via `project_users`
+- Completed welds are immutable (no UPDATE/DELETE permitted via RLS)
+- `sensor_logs` have no UPDATE or DELETE policy — write-once by design
+- `welding_standards` and `welding_parameters` are read-only for all authenticated users
 
-Owns the OpenAPI 3.1 spec (`openapi.yaml`) and the Orval config (`orval.config.ts`). Running codegen produces output into two sibling packages:
+## Applying Migrations to Supabase
 
-1. `lib/api-client-react/src/generated/` — React Query hooks + fetch client
-2. `lib/api-zod/src/generated/` — Zod schemas
+**Option 1 — SQL Editor (recommended):**
+1. Open Supabase dashboard → SQL Editor
+2. Paste the contents of `supabase/migrations/FULL_MIGRATION.sql`
+3. Run — this creates all tables, RLS policies, and seeds welding standards data
 
-Run codegen: `pnpm --filter @workspace/api-spec run codegen`
+**Option 2 — Supabase CLI:**
+```bash
+supabase db push --project-ref <your-project-ref>
+```
 
-### `lib/api-zod` (`@workspace/api-zod`)
+## Architecture Notes
 
-Generated Zod schemas from the OpenAPI spec (e.g. `HealthCheckResponse`). Used by `api-server` for response validation.
+### Sensor Log Batch Upload
+Sensor data is captured at 1 Hz during welding operations. The mobile Sync Service batches 100–200 records per upload request to prevent network overload during active welding. The API accepts up to 500 records per batch call to `POST /api/welds/:weldId/sensor-logs/batch`.
 
-### `lib/api-client-react` (`@workspace/api-client-react`)
+### Offline-First Sync
+The mobile app stores all data locally in SQLite (Drift) with `sync_status: pending | synced | conflict`. The Sync Service calls `/api/sync/upload` when connectivity is available, then `/api/sync/download` to pull updates. Completed welds are immutable and cannot be overwritten by downloads.
 
-Generated React Query hooks and fetch client from the OpenAPI spec (e.g. `useHealthCheck`, `healthCheck`).
+### Sensor Calibrations
+The plug-and-play sensor kit (hydraulic T-connector pressure sensor + PT100 temperature sensor) must be periodically calibrated against an RBC-certified reference gauge. Calibration records include `offset_value` and `slope_value` applied to raw readings, and are stored per `sensor_serial` in `sensor_calibrations`.
 
-### `scripts` (`@workspace/scripts`)
-
-Utility scripts package. Each script is a `.ts` file in `src/` with a corresponding npm script in `package.json`. Run scripts via `pnpm --filter @workspace/scripts run <script>`. Scripts can import any workspace package (e.g., `@workspace/db`) by adding it as a dependency in `scripts/package.json`.
+### Future: Digital Certification
+The `weld_certificates` and `weld_signatures` tables are reserved for the future digital certification module. They exist in the schema but are not yet fully implemented in the business logic.
