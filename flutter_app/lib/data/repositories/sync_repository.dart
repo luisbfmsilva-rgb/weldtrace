@@ -9,6 +9,8 @@ import '../local/dao/machines_dao.dart';
 import '../local/dao/sensor_logs_dao.dart';
 import '../local/tables/projects_table.dart';
 import '../local/tables/machines_table.dart';
+import '../local/tables/welding_standards_table.dart';
+import '../local/tables/welding_parameters_table.dart';
 import '../models/sync_models.dart';
 import '../remote/sync_remote_data_source.dart';
 
@@ -186,6 +188,77 @@ class SyncRepository {
                 updatedAt: Value(DateTime.tryParse(m['updated_at'] as String? ?? '')),
               )).toList();
           await db.machinesDao.upsertAll(machineRows);
+
+          // Write welding standards
+          final standardRows = updates.weldingStandards.map((s) =>
+              WeldingStandardsTableCompanion(
+                id: Value(s['id'] as String),
+                name: Value(s['name'] as String),
+                code: Value(s['code'] as String),
+                weldType: Value(s['weld_type'] as String? ?? 'butt_fusion'),
+                description: Value(s['description'] as String?),
+                version: Value(s['version'] as String?),
+                isActive: Value(s['is_active'] as bool? ?? true),
+                syncStatus: const Value('synced'),
+                lastSyncedAt: Value(DateTime.now()),
+                updatedAt: Value(
+                    DateTime.tryParse(s['updated_at'] as String? ?? '')),
+              )).toList();
+          await db.weldingParametersDao.upsertAllStandards(standardRows);
+
+          // Write welding parameters
+          final paramRows = updates.weldingParameters.map((p) =>
+              WeldingParametersTableCompanion(
+                id: Value(p['id'] as String),
+                standardId: Value(p['standard_id'] as String),
+                pipeMaterial: Value(p['pipe_material'] as String),
+                pipeDiameterMm: Value((p['pipe_diameter_mm'] as num).toDouble()),
+                sdrRating: Value(p['sdr_rating'] as String),
+                wallThicknessMm: Value(
+                    (p['wall_thickness_mm'] as num?)?.toDouble()),
+                ambientTempMinCelsius: Value(
+                    (p['ambient_temp_min_celsius'] as num?)?.toDouble() ??
+                        -15.0),
+                ambientTempMaxCelsius: Value(
+                    (p['ambient_temp_max_celsius'] as num?)?.toDouble() ??
+                        50.0),
+                heatingUpTimeS: Value(p['heating_up_time_s'] as int?),
+                heatingUpPressureBar: Value(
+                    (p['heating_up_pressure_bar'] as num?)?.toDouble()),
+                heatingTimeS: Value(p['heating_time_s'] as int?),
+                heatingPressureBar: Value(
+                    (p['heating_pressure_bar'] as num?)?.toDouble()),
+                changeoverTimeMaxS:
+                    Value(p['changeover_time_max_s'] as int?),
+                buildupTimeS: Value(p['buildup_time_s'] as int?),
+                fusionTimeS: Value(p['fusion_time_s'] as int?),
+                fusionPressureBar: Value(
+                    (p['fusion_pressure_bar'] as num?)?.toDouble()),
+                fusionPressureMinBar: Value(
+                    (p['fusion_pressure_min_bar'] as num?)?.toDouble()),
+                fusionPressureMaxBar: Value(
+                    (p['fusion_pressure_max_bar'] as num?)?.toDouble()),
+                coolingTimeS: Value(p['cooling_time_s'] as int?),
+                coolingPressureBar: Value(
+                    (p['cooling_pressure_bar'] as num?)?.toDouble()),
+                efWeldingTimeS: Value(p['ef_welding_time_s'] as int?),
+                efWeldingVoltage: Value(
+                    (p['ef_welding_voltage'] as num?)?.toDouble()),
+                efCoolingTimeS: Value(p['ef_cooling_time_s'] as int?),
+                heatingTempNominalCelsius: Value(
+                    (p['heating_temp_nominal_celsius'] as num?)?.toDouble()),
+                heatingTempMinCelsius: Value(
+                    (p['heating_temp_min_celsius'] as num?)?.toDouble()),
+                heatingTempMaxCelsius: Value(
+                    (p['heating_temp_max_celsius'] as num?)?.toDouble()),
+                notes: Value(p['notes'] as String?),
+                isActive: Value(p['is_active'] as bool? ?? true),
+                syncStatus: const Value('synced'),
+                lastSyncedAt: Value(DateTime.now()),
+                updatedAt: Value(
+                    DateTime.tryParse(p['updated_at'] as String? ?? '')),
+              )).toList();
+          await db.weldingParametersDao.upsertAllParameters(paramRows);
 
           return Success(updates);
         },

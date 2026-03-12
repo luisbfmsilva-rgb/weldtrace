@@ -5,9 +5,11 @@ import '../data/remote/auth_remote_data_source.dart';
 import '../data/remote/sync_remote_data_source.dart';
 import '../data/repositories/auth_repository.dart';
 import '../data/repositories/sync_repository.dart';
+import '../data/repositories/weld_parameters_repository.dart';
 import '../services/sync/sync_service.dart';
 import '../services/sensor/sensor_service.dart';
 import '../core/network/api_client.dart';
+import '../presentation/welding/weld_setup_notifier.dart';
 
 // ── Database ──────────────────────────────────────────────────────────────────
 
@@ -15,6 +17,16 @@ final databaseProvider = Provider<AppDatabase>((ref) {
   final db = AppDatabase();
   ref.onDispose(db.close);
   return db;
+});
+
+// ── API client ─────────────────────────────────────────────────────────────────
+
+final apiClientProvider = Provider<ApiClient>((ref) {
+  // Note: forward reference is safe because authRepositoryProvider only
+  // reads apiClientProvider lazily; Riverpod handles circular deps via lazy eval.
+  return ApiClient(
+    tokenProvider: () => ref.read(authRepositoryProvider).getAccessToken(),
+  );
 });
 
 // ── Auth repository ────────────────────────────────────────────────────────────
@@ -25,15 +37,6 @@ final authRepositoryProvider = Provider<AuthRepository>((ref) {
   return AuthRepository(
     remoteDataSource: AuthRemoteDataSource(api),
     db: db,
-  );
-});
-
-// ── API client ─────────────────────────────────────────────────────────────────
-
-final apiClientProvider = Provider<ApiClient>((ref) {
-  final authRepo = ref.watch(authRepositoryProvider);
-  return ApiClient(
-    tokenProvider: () => authRepo.getAccessToken(),
   );
 });
 
@@ -62,6 +65,24 @@ final sensorServiceProvider = Provider<SensorService>((ref) {
   final service = SensorService(db: db);
   ref.onDispose(service.dispose);
   return service;
+});
+
+// ── Welding parameters ─────────────────────────────────────────────────────────
+
+final weldParametersRepositoryProvider =
+    Provider<WeldParametersRepository>((ref) {
+  final db = ref.watch(databaseProvider);
+  return WeldParametersRepository(db: db);
+});
+
+/// Per-screen StateNotifier that drives the weld setup form.
+/// Use [weldSetupProvider] in WeldSetupScreen only.
+final weldSetupProvider =
+    StateNotifierProvider.autoDispose<WeldSetupNotifier, WeldSetupState>((ref) {
+  return WeldSetupNotifier(
+    paramsRepo: ref.watch(weldParametersRepositoryProvider),
+    db: ref.watch(databaseProvider),
+  );
 });
 
 // ── Auth state notifier ────────────────────────────────────────────────────────

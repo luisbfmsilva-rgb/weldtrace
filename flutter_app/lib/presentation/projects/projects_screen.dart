@@ -24,6 +24,11 @@ class ProjectsScreen extends ConsumerWidget {
               final service = ref.read(syncServiceProvider);
               service.start();
               await service.syncNow();
+              if (context.mounted) {
+                ScaffoldMessenger.of(context).showSnackBar(
+                  const SnackBar(content: Text('Sync complete')),
+                );
+              }
             },
           ),
           IconButton(
@@ -43,7 +48,7 @@ class ProjectsScreen extends ConsumerWidget {
           if (projects.isEmpty) {
             return _EmptyState(
               message: authState.isAuthenticated
-                  ? 'No projects yet. Sync to pull your assigned projects.'
+                  ? 'No projects yet.\nTap the sync icon to pull your assigned projects.'
                   : 'Sign in to see your projects.',
             );
           }
@@ -65,14 +70,14 @@ class _ProjectCard extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
-    final statusColor = project.status == 'active'
-        ? const Color(0xFF2E7D32)
-        : theme.colorScheme.outline;
+    final isActive = project.status == 'active';
+    final statusColor = isActive ? const Color(0xFF2E7D32) : theme.colorScheme.outline;
 
     return Card(
       child: InkWell(
         borderRadius: BorderRadius.circular(12),
-        onTap: () => context.push('/projects/${project.id}/weld'),
+        // Navigate to WeldSetupScreen pre-seeded with this project
+        onTap: () => context.push('/projects/${project.id}/weld/setup'),
         child: Padding(
           padding: const EdgeInsets.all(16),
           child: Row(
@@ -92,19 +97,29 @@ class _ProjectCard extends StatelessWidget {
                         children: [
                           Icon(Icons.location_on_outlined,
                               size: 14,
-                              color:
-                                  theme.colorScheme.onSurface.withOpacity(0.5)),
+                              color: theme.colorScheme.onSurface
+                                  .withOpacity(0.5)),
                           const SizedBox(width: 4),
                           Text(
                             project.location!,
                             style: theme.textTheme.bodySmall?.copyWith(
-                              color:
-                                  theme.colorScheme.onSurface.withOpacity(0.5),
+                              color: theme.colorScheme.onSurface
+                                  .withOpacity(0.5),
                             ),
                           ),
                         ],
                       ),
                     ],
+                    const SizedBox(height: 6),
+                    Text(
+                      isActive ? 'Tap to start a new weld →' : 'Project inactive',
+                      style: theme.textTheme.bodySmall?.copyWith(
+                        color: isActive
+                            ? theme.colorScheme.primary
+                            : theme.colorScheme.outline,
+                        fontWeight: FontWeight.w500,
+                      ),
+                    ),
                   ],
                 ),
               ),
@@ -149,7 +164,8 @@ class _EmptyState extends StatelessWidget {
           Icon(
             Icons.folder_open,
             size: 64,
-            color: Theme.of(context).colorScheme.onSurface.withOpacity(0.2),
+            color:
+                Theme.of(context).colorScheme.onSurface.withOpacity(0.2),
           ),
           const SizedBox(height: 16),
           Text(

@@ -5,6 +5,7 @@ import 'package:go_router/go_router.dart';
 import '../di/providers.dart';
 import 'auth/login_screen.dart';
 import 'projects/projects_screen.dart';
+import 'welding/weld_setup_screen.dart';
 import 'welding/welding_session_screen.dart';
 import 'machines/machines_screen.dart';
 import 'sensors/sensor_screen.dart';
@@ -36,13 +37,28 @@ class WeldTraceApp extends ConsumerWidget {
           path: '/projects',
           builder: (context, state) => const ProjectsScreen(),
         ),
+
+        // ── Weld flow ─────────────────────────────────────────────────────
+        // Step 1: Setup — select all parameters, create local record
         GoRoute(
-          path: '/projects/:projectId/weld',
+          path: '/projects/:projectId/weld/setup',
           builder: (context, state) {
             final projectId = state.pathParameters['projectId']!;
-            return WeldingSessionScreen(projectId: projectId);
+            return WeldSetupScreen(preselectedProjectId: projectId);
           },
         ),
+        // Step 2: Session — live sensor monitoring and phase workflow
+        GoRoute(
+          path: '/weld/session',
+          builder: (context, state) {
+            final args = state.extra as WeldSessionArgs;
+            return WeldingSessionScreen(
+              weldId: args.weldId,
+              phases: args.phases,
+            );
+          },
+        ),
+
         GoRoute(
           path: '/machines',
           builder: (context, state) => const MachinesScreen(),
@@ -67,9 +83,9 @@ class WeldTraceApp extends ConsumerWidget {
   }
 
   ThemeData _buildTheme() {
-    const primaryColor = Color(0xFF0052CC);   // industrial blue
-    const errorColor = Color(0xFFD32F2F);     // safety red
-    const warningColor = Color(0xFFF57F17);   // amber
+    const primaryColor = Color(0xFF0052CC);
+    const errorColor = Color(0xFFD32F2F);
+    const warningColor = Color(0xFFF57F17);
 
     return ThemeData(
       useMaterial3: true,
