@@ -21,13 +21,14 @@ import 'welding_table.dart';
 ///
 /// ── Conversion formula ─────────────────────────────────────────────────────
 ///
-///   e        = OD / SDR                              [mm]
-///   A_pipe   = π × (OD − e) × e                     [mm²]
-///   P_gauge  = (P_interfacial × A_pipe) / A_cylinder + P_drag   [bar]
-///
-/// The ratio A_pipe / A_cylinder is dimensionless (both in mm²).
-/// P_interfacial and P_gauge are both in bar, so the equation is
-/// dimensionally consistent (1 bar × mm² / mm² = 1 bar).
+///   e                   = OD / SDR                               [mm]
+///   A_ann               = π × (OD − e) × e                      [mm²]  (annulus, for reference)
+///   beadWidth           = e × 0.9                                [mm]
+///   effectiveCircum     = π × OD × 0.65  (beadContactFactor)    [mm]
+///   contactArea         = effectiveCircum × beadWidth            [mm²]  clamped [100, 10 000 000]
+///   forceN              = P_interfacial × 100 000 × contactArea / 1e6   [N]
+///   machinePressureBar  = forceN / (A_cylinder / 1e6) / 100 000         [bar]
+///   gaugePressureBar    = max(0, machinePressureBar − dragPressureBar)   [bar]
 ///
 /// When [MachineSpec.hasHydraulicData] is false the generator returns
 /// the interfacial pressures unchanged and marks [WeldingTableRow.isMachinePressure]
@@ -83,17 +84,25 @@ class WeldingTableGenerator {
     final cyl  = machineSpec.hydraulicCylinderAreaMm2 ?? 1.0;
     final drag = machineSpec.dragPressureBar;
 
+    // Pipe end-face annulus area.
+    //   A_ann [mm²] = π × (OD − e) × e
+    final e    = pipeSpec.wallThicknessMm;
+    final area = math.pi * (pipeSpec.outerDiameterMm - e) * e;
+
     // Bead width and contact area for pressure conversion.
     //
     //   bead width proportional to wall thickness
-    final e            = pipeSpec.wallThicknessMm;
-    final beadWidthMm  = e * 0.9;
-    // approximate molten bead contact area
-    final contactAreaMm2 = math.pi * pipeSpec.outerDiameterMm * beadWidthMm;
+    final beadWidthMm = e * 0.9;
+    // effective molten bead contact band
+    // reduces full circumference assumption
+    const beadContactFactor = 0.65;
+    final effectiveCircumference = math.pi * pipeSpec.outerDiameterMm * beadContactFactor;
+    // numeric guard — prevents unrealistic values for very small/large pipes
+    final contactAreaMm2 =
+        (effectiveCircumference * beadWidthMm).clamp(100.0, 10000000.0);
 
     // Converts one interfacial pressure value to machine gauge pressure.
     //
-    //   converts bar × area into Newtons
     //   F [N]               = P [bar] × 100 000 × contactArea [mm²] / 1e6
     //   machinePressure [bar] = F / (A_cyl [mm²] / 1e6) / 100 000
     //   gaugePressure [bar]   = machinePressure − P_drag  (clamped ≥ 0)
@@ -152,10 +161,15 @@ class WeldingTableGenerator {
     final drag = machineSpec.dragPressureBar;
 
     // bead width proportional to wall thickness
-    final e            = pipeSpec.wallThicknessMm;
-    final beadWidthMm  = e * 0.9;
-    // approximate molten bead contact area
-    final contactAreaMm2 = math.pi * pipeSpec.outerDiameterMm * beadWidthMm;
+    final e           = pipeSpec.wallThicknessMm;
+    final beadWidthMm = e * 0.9;
+    // effective molten bead contact band
+    // reduces full circumference assumption
+    const beadContactFactor = 0.65;
+    final effectiveCircumference = math.pi * pipeSpec.outerDiameterMm * beadContactFactor;
+    // numeric guard — prevents unrealistic values for very small/large pipes
+    final contactAreaMm2 =
+        (effectiveCircumference * beadWidthMm).clamp(100.0, 10000000.0);
 
     const timeTol = 0.10;  // ±10 % time tolerance
     const presTol = 0.10;  // ±10 % pressure tolerance fallback
@@ -453,6 +467,61 @@ class WeldingTableGenerator {
       syncStatus: def(companion.syncStatus, 'pending'),
       lastSyncedAt: val(companion.lastSyncedAt),
     );
+  }
+
+  // ── Debug / engineering verification helper ──────────────────────────────────
+
+  /// Returns a human-readable map of intermediate calculation values for a
+  /// given pipe and machine combination.
+  ///
+  /// Useful for engineering verification of the pressure conversion chain
+  /// without needing to run a full weld:
+  ///
+  /// ```dart
+  /// final info = WeldingTableGenerator.debugCalculation(
+  ///   pipeDiameterMm:           160,
+  ///   wallThicknessMm:          14.55,
+  ///   interfacialPressureBar:   0.15,
+  ///   hydraulicCylinderAreaMm2: 1000,
+  ///   dragPressureBar:          0.2,
+  /// );
+  /// ```
+  ///
+  /// Returned keys:
+  ///   wallThickness       — e [mm]
+  ///   beadWidth           — e × 0.9 [mm]
+  ///   contactArea         — effective contact area [mm²]
+  ///   fusionForce         — forceN [N]
+  ///   machinePressure     — machine hydraulic pressure [bar]
+  static Map<String, double> debugCalculation({
+    required double pipeDiameterMm,
+    required double wallThicknessMm,
+    required double interfacialPressureBar,
+    required double hydraulicCylinderAreaMm2,
+    double dragPressureBar = 0.0,
+  }) {
+    final e           = wallThicknessMm;
+    final beadWidthMm = e * 0.9;
+
+    // effective molten bead contact band
+    // reduces full circumference assumption
+    const beadContactFactor = 0.65;
+    final effectiveCircumference = math.pi * pipeDiameterMm * beadContactFactor;
+    // numeric guard — prevents unrealistic values for very small/large pipes
+    final contactAreaMm2 =
+        (effectiveCircumference * beadWidthMm).clamp(100.0, 10000000.0);
+
+    final fusionForceN       = interfacialPressureBar * 100000 * contactAreaMm2 / 1e6;
+    final machinePressureBar = fusionForceN / (hydraulicCylinderAreaMm2 / 1e6) / 100000;
+    final gaugePressureBar   = math.max(0.0, machinePressureBar - dragPressureBar);
+
+    return {
+      'wallThickness':   e,
+      'beadWidth':       beadWidthMm,
+      'contactArea':     contactAreaMm2,
+      'fusionForce':     fusionForceN,
+      'machinePressure': gaugePressureBar,
+    };
   }
 
   // ── Changeover time lookup ────────────────────────────────────────────────────

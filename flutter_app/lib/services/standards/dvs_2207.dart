@@ -40,10 +40,20 @@ import '../welding/welding_phases.dart';
 ///
 ///   changeover [s] = min(15, e × 2)   (per DVS 2207-1 Table 3 spirit)
 ///
+/// ── Contact area model ────────────────────────────────────────────────────────
+///
+///   // effective molten bead contact band
+///   // reduces full circumference assumption
+///   beadContactFactor           = 0.65
+///   effectiveCircumference [mm] = π × OD × beadContactFactor
+///   contactAreaMm2 [mm²]        = effectiveCircumference × beadWidth
+///     clamped to [100, 10 000 000] mm² (numeric guard)
+///
 /// ── Machine gauge pressure conversion ────────────────────────────────────────
 ///
-///   F [N]          = P_interfacial [bar] × 100 000 × A_pipe [mm²] / 1e6
-///   P_gauge [bar]  = P_interfacial × A_pipe / A_cyl + P_drag
+///   forceN [N]              = P_interfacial [bar] × 100 000 × contactArea [mm²] / 1e6
+///   machinePressureBar [bar]= forceN / (A_cyl [mm²] / 1e6) / 100 000
+///   gaugePressureBar [bar]  = max(0, machinePressureBar − dragPressureBar)
 class Dvs2207 {
   Dvs2207._();
 
@@ -107,8 +117,13 @@ class Dvs2207 {
     // bead width proportional to wall thickness
     final beadWidthMm = e * 0.9;
 
-    // approximate molten bead contact area
-    final contactAreaMm2 = math.pi * pipeDiameterMm * beadWidthMm;
+    // effective molten bead contact band
+    // reduces full circumference assumption
+    const beadContactFactor = 0.65;
+    final effectiveCircumference = math.pi * pipeDiameterMm * beadContactFactor;
+    var contactAreaMm2 = effectiveCircumference * beadWidthMm;
+    // numeric guard — prevents unrealistic values for very small/large pipes
+    contactAreaMm2 = contactAreaMm2.clamp(100.0, 10000000.0);
 
     // ── 3. Dynamic time parameters ────────────────────────────────────────────
 

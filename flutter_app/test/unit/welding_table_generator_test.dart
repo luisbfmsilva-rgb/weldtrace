@@ -1,3 +1,5 @@
+import 'dart:math' as math;
+
 import 'package:drift/drift.dart';
 import 'package:flutter_test/flutter_test.dart';
 
@@ -406,6 +408,234 @@ void main() {
             reason: 'Large-drag edge case produced negative pressure',
           );
         }
+      }
+    });
+  });
+
+  // ── Contact area model (beadContactFactor = 0.65) ──────────────────────────
+
+  group('contact area model', () {
+    /// All tests in this group use debugCalculation() — pure Dart, no Drift.
+
+    test('contact area uses beadContactFactor 0.65', () {
+      const od  = 160.0;
+      const sdr = 11.0;
+      final e          = od / sdr;
+      final beadWidth  = e * 0.9;
+      final expected   = math.pi * od * 0.65 * beadWidth;
+
+      final dbg = WeldingTableGenerator.debugCalculation(
+        pipeDiameterMm:           od,
+        wallThicknessMm:          e,
+        interfacialPressureBar:   0.15,
+        hydraulicCylinderAreaMm2: 1000,
+      );
+
+      expect(dbg['contactArea']!, closeTo(expected, 0.5));
+    });
+
+    test('contact area is smaller than full-circumference assumption', () {
+      const od  = 160.0;
+      const e   = 160.0 / 11.0;
+      final beadWidth       = e * 0.9;
+      final fullCircArea    = math.pi * od * beadWidth;
+      final reducedCircArea =
+          WeldingTableGenerator.debugCalculation(
+            pipeDiameterMm:           od,
+            wallThicknessMm:          e,
+            interfacialPressureBar:   0.15,
+            hydraulicCylinderAreaMm2: 1000,
+          )['contactArea']!;
+
+      expect(reducedCircArea, lessThan(fullCircArea));
+    });
+
+    test('contact area scales with pipe diameter for large pipes', () {
+      final smallPipe = WeldingTableGenerator.debugCalculation(
+        pipeDiameterMm:           160,
+        wallThicknessMm:          160 / 11.0,
+        interfacialPressureBar:   0.15,
+        hydraulicCylinderAreaMm2: 1000,
+      )['contactArea']!;
+
+      final largePipe = WeldingTableGenerator.debugCalculation(
+        pipeDiameterMm:           315,
+        wallThicknessMm:          315 / 11.0,
+        interfacialPressureBar:   0.15,
+        hydraulicCylinderAreaMm2: 1000,
+      )['contactArea']!;
+
+      expect(largePipe, greaterThan(smallPipe));
+    });
+
+    test('contact area is clamped to minimum 100 mm² for micro pipes', () {
+      // Pipe too small to weld in practice — clamp must floor at 100 mm².
+      final dbg = WeldingTableGenerator.debugCalculation(
+        pipeDiameterMm:           5,
+        wallThicknessMm:          0.1,
+        interfacialPressureBar:   0.15,
+        hydraulicCylinderAreaMm2: 1000,
+      );
+      expect(dbg['contactArea']!, greaterThanOrEqualTo(100.0));
+    });
+  });
+
+  // ── Machine pressure scaling with cylinder area ────────────────────────────
+
+  group('machine pressure scaling', () {
+    test('machine pressure increases when cylinder area decreases', () {
+      const od  = 160.0;
+      const e   = 160.0 / 11.0;
+
+      final smallCylinder = WeldingTableGenerator.debugCalculation(
+        pipeDiameterMm:           od,
+        wallThicknessMm:          e,
+        interfacialPressureBar:   0.15,
+        hydraulicCylinderAreaMm2: 500,   // smaller cylinder
+      )['machinePressure']!;
+
+      final largeCylinder = WeldingTableGenerator.debugCalculation(
+        pipeDiameterMm:           od,
+        wallThicknessMm:          e,
+        interfacialPressureBar:   0.15,
+        hydraulicCylinderAreaMm2: 5000,  // larger cylinder
+      )['machinePressure']!;
+
+      expect(smallCylinder, greaterThan(largeCylinder));
+    });
+
+    test('machine pressure is proportional to interfacial pressure', () {
+      const od  = 160.0;
+      const e   = 160.0 / 11.0;
+      const cyl = 1000.0;
+
+      final lowP = WeldingTableGenerator.debugCalculation(
+        pipeDiameterMm:           od,
+        wallThicknessMm:          e,
+        interfacialPressureBar:   0.10,
+        hydraulicCylinderAreaMm2: cyl,
+      )['machinePressure']!;
+
+      final highP = WeldingTableGenerator.debugCalculation(
+        pipeDiameterMm:           od,
+        wallThicknessMm:          e,
+        interfacialPressureBar:   0.25,
+        hydraulicCylinderAreaMm2: cyl,
+      )['machinePressure']!;
+
+      expect(highP, greaterThan(lowP));
+      // Linearity check — ratio should be ≈ 2.5×
+      expect(highP / lowP, closeTo(2.5, 0.05));
+    });
+  });
+
+  // ── Drag pressure compensation ─────────────────────────────────────────────
+
+  group('drag pressure compensation', () {
+    test('gauge pressure = machine pressure minus drag', () {
+      const od  = 160.0;
+      const e   = 160.0 / 11.0;
+      const cyl = 1000.0;
+
+      final noDrag = WeldingTableGenerator.debugCalculation(
+        pipeDiameterMm:           od,
+        wallThicknessMm:          e,
+        interfacialPressureBar:   0.15,
+        hydraulicCylinderAreaMm2: cyl,
+        dragPressureBar:          0.0,
+      )['machinePressure']!;
+
+      final withDrag = WeldingTableGenerator.debugCalculation(
+        pipeDiameterMm:           od,
+        wallThicknessMm:          e,
+        interfacialPressureBar:   0.15,
+        hydraulicCylinderAreaMm2: cyl,
+        dragPressureBar:          0.5,
+      )['machinePressure']!;
+
+      expect(withDrag, lessThan(noDrag));
+    });
+
+    test('gauge pressure is clamped to zero when drag exceeds machine pressure', () {
+      final dbg = WeldingTableGenerator.debugCalculation(
+        pipeDiameterMm:           160,
+        wallThicknessMm:          160 / 11.0,
+        interfacialPressureBar:   0.001,   // tiny interfacial → tiny force
+        hydraulicCylinderAreaMm2: 100000,  // enormous cylinder → tiny machine P
+        dragPressureBar:          999,     // absurd drag
+      );
+      expect(dbg['machinePressure']!, equals(0.0));
+    });
+  });
+
+  // ── Large diameter pipes (315+ mm) ─────────────────────────────────────────
+
+  group('large diameter pipes (315+ mm)', () {
+    test('DVS companion generates correct wall thickness for OD=315 SDR=11', () {
+      final companion = Dvs2207.generateFallback(
+        pipeDiameterMm: 315,
+        sdrRating:      '11',
+        pipeMaterial:   'PE100',
+      );
+      // e = 315/11 ≈ 28.64 mm
+      expect(companion.wallThicknessMm.value!, closeTo(315 / 11, 0.01));
+    });
+
+    test('large pipe produces higher fusion force than small pipe', () {
+      final small = WeldingTableGenerator.debugCalculation(
+        pipeDiameterMm:           160,
+        wallThicknessMm:          160 / 11.0,
+        interfacialPressureBar:   0.15,
+        hydraulicCylinderAreaMm2: 1000,
+      )['fusionForce']!;
+
+      final large = WeldingTableGenerator.debugCalculation(
+        pipeDiameterMm:           315,
+        wallThicknessMm:          315 / 11.0,
+        interfacialPressureBar:   0.15,
+        hydraulicCylinderAreaMm2: 1000,
+      )['fusionForce']!;
+
+      expect(large, greaterThan(small));
+    });
+
+    test('OD=630 SDR=17.6 (thick-wall transmission) — all companion fields present', () {
+      final companion = Dvs2207.generateFallback(
+        pipeDiameterMm:           630,
+        sdrRating:                '17.6',
+        pipeMaterial:             'PE100',
+        hydraulicCylinderAreaMm2: 5000,
+        dragPressureBar:          0.3,
+      );
+      expect(companion.fusionPressureBar.present, isTrue);
+      expect(companion.heatingTimeS.present,      isTrue);
+      expect(companion.coolingTimeS.present,      isTrue);
+      expect(companion.wallThicknessMm.present,   isTrue);
+
+      // e = 630/17.6 ≈ 35.8 mm
+      expect(
+        companion.wallThicknessMm.value!,
+        closeTo(630 / 17.6, 0.1),
+      );
+    });
+
+    test('debugCalculation for OD=630 returns all five keys', () {
+      final dbg = WeldingTableGenerator.debugCalculation(
+        pipeDiameterMm:           630,
+        wallThicknessMm:          630 / 17.6,
+        interfacialPressureBar:   0.15,
+        hydraulicCylinderAreaMm2: 5000,
+        dragPressureBar:          0.3,
+      );
+      expect(dbg.containsKey('wallThickness'),   isTrue);
+      expect(dbg.containsKey('beadWidth'),       isTrue);
+      expect(dbg.containsKey('contactArea'),     isTrue);
+      expect(dbg.containsKey('fusionForce'),     isTrue);
+      expect(dbg.containsKey('machinePressure'), isTrue);
+
+      // All values must be non-negative
+      for (final v in dbg.values) {
+        expect(v, greaterThanOrEqualTo(0));
       }
     });
   });
