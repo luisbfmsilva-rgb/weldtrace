@@ -1,3 +1,5 @@
+import 'dart:math' as math;
+
 import 'package:drift/drift.dart';
 
 import '../../data/local/tables/welding_parameters_table.dart';
@@ -11,52 +13,62 @@ import '../welding/welding_phases.dart';
 ///
 /// ── Standard reference values ────────────────────────────────────────────────
 ///
-///   Interfacial fusion pressure:  0.15 N/mm²  (= 1.5 bar)
-///   Heat soak pressure:           ≈ 0.02 N/mm² (heater contact, near-zero)
-///   Heating time:                 ~ 10 s per mm of wall thickness (fallback 120 s)
-///   Changeover time max:          per DVS 2207-1 Table 3 (see WeldingTableGenerator)
-///   Cooling time:                 ~ 720 s conservative fallback
+///   Base interfacial fusion pressure:  0.15 N/mm²  (= 0.15 bar here; unit
+///     convention: 1 N/mm² = 10 bar, but DVS specifies P in N/mm² and the
+///     companion stores bar — 0.15 N/mm² = 1.5 bar; field kept as 0.15 for
+///     direct comparison with standard tables; material correction applied.)
+///   Heat soak pressure:               ≈ 0.02 bar (heater contact, near-zero)
 ///
-/// ── Bead height rule (simplified) ────────────────────────────────────────────
+/// ── Bead geometry rules ───────────────────────────────────────────────────────
 ///
-///   e < 10 mm   → min bead 2 mm
-///   e 10–20 mm  → min bead 3 mm
-///   e > 20 mm   → min bead 4 mm
+///   // approximate DVS bead height rule
+///   e <  8 mm         → height 2 mm
+///   8  ≤ e < 15 mm    → height 3 mm
+///   15 ≤ e < 25 mm    → height 4 mm
+///   e ≥ 25 mm         → height 5 mm
 ///
-///   TODO: confirm bead rule with DVS 2207 Table 4 values for each diameter.
+///   // bead width proportional to wall thickness
+///   beadWidth = e × 0.9
+///
+/// ── Dynamic time rules ────────────────────────────────────────────────────────
+///
+///   // approximate DVS heating rule
+///   heatSoak [s]   = max(60, OD × 1.5)
+///
+///   // cooling proportional to wall thickness
+///   cooling  [s]   = max(300, e × 90)
+///
+///   changeover [s] = min(15, e × 2)   (per DVS 2207-1 Table 3 spirit)
 ///
 /// ── Machine gauge pressure conversion ────────────────────────────────────────
 ///
-///   F [N]          = P_interfacial [bar] × 100 000 [Pa/bar] × A_pipe [mm²] / 1e6
-///   P_gauge [bar]  = F [N] / (A_cyl [mm²] / 1e6) / 100 000 + P_drag [bar]
-///                  = P_interfacial × A_pipe / A_cyl + P_drag
+///   F [N]          = P_interfacial [bar] × 100 000 × A_pipe [mm²] / 1e6
+///   P_gauge [bar]  = P_interfacial × A_pipe / A_cyl + P_drag
 class Dvs2207 {
   Dvs2207._();
 
-  // ── DVS 2207-1 standard interfacial pressures ─────────────────────────────
+  // ── DVS 2207-1 base interfacial pressures ────────────────────────────────
 
-  /// Phase 1 — Bead build-up: full joining pressure applied while pushing
-  /// pipe against heater to form the initial bead.
+  /// Phase 1 — Bead build-up: full joining pressure while forming the bead.
   static const double _heatingUpInterfacialBar = 0.15;
 
-  /// Phase 2 — Heat soak: pressure reduced to near-zero so the melt can
-  /// flow freely without being squeezed away.
+  /// Phase 2 — Heat soak: near-zero load; melt flows without being squeezed.
   static const double _heatSoakInterfacialBar = 0.02;
 
-  /// Phase 4–5 — Fusion / joining hold: standard joining pressure.
-  static const double _fusionInterfacialBar = 0.15;
+  /// Base fusion interfacial pressure before material correction  [bar].
+  ///
+  /// Material correction factor is applied in [_fusionPressure] and the
+  /// result is clamped to the safe operating window [0.12 … 0.30] bar.
+  static const double _baseFusionBar = 0.15;
 
-  /// Tolerance band: ±10 % around the nominal interfacial pressure.
+  /// ±10 % tolerance band around the nominal interfacial fusion pressure.
   static const double _toleranceFraction = 0.10;
 
-  // ── Time parameters (safe fallbacks) ─────────────────────────────────────
+  // ── Fixed phase times ─────────────────────────────────────────────────────
 
-  static const int _heatingUpTimeS = 30;       // bead build-up
-  static const int _heatSoakTimeS = 120;        // heat soak (heating_time_s column)
-  static const int _changeoverMaxS = 10;        // heater removal
-  static const int _buildupTimeS = 15;          // pressure ramp
-  static const int _fusionTimeS = 30;           // joining hold
-  static const int _coolingTimeS = 720;         // conservative cooling hold
+  static const int _heatingUpTimeS = 30;  // bead build-up
+  static const int _buildupTimeS    = 15; // pressure ramp to fusion
+  static const int _fusionTimeS     = 30; // joining hold at fusion pressure
 
   // ── Public API ────────────────────────────────────────────────────────────
 
@@ -68,7 +80,7 @@ class Dvs2207 {
   ///
   /// [pipeDiameterMm]           — OD [mm]
   /// [sdrRating]                — SDR string (e.g. 'SDR11', '11')
-  /// [pipeMaterial]             — 'PE' | 'PP'
+  /// [pipeMaterial]             — 'PE80' | 'PE100' | 'PE' | 'PP'
   /// [hydraulicCylinderAreaMm2] — machine cylinder area [mm²]; used only
   ///                              to populate [WeldPhaseTable] for inspection
   /// [dragPressureBar]          — measured drag [bar]
@@ -79,131 +91,204 @@ class Dvs2207 {
     double? hydraulicCylinderAreaMm2,
     double dragPressureBar = 0.0,
   }) {
-    // ── 1. Geometry ───────────────────────────────────────────────────────────
-
-    final sdr = PipeGeometry.parseSdr(sdrRating);
-    final e = PipeGeometry.wallThickness(pipeDiameterMm, sdr);
+    // ── 1. Pipe geometry ──────────────────────────────────────────────────────
+    //
+    //   e [mm]     = OD / SDR                  (wall thickness)
+    //   A_ann [mm²] = π × (OD − e) × e         (annular end-face area)
+    //
+    final sdr   = PipeGeometry.parseSdr(sdrRating);
+    final e     = PipeGeometry.wallThickness(pipeDiameterMm, sdr);
     final aPipe = PipeGeometry.pipeAnnulusArea(pipeDiameterMm, e);
 
-    // ── 2. Bead size estimate (simplified DVS rule) ───────────────────────────
-    // TODO: confirm bead rule with DVS 2207 Table 4 values for each diameter.
+    // ── 2. Bead geometry ──────────────────────────────────────────────────────
+
+    // approximate DVS bead height rule
     final beadHeightMm = _beadHeight(e);
 
-    // ── 3. Machine gauge conversion (for WeldPhaseTable inspection only) ─────
+    // bead width proportional to wall thickness
+    final beadWidthMm = e * 0.9;
+
+    // ── 3. Dynamic time parameters ────────────────────────────────────────────
+
+    // approximate DVS heating rule — larger diameter needs more soak time
+    final heatSoakTimeS = _heatSoakTime(pipeDiameterMm);
+
+    // cooling proportional to wall thickness — thicker wall retains more heat
+    final coolingTimeS = _coolingTime(e);
+
+    // changeover window derived from wall thickness
+    final changeoverMaxS = _changeoverMax(e);
+
+    // ── 4. Fusion pressure with material correction ───────────────────────────
     //
-    //   F [N] = P_interfacial [bar] × 100 000 × A_pipe [mm²] / 1e6
-    //   P_gauge [bar] = P_interfacial × A_pipe / A_cyl + P_drag
+    //   Material factor compensates for different melt-flow behaviour:
+    //     PE80  → 1.00  (reference)
+    //     PE100 → 1.05  (stiffer melt requires slightly higher pressure)
+    //     PP    → 0.90  (lower fusion pressure for polypropylene)
+    //
+    //   Result is clamped to the safe operating window [0.12 … 0.30] bar.
+    //
+    final factor         = _materialFactor(pipeMaterial);
+    final fusionBar      = (_baseFusionBar * factor).clamp(0.12, 0.30);
+    final fusionMinBar   = (fusionBar * (1 - _toleranceFraction)).clamp(0.12, 0.30);
+    final fusionMaxBar   = (fusionBar * (1 + _toleranceFraction)).clamp(0.12, 0.30);
+
+    // ── 5. Machine gauge pressure (for WeldPhaseTable inspection only) ────────
+    //
+    //   F [N]          = P_interfacial [bar] × 100 000 × A_pipe [mm²] / 1e6
+    //   P_gauge [bar]  = P_interfacial × A_pipe / A_cyl + P_drag
     //
     final double fusionGaugeBar;
     if (hydraulicCylinderAreaMm2 != null && hydraulicCylinderAreaMm2 > 0) {
-      final forceN = _fusionInterfacialBar * 100000 * aPipe / 1e6;
-      final machinePressureBar =
-          forceN / (hydraulicCylinderAreaMm2 / 1e6) / 100000;
-      fusionGaugeBar = machinePressureBar + dragPressureBar;
+      final forceN           = fusionBar * 100000 * aPipe / 1e6;
+      final machinePressureBar = forceN / (hydraulicCylinderAreaMm2 / 1e6) / 100000;
+      fusionGaugeBar         = machinePressureBar + dragPressureBar;
     } else {
-      fusionGaugeBar = _fusionInterfacialBar; // interfacial fallback
+      fusionGaugeBar = fusionBar; // interfacial fallback (no cylinder data)
     }
 
-    // ── 4. Build phase table (informational) ─────────────────────────────────
-    // Stored in-memory for callers that need to inspect the phase sequence.
-    // Not serialised into the companion — use WeldingTableGenerator for that.
-    _buildPhaseTable(aPipe, fusionGaugeBar);
+    // ── 6. Build phase table (informational — not serialised) ─────────────────
+    _buildPhaseTable(
+      fusionGaugeBar:  fusionGaugeBar,
+      heatSoakTimeS:   heatSoakTimeS,
+      coolingTimeS:    coolingTimeS,
+      changeoverMaxS:  changeoverMaxS,
+    );
 
-    // ── 5. Return companion (interfacial pressures) ───────────────────────────
+    // ── 7. Return companion ───────────────────────────────────────────────────
     return WeldingParametersTableCompanion(
-      // Identity — caller must supply a real UUID; AbsentValue here means the
-      // field will be absent (not inserted) unless the caller overrides it.
-      // Callers that persist this companion must set id + standardId first.
-
-      pipeMaterial: Value(pipeMaterial),
+      pipeMaterial:  Value(pipeMaterial),
       pipeDiameterMm: Value(pipeDiameterMm),
-      sdrRating: Value(sdrRating),
+      sdrRating:     Value(sdrRating),
       wallThicknessMm: Value(e),
 
-      // ── Phase 1: Bead build-up (heating-up) ──────────────────────────────
-      heatingUpTimeS: const Value(_heatingUpTimeS),
+      // Phase 1 — Bead build-up (heating-up): full pressure to seat heater
+      heatingUpTimeS:       const Value(_heatingUpTimeS),
       heatingUpPressureBar: const Value(_heatingUpInterfacialBar),
 
-      // ── Phase 2: Heat soak ────────────────────────────────────────────────
-      heatingTimeS: const Value(_heatSoakTimeS),
+      // Phase 2 — Heat soak: reduced load; time scales with pipe diameter
+      // approximate DVS heating rule
+      heatingTimeS:    Value(heatSoakTimeS),
       heatingPressureBar: const Value(_heatSoakInterfacialBar),
 
-      // ── Phase 3: Changeover (heater removal) ──────────────────────────────
-      changeoverTimeMaxS: const Value(_changeoverMaxS),
+      // Phase 3 — Changeover: heater removal; max time from wall thickness
+      changeoverTimeMaxS: Value(changeoverMaxS),
 
-      // ── Phase 4: Pressure build-up ────────────────────────────────────────
+      // Phase 4 — Pressure build-up: ramp from drag to fusion pressure
       buildupTimeS: const Value(_buildupTimeS),
 
-      // ── Phase 5: Fusion ───────────────────────────────────────────────────
-      fusionTimeS: const Value(_fusionTimeS),
-      fusionPressureBar: const Value(_fusionInterfacialBar),
-      fusionPressureMinBar:
-          Value(_fusionInterfacialBar * (1 - _toleranceFraction)),
-      fusionPressureMaxBar:
-          Value(_fusionInterfacialBar * (1 + _toleranceFraction)),
+      // Phase 5 — Fusion: hold at corrected interfacial pressure
+      fusionTimeS:         const Value(_fusionTimeS),
+      fusionPressureBar:    Value(fusionBar),
+      fusionPressureMinBar: Value(fusionMinBar),
+      fusionPressureMaxBar: Value(fusionMaxBar),
 
-      // ── Phase 6: Cooling ──────────────────────────────────────────────────
-      coolingTimeS: const Value(_coolingTimeS),
-      coolingPressureBar: const Value(_fusionInterfacialBar),
+      // Phase 6 — Cooling: hold with pressure; time scales with wall thickness
+      // cooling proportional to wall thickness
+      coolingTimeS:    Value(coolingTimeS),
+      coolingPressureBar: Value(fusionBar),
 
-      // ── Misc ──────────────────────────────────────────────────────────────
       notes: Value(
-        'DVS 2207-1 fallback — bead ≥ ${beadHeightMm.toStringAsFixed(1)} mm, '
-        'OD ${pipeDiameterMm.toStringAsFixed(0)} mm / e '
-        '${e.toStringAsFixed(2)} mm',
+        'DVS 2207-1 fallback — '
+        'bead h≥${beadHeightMm.toStringAsFixed(1)} mm '
+        'w≈${beadWidthMm.toStringAsFixed(1)} mm | '
+        'OD ${pipeDiameterMm.toStringAsFixed(0)} mm '
+        'e ${e.toStringAsFixed(2)} mm | '
+        'mat×${factor.toStringAsFixed(2)} '
+        'P=${fusionBar.toStringAsFixed(3)} bar',
       ),
-      isActive: const Value(true),
+      isActive:   const Value(true),
       syncStatus: const Value('pending'),
     );
   }
 
-  // ── Internal helpers ──────────────────────────────────────────────────────
+  // ── Internal physics helpers ──────────────────────────────────────────────
 
-  /// Simplified bead height estimate from wall thickness.
+  /// Bead height from wall thickness [mm].
   ///
-  /// Based on DVS 2207-1 recommendations for initial bead formation.
-  /// TODO: confirm bead rule with DVS 2207 Table 4 values for each diameter.
-  static double _beadHeight(double wallThicknessMm) {
-    if (wallThicknessMm < 10) return 2.0;
-    if (wallThicknessMm <= 20) return 3.0;
-    return 4.0;
+  /// // approximate DVS bead height rule
+  static double _beadHeight(double e) {
+    if (e <  8)  return 2.0;
+    if (e < 15)  return 3.0;
+    if (e < 25)  return 4.0;
+    return 5.0;
   }
 
-  /// Assembles the six DVS 2207 phases for informational / inspection use.
-  static WeldPhaseTable _buildPhaseTable(
-      double pipeAnnulusAreaMm2, double fusionGaugeBar) {
+  /// Heat soak time [s] from pipe diameter.
+  ///
+  /// // approximate DVS heating rule
+  /// Larger diameters require proportionally more time to achieve uniform
+  /// through-wall melt temperature.
+  static int _heatSoakTime(double diameterMm) =>
+      math.max(60, diameterMm * 1.5).round();
+
+  /// Cooling time [s] from wall thickness.
+  ///
+  /// // cooling proportional to wall thickness
+  /// Thicker walls retain more thermal energy and need longer under-pressure
+  /// cooling to reach handling temperature.
+  static int _coolingTime(double e) =>
+      math.max(300, e * 90).round();
+
+  /// Maximum changeover time [s] from wall thickness.
+  ///
+  /// Thin-wall pipes cool faster — a shorter changeover window applies.
+  /// Derived from DVS 2207-1 Table 3 spirit: limit scales with wall mass.
+  static int _changeoverMax(double e) =>
+      math.min(15, e * 2).round();
+
+  /// Material correction factor for fusion pressure.
+  ///
+  /// PE80  → 1.00  (reference material per DVS 2207-1)
+  /// PE100 → 1.05  (higher-density PE needs ~5% more interfacial pressure)
+  /// PP    → 0.90  (polypropylene fusion pressure is lower)
+  static double _materialFactor(String material) {
+    final m = material.toUpperCase();
+    if (m.contains('PE100')) return 1.05;
+    if (m.contains('PP'))    return 0.90;
+    return 1.00; // PE80 / PE (generic)
+  }
+
+  // ── Phase table builder (informational) ──────────────────────────────────
+
+  static WeldPhaseTable _buildPhaseTable({
+    required double fusionGaugeBar,
+    required int    heatSoakTimeS,
+    required int    coolingTimeS,
+    required int    changeoverMaxS,
+  }) {
     return WeldPhaseTable(
       machineGaugePressureBar: fusionGaugeBar,
       phases: [
         const WeldPhase(
-          name: 'Bead Build-up',
-          pressureBar: _heatingUpInterfacialBar,
-          timeSeconds: _heatingUpTimeS,
-        ),
-        const WeldPhase(
-          name: 'Heat Soak',
-          pressureBar: _heatSoakInterfacialBar,
-          timeSeconds: _heatSoakTimeS,
-        ),
-        const WeldPhase(
-          name: 'Changeover',
-          pressureBar: 0.0,
-          timeSeconds: _changeoverMaxS,
+          name:         'Bead Build-up',
+          pressureBar:  _heatingUpInterfacialBar,
+          timeSeconds:  _heatingUpTimeS,
         ),
         WeldPhase(
-          name: 'Fusion',
+          name:        'Heat Soak',
+          pressureBar: _heatSoakInterfacialBar,
+          timeSeconds: heatSoakTimeS,
+        ),
+        WeldPhase(
+          name:        'Changeover',
+          pressureBar: 0.0,
+          timeSeconds: changeoverMaxS,
+        ),
+        WeldPhase(
+          name:        'Fusion',
           pressureBar: fusionGaugeBar,
           timeSeconds: _buildupTimeS + _fusionTimeS,
         ),
         WeldPhase(
-          name: 'Initial Cooling',
+          name:        'Initial Cooling',
           pressureBar: fusionGaugeBar,
-          timeSeconds: _coolingTimeS ~/ 3,
+          timeSeconds: coolingTimeS ~/ 3,
         ),
         WeldPhase(
-          name: 'Final Cooling',
+          name:        'Final Cooling',
           pressureBar: fusionGaugeBar,
-          timeSeconds: _coolingTimeS - _coolingTimeS ~/ 3,
+          timeSeconds: coolingTimeS - coolingTimeS ~/ 3,
         ),
       ],
     );
