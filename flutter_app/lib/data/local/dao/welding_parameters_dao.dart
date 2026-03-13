@@ -91,8 +91,13 @@ class WeldingParametersDao extends DatabaseAccessor<AppDatabase>
             ..limit(1))
           .getSingleOrNull();
 
-  Future<void> upsertParameter(WeldingParametersTableCompanion row) =>
+  /// Upsert a single parameter record by primary key.
+  Future<void> upsert(WeldingParametersTableCompanion row) =>
       into(weldingParametersTable).insertOnConflictUpdate(row);
+
+  /// Alias kept for backwards-compatibility.
+  Future<void> upsertParameter(WeldingParametersTableCompanion row) =>
+      upsert(row);
 
   Future<void> upsertAllParameters(
           List<WeldingParametersTableCompanion> rows) =>
