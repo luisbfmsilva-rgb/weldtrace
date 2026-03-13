@@ -6,3 +6,63 @@ id = "0Mkkh7q4CMPeQXduEfcSG"
 uri = "file://weldtrace_project.zip"
 type = "unspecified"
 title = "WeldTrace Project — Full Source (ZIP)"
+
+[[outputs]]
+id = "7eOeI1WXAO9ksEXWUl3Bq"
+uri = "file://weld_pdfs/01_PE100_160mm_SDR11_standard.pdf"
+type = "pdf"
+title = "01 — PE100 160mm SDR11 Standard (DVS 2207, 91 samples)"
+
+[[outputs]]
+id = "B7ixq03IEgfz03YlSAZ1c"
+uri = "file://weld_pdfs/02_PE80_110mm_SDR17_with_params.pdf"
+type = "pdf"
+title = "02 — PE80 110mm SDR17.6 with Welding Params (ISO 21307, 73 samples)"
+
+[[outputs]]
+id = "A5BUEU96vHAbSagm94gPy"
+uri = "file://weld_pdfs/03_PP_200mm_SDR11_industrial.pdf"
+type = "pdf"
+title = "03 — PP 200mm SDR11 Industrial (DVS 2207, 111 samples)"
+
+[[outputs]]
+id = "gfabZxQJP1IN9KMAg0alT"
+uri = "file://weld_pdfs/04_PE100_315mm_maxcurve_5000pt.pdf"
+type = "pdf"
+title = "04 — PE100 315mm Max Curve (ASTM F2620, 5 000 samples)"
+
+[[outputs]]
+id = "FU0VVRcfuO88m8NcAe5MN"
+uri = "file://weld_pdfs/05_LOW_SAMPLE_COUNT_emergency_stop.pdf"
+type = "pdf"
+title = "05 — LOW_SAMPLE_COUNT Emergency Stop (1 sample)"
+
+[[outputs]]
+id = "kp5tcrmBdreBmOeL12-tV"
+uri = "file://weld_pdfs/06_EMPTY_sensor_offline.pdf"
+type = "pdf"
+title = "06 — Empty Curve / Sensor Offline (0 samples)"
+
+[[outputs]]
+id = "mu9SxCxnPnhPXbbbjR9Tj"
+uri = "file://weld_pdfs/07_PVDF_63mm_SDR21_strict.pdf"
+type = "pdf"
+title = "07 — PVDF 63mm SDR21 Pharmaceutical (DVS 2207, 55 samples)"
+
+[[outputs]]
+id = "DSjMFM83XH4AndSjXoEO5"
+uri = "file://weld_pdfs/08_PE100_125mm_SDR11_batch_weld3.pdf"
+type = "pdf"
+title = "08 — PE100 125mm Batch Session Weld #3 (ISO 21307, 86 samples)"
+
+[[outputs]]
+id = "UWlQU0-bNpRad1ioA7ITA"
+uri = "file://weld_pdfs/09_PE100_160mm_commissioning_full.pdf"
+type = "pdf"
+title = "09 — PE100 160mm Commissioning, Full Params (ASTM F2620, 100 samples)"
+
+[[outputs]]
+id = "gXx1IuyIhl5MQ9EqOXxoE"
+uri = "file://weld_pdfs/10_PE100rc_200mm_SDR17_trench_repair.pdf"
+type = "pdf"
+title = "10 — PE100rc 200mm Emergency Trench Repair (DVS 2207, 95 samples)"
