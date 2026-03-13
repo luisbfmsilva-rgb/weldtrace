@@ -70,6 +70,16 @@ class AuthRepository {
     return const Success(null);
   }
 
+  /// Requests a password-reset email for [email].
+  ///
+  /// Stub — the actual API integration (Supabase password reset) will be
+  /// wired in a later sprint when the auth remote data source is extended.
+  /// Returns [Success(null)] unconditionally so the UI can always show
+  /// a confirmation message without leaking whether the address is registered.
+  Future<Result<void>> requestPasswordReset(String email) async {
+    return const Success(null);
+  }
+
   Future<Result<String?>> refreshAccessToken() async {
     final refreshToken = await getRefreshToken();
     if (refreshToken == null) {

@@ -93,9 +93,8 @@ class AstmF2620 {
     //   e [mm]      = OD / SDR                 (wall thickness)
     //   A_ann [mm²] = π × (OD − e) × e        (annular end-face area)
     //
-    final sdr   = PipeGeometry.parseSdr(sdrRating);
-    final e     = PipeGeometry.wallThickness(pipeDiameterMm, sdr);
-    final aPipe = PipeGeometry.pipeAnnulusArea(pipeDiameterMm, e);
+    final sdr = PipeGeometry.parseSdr(sdrRating);
+    final e   = PipeGeometry.wallThickness(pipeDiameterMm, sdr);
 
     // ── 2. Bead geometry ──────────────────────────────────────────────────────
 
@@ -104,6 +103,9 @@ class AstmF2620 {
 
     // bead width proportional to wall thickness
     final beadWidthMm = e * 0.9;
+
+    // approximate molten bead contact area
+    final contactAreaMm2 = math.pi * pipeDiameterMm * beadWidthMm;
 
     // ── 3. Dynamic time parameters ────────────────────────────────────────────
 
@@ -131,14 +133,17 @@ class AstmF2620 {
 
     // ── 5. Machine gauge pressure (for WeldPhaseTable inspection only) ────────
     //
-    //   F [N]          = P_interfacial [bar] × 100 000 × A_pipe [mm²] / 1e6
-    //   P_gauge [bar]  = P_interfacial × A_pipe / A_cyl + P_drag
+    //   converts bar × area into Newtons
+    //   F [N]               = P_interfacial [bar] × 100 000 × contactArea [mm²] / 1e6
+    //   machinePressure [bar] = F [N] / (A_cyl [mm²] / 1e6) / 100 000
+    //   gaugePressure [bar]   = machinePressure − P_drag  (clamped ≥ 0)
     //
     final double fusionGaugeBar;
     if (hydraulicCylinderAreaMm2 != null && hydraulicCylinderAreaMm2 > 0) {
-      final forceN             = fusionBar * 100000 * aPipe / 1e6;
+      // converts bar × area into Newtons
+      final forceN             = fusionBar * 100000 * contactAreaMm2 / 1e6;
       final machinePressureBar = forceN / (hydraulicCylinderAreaMm2 / 1e6) / 100000;
-      fusionGaugeBar           = machinePressureBar + dragPressureBar;
+      fusionGaugeBar           = math.max(0.0, machinePressureBar - dragPressureBar);
     } else {
       fusionGaugeBar = fusionBar;
     }

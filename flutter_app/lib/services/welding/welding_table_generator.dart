@@ -1,3 +1,7 @@
+import 'dart:math' as math;
+
+import 'package:drift/drift.dart';
+
 import '../../data/local/tables/welding_parameters_table.dart';
 import '../../workflow/welding_phase.dart';
 import '../standards/dvs_2207.dart';
@@ -75,17 +79,33 @@ class WeldingTableGenerator {
     required PipeSpec pipeSpec,
     required MachineSpec machineSpec,
   }) {
-    final area = pipeSpec.pipeAnnulusAreaMm2;
     final hasMachine = machineSpec.hasHydraulicData;
-    final cyl = machineSpec.hydraulicCylinderAreaMm2 ?? 1.0;
+    final cyl  = machineSpec.hydraulicCylinderAreaMm2 ?? 1.0;
     final drag = machineSpec.dragPressureBar;
 
-    // Converts one interfacial pressure value to machine gauge (or returns
-    // the interfacial value unchanged when cylinder area is unknown).
+    // Bead width and contact area for pressure conversion.
+    //
+    //   bead width proportional to wall thickness
+    final e            = pipeSpec.wallThicknessMm;
+    final beadWidthMm  = e * 0.9;
+    // approximate molten bead contact area
+    final contactAreaMm2 = math.pi * pipeSpec.outerDiameterMm * beadWidthMm;
+
+    // Converts one interfacial pressure value to machine gauge pressure.
+    //
+    //   converts bar × area into Newtons
+    //   F [N]               = P [bar] × 100 000 × contactArea [mm²] / 1e6
+    //   machinePressure [bar] = F / (A_cyl [mm²] / 1e6) / 100 000
+    //   gaugePressure [bar]   = machinePressure − P_drag  (clamped ≥ 0)
+    //
+    // Returns the interfacial value unchanged when cylinder area is unknown.
     double? convert(double? interfacial) {
       if (interfacial == null) return null;
       if (!hasMachine) return interfacial;
-      return (interfacial * area) / cyl + drag;
+      // converts bar × area into Newtons
+      final forceN             = interfacial * 100000 * contactAreaMm2 / 1e6;
+      final machinePressureBar = forceN / (cyl / 1e6) / 100000;
+      return math.max(0.0, machinePressureBar - drag);
     }
 
     // Fusion pressure band
@@ -127,18 +147,27 @@ class WeldingTableGenerator {
     PipeSpec pipeSpec,
     MachineSpec machineSpec,
   ) {
-    final area = pipeSpec.pipeAnnulusAreaMm2;
     final hasMachine = machineSpec.hasHydraulicData;
-    final cyl = machineSpec.hydraulicCylinderAreaMm2 ?? 1.0;
+    final cyl  = machineSpec.hydraulicCylinderAreaMm2 ?? 1.0;
     final drag = machineSpec.dragPressureBar;
 
-    const timeTol = 0.10;   // ±10 % time tolerance
-    const presTol = 0.10;   // ±10 % pressure tolerance fallback
+    // bead width proportional to wall thickness
+    final e            = pipeSpec.wallThicknessMm;
+    final beadWidthMm  = e * 0.9;
+    // approximate molten bead contact area
+    final contactAreaMm2 = math.pi * pipeSpec.outerDiameterMm * beadWidthMm;
 
+    const timeTol = 0.10;  // ±10 % time tolerance
+    const presTol = 0.10;  // ±10 % pressure tolerance fallback
+
+    // converts bar × area into Newtons; result clamped ≥ 0
     double? conv(double? interfacial) {
       if (interfacial == null) return null;
       if (!hasMachine) return interfacial;
-      return (interfacial * area) / cyl + drag;
+      // converts bar × area into Newtons
+      final forceN             = interfacial * 100000 * contactAreaMm2 / 1e6;
+      final machinePressureBar = forceN / (cyl / 1e6) / 100000;
+      return math.max(0.0, machinePressureBar - drag);
     }
 
     double? convMin(double? interfacial, double? nomMachine) =>
@@ -363,6 +392,66 @@ class WeldingTableGenerator {
       pipeMaterial: pipeMaterial,
       hydraulicCylinderAreaMm2: hydraulicCylinderAreaMm2,
       dragPressureBar: dragPressureBar,
+    );
+  }
+
+  // ── Companion → Record converter ──────────────────────────────────────────────
+
+  /// Creates a [WeldingParameterRecord] from a [WeldingParametersTableCompanion].
+  ///
+  /// Used when a fallback companion is generated offline (no DB row exists)
+  /// and must be passed to [generate] / [buildFromRecord] immediately.
+  ///
+  /// [id]         — synthetic record ID (e.g. 'fallback-dvs-PE100-160-11')
+  /// [standardId] — the standard's ID from the DB (or the standardId string)
+  static WeldingParameterRecord companionToRecord({
+    required WeldingParametersTableCompanion companion,
+    required String id,
+    required String standardId,
+  }) {
+    // Helper: extract value or return null for absent fields.
+    T? val<T>(Value<T> v) => v.present ? v.value : null;
+    // Helper: extract value or return a default for required fields.
+    T def<T>(Value<T> v, T defaultVal) => v.present ? v.value : defaultVal;
+
+    return WeldingParameterRecord(
+      id:              id,
+      standardId:      standardId,
+      pipeMaterial:    def(companion.pipeMaterial, ''),
+      pipeDiameterMm:  def(companion.pipeDiameterMm, 0.0),
+      sdrRating:       def(companion.sdrRating, ''),
+      wallThicknessMm: val(companion.wallThicknessMm),
+
+      ambientTempMinCelsius: def(companion.ambientTempMinCelsius, -15.0),
+      ambientTempMaxCelsius: def(companion.ambientTempMaxCelsius, 50.0),
+
+      heatingUpTimeS:       val(companion.heatingUpTimeS),
+      heatingUpPressureBar: val(companion.heatingUpPressureBar),
+      heatingTimeS:         val(companion.heatingTimeS),
+      heatingPressureBar:   val(companion.heatingPressureBar),
+      changeoverTimeMaxS:   val(companion.changeoverTimeMaxS),
+      buildupTimeS:         val(companion.buildupTimeS),
+      fusionTimeS:          val(companion.fusionTimeS),
+      fusionPressureBar:    val(companion.fusionPressureBar),
+      fusionPressureMinBar: val(companion.fusionPressureMinBar),
+      fusionPressureMaxBar: val(companion.fusionPressureMaxBar),
+      coolingTimeS:         val(companion.coolingTimeS),
+      coolingPressureBar:   val(companion.coolingPressureBar),
+
+      efWeldingTimeS:  val(companion.efWeldingTimeS),
+      efWeldingVoltage: val(companion.efWeldingVoltage),
+      efCoolingTimeS:  val(companion.efCoolingTimeS),
+
+      heatingTempNominalCelsius: val(companion.heatingTempNominalCelsius),
+      heatingTempMinCelsius:     val(companion.heatingTempMinCelsius),
+      heatingTempMaxCelsius:     val(companion.heatingTempMaxCelsius),
+
+      notes:      val(companion.notes),
+      isActive:   def(companion.isActive, true),
+      createdAt:  val(companion.createdAt),
+      updatedAt:  val(companion.updatedAt),
+      syncStatus: def(companion.syncStatus, 'pending'),
+      lastSyncedAt: val(companion.lastSyncedAt),
     );
   }
 

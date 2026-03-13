@@ -149,6 +149,15 @@ class AuthNotifier extends StateNotifier<AuthState> {
       failure: (_) {},
     );
   }
+
+  /// Sends a password-reset email to [email].
+  ///
+  /// Stub — delegates to [AuthRepository.requestPasswordReset].
+  /// The UI shows a confirmation snackbar regardless of outcome so that
+  /// valid email addresses are not enumerated to an attacker.
+  Future<void> requestPasswordReset(String email) async {
+    await _repo.requestPasswordReset(email);
+  }
 }
 
 final authProvider = StateNotifierProvider<AuthNotifier, AuthState>((ref) {

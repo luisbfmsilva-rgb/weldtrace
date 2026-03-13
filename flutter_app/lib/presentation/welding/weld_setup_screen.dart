@@ -178,9 +178,9 @@ class _WeldSetupScreenState extends ConsumerState<WeldSetupScreen> {
               hint: 'Select material',
               value: setup.pipeMaterial,
               items: const [
-                DropdownMenuItem(value: 'PE', child: Text('PE — Polyethylene')),
-                DropdownMenuItem(
-                    value: 'PP', child: Text('PP — Polypropylene')),
+                DropdownMenuItem(value: 'PE80',  child: Text('PE80 — Polyethylene 80')),
+                DropdownMenuItem(value: 'PE100', child: Text('PE100 — Polyethylene 100')),
+                DropdownMenuItem(value: 'PP',    child: Text('PP — Polypropylene')),
               ],
               onChanged: (v) {
                 if (v != null) {
@@ -272,6 +272,8 @@ class _WeldSetupScreenState extends ConsumerState<WeldSetupScreen> {
               _WeldingTableCard(table: setup.weldingTable!)
             else if (setup.matchedParameters != null)
               _ParameterPreviewCard(params: setup.matchedParameters!),
+            if (setup.parametersFromFallback)
+              _FallbackWarningBadge(),
             if (setup.lookupError != null)
               _ErrorCard(message: setup.lookupError!),
 
@@ -542,6 +544,43 @@ class _NoDataWarning extends StatelessWidget {
           Expanded(
               child: Text(message,
                   style: const TextStyle(fontSize: 13, color: Colors.amber))),
+        ],
+      ),
+    );
+  }
+}
+
+/// Yellow warning badge shown when welding parameters were computed by the
+/// offline fallback engine rather than loaded from certified database records.
+class _FallbackWarningBadge extends StatelessWidget {
+  const _FallbackWarningBadge();
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      margin: const EdgeInsets.only(bottom: 12),
+      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
+      decoration: BoxDecoration(
+        color: Colors.amber.shade50,
+        borderRadius: BorderRadius.circular(8),
+        border: Border.all(color: Colors.amber.shade700),
+      ),
+      child: Row(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Icon(Icons.warning_amber_rounded,
+              color: Colors.amber.shade800, size: 18),
+          const SizedBox(width: 8),
+          Expanded(
+            child: Text(
+              'Parameters generated automatically (verify with standard)',
+              style: TextStyle(
+                fontSize: 12,
+                color: Colors.amber.shade900,
+                fontWeight: FontWeight.w600,
+              ),
+            ),
+          ),
         ],
       ),
     );

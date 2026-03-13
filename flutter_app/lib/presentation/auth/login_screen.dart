@@ -16,6 +16,7 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
   final _emailController = TextEditingController();
   final _passwordController = TextEditingController();
   bool _obscurePassword = true;
+  bool _rememberMe = false;
 
   @override
   void dispose() {
@@ -35,6 +36,25 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
     if (authState.isAuthenticated) {
       context.go('/projects');
     }
+  }
+
+  Future<void> _forgotPassword() async {
+    final email = _emailController.text.trim();
+    if (email.isEmpty || !email.contains('@')) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('Enter your email address first, then tap Forgot Password.'),
+        ),
+      );
+      return;
+    }
+    await ref.read(authProvider.notifier).requestPasswordReset(email);
+    if (!mounted) return;
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(
+        content: Text('Password reset email sent to $email'),
+      ),
+    );
   }
 
   @override
@@ -121,6 +141,39 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
                         if (v.length < 8) return 'Minimum 8 characters';
                         return null;
                       },
+                    ),
+                    const SizedBox(height: 4),
+
+                    // Remember me + Forgot password row
+                    Row(
+                      children: [
+                        Checkbox(
+                          value: _rememberMe,
+                          onChanged: (v) =>
+                              setState(() => _rememberMe = v ?? false),
+                          materialTapTargetSize:
+                              MaterialTapTargetSize.shrinkWrap,
+                          visualDensity: VisualDensity.compact,
+                        ),
+                        const Text('Remember login',
+                            style: TextStyle(fontSize: 13)),
+                        const Spacer(),
+                        TextButton(
+                          onPressed:
+                              authState.isLoading ? null : _forgotPassword,
+                          style: TextButton.styleFrom(
+                            padding: EdgeInsets.zero,
+                            minimumSize: const Size(0, 36),
+                          ),
+                          child: Text(
+                            'Forgot password?',
+                            style: TextStyle(
+                              fontSize: 13,
+                              color: theme.colorScheme.primary,
+                            ),
+                          ),
+                        ),
+                      ],
                     ),
                     const SizedBox(height: 8),
 
