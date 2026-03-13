@@ -1,6 +1,7 @@
 import 'dart:math' as math;
 import 'dart:typed_data';
 
+import 'package:crypto/crypto.dart';
 import 'package:intl/intl.dart';
 import 'package:pdf/pdf.dart';
 import 'package:pdf/widgets.dart' as pw;
@@ -231,6 +232,22 @@ class WeldReportGenerator {
 
     return pdf.save();
   }
+
+  // ── PDF hash utility ─────────────────────────────────────────────────────
+
+  /// Computes the SHA-256 hex digest of [pdfBytes].
+  ///
+  /// Call this immediately after [generate] to obtain the hash that can be
+  /// stored in a [WeldCertificate]:
+  ///
+  /// ```dart
+  /// final pdfBytes = await WeldReportGenerator.generate(...);
+  /// final pdfHash  = WeldReportGenerator.computePdfHash(pdfBytes);
+  /// final cert     = WeldCertificate.generateCertificate(
+  ///   ..., pdfHash: pdfHash);
+  /// ```
+  static String computePdfHash(Uint8List pdfBytes) =>
+      sha256.convert(pdfBytes).toString();
 
   // ── Section builders ────────────────────────────────────────────────────
 
@@ -524,9 +541,18 @@ class WeldReportGenerator {
             ),
           ),
           pw.SizedBox(height: 6),
-          _certRow('Joint ID',  jointId),
-          _certRow('Signature', signature),
+          _certRow('Joint ID',    jointId),
+          _certRow('Signature',   signature),
+          _certRow('Certificate', '$jointId.certificate.json'),
           pw.SizedBox(height: 4),
+          pw.Text(
+            'Certificate available for this weld.',
+            style: pw.TextStyle(
+              fontSize:  8,
+              color:     PdfColors.grey800,
+            ),
+          ),
+          pw.SizedBox(height: 2),
           pw.Text(
             'Scan the QR code or query the public registry with the joint ID '
             'and signature above to independently confirm weld authenticity.',
