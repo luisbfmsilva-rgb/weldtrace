@@ -21,9 +21,11 @@ import 'weld_verifier.dart';
 ///   5. Curve Statistics — duration, max / avg pressure, sample count
 ///   6. Pressure × Time Chart — vector rendering; "No data" fallback
 ///   7. Digital Signature — SHA-256 fingerprint
-///   8. Verification — QR code (encodes full verification JSON payload) and
+///   8. Certification — local certification ledger record
+///   9. Public Verification — WeldTrace registry notice
+///  10. Weld Verification — QR code (encodes full verification JSON payload) and
 ///      scanner instructions
-///   9. Footer — page numbers
+///  11. Footer — page numbers
 ///
 /// All optional parameters default to placeholder strings so the report always
 /// renders without throwing.  Chart rendering is wrapped in try/catch.
@@ -211,7 +213,14 @@ class WeldReportGenerator {
             effectiveJointId, weldSignature, rowAltColour, accentColour),
           pw.SizedBox(height: 16),
 
-          // ── 8. Verification ───────────────────────────────────────────────
+          // ── 8. Public Verification ────────────────────────────────────────
+          _sectionTitle('Public Verification', accentColour),
+          pw.SizedBox(height: 6),
+          _publicVerificationBlock(
+            effectiveJointId, weldSignature, rowAltColour, accentColour),
+          pw.SizedBox(height: 16),
+
+          // ── 9. Weld Verification QR ───────────────────────────────────────
           _sectionTitle('Weld Verification', accentColour),
           pw.SizedBox(height: 6),
           _verificationBlock(weldSignature, qrPayload, rowAltColour, accentColour),
@@ -459,6 +468,60 @@ class WeldReportGenerator {
             'This weld is registered in the WeldTrace certification ledger. '
             'The joint ID and signature above are immutable and uniquely identify '
             'this weld joint in compliance with DVS 2207, ISO 21307, and ASTM F2620.',
+            style: pw.TextStyle(
+              fontSize:  7,
+              color:     PdfColors.grey600,
+              fontStyle: pw.FontStyle.italic,
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  /// Renders the PUBLIC VERIFICATION section — registry notice, joint ID and
+  /// signature.
+  ///
+  /// Informs field inspectors that the weld may be independently verified
+  /// against the WeldTrace public registry.
+  static pw.Widget _publicVerificationBlock(
+      String jointId,
+      String signature,
+      PdfColor bgColour,
+      PdfColor accentColour) {
+    return pw.Container(
+      padding: const pw.EdgeInsets.all(10),
+      decoration: pw.BoxDecoration(
+        color:        bgColour,
+        border:       pw.Border.all(color: accentColour),
+        borderRadius: const pw.BorderRadius.all(pw.Radius.circular(4)),
+      ),
+      child: pw.Column(
+        crossAxisAlignment: pw.CrossAxisAlignment.start,
+        children: [
+          pw.Text(
+            'Public Verification',
+            style: pw.TextStyle(
+              fontSize:   9,
+              fontWeight: pw.FontWeight.bold,
+              color:      accentColour,
+            ),
+          ),
+          pw.SizedBox(height: 4),
+          pw.Text(
+            'This weld may be verified using the WeldTrace registry.',
+            style: pw.TextStyle(
+              fontSize:  8,
+              color:     PdfColors.grey800,
+            ),
+          ),
+          pw.SizedBox(height: 6),
+          _certRow('Joint ID',  jointId),
+          _certRow('Signature', signature),
+          pw.SizedBox(height: 4),
+          pw.Text(
+            'Scan the QR code or query the public registry with the joint ID '
+            'and signature above to independently confirm weld authenticity.',
             style: pw.TextStyle(
               fontSize:  7,
               color:     PdfColors.grey600,

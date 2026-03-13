@@ -9,7 +9,8 @@ import 'weld_trace_signature.dart';
 /// The QR code embedded in every PDF report encodes a compact
 /// [buildVerificationPayload] JSON object (< 200 characters).  A field
 /// inspector can scan the code, extract the joint ID and signature, then
-/// call [verifySignature] to confirm authenticity.
+/// call [verifySignature] to confirm authenticity, or look up the entry in
+/// the WeldTrace public registry using the `verify` field.
 class WeldVerifier {
   WeldVerifier._();
 
@@ -54,27 +55,29 @@ class WeldVerifier {
   /// Structure:
   /// ```json
   /// {
-  ///   "app":   "WeldTrace",
-  ///   "joint": "<UUID-v7 joint ID>",
-  ///   "sig":   "<64-char SHA-256 hex>",
-  ///   "v":     1
+  ///   "app":    "WeldTrace",
+  ///   "joint":  "<UUID-v7 joint ID>",
+  ///   "sig":    "<64-char SHA-256 hex>",
+  ///   "v":      1,
+  ///   "verify": "registry"
   /// }
   /// ```
   ///
   /// Estimated size:
-  ///   27 (keys + braces) + 36 (UUID v7) + 64 (SHA-256) + separators ≈ 144 chars.
+  ///   36 (UUID v7) + 64 (SHA-256) + keys/separators ≈ 164 chars.
   ///
-  /// This fits comfortably within a QR code at error correction level M
-  /// (≈ 260 byte capacity for alphanumeric data).
+  /// The `verify: "registry"` field instructs scanner apps to cross-check
+  /// the entry in the WeldTrace public registry.
   static String buildVerificationPayload({
     required String jointId,
     required String signature,
   }) {
     return jsonEncode({
-      'app':   'WeldTrace',
-      'joint': jointId,
-      'sig':   signature,
-      'v':     1,
+      'app':    'WeldTrace',
+      'joint':  jointId,
+      'sig':    signature,
+      'v':      1,
+      'verify': 'registry',
     });
   }
 

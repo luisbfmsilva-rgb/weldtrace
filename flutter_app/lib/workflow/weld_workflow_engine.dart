@@ -12,6 +12,7 @@ import '../services/sensor/sensor_reading.dart';
 import '../services/sensor/sensor_service.dart';
 import '../services/welding_trace/curve_compression.dart';
 import '../services/welding_trace/weld_ledger.dart';
+import '../services/welding_trace/weld_registry.dart';
 import '../services/welding_trace/weld_trace_recorder.dart';
 import '../services/welding_trace/weld_trace_signature.dart';
 import '../services/welding_trace/weld_report_generator.dart';
@@ -317,6 +318,22 @@ class WeldWorkflowEngine {
       _logger.d('[WeldWorkflow] Ledger entry appended: $jointId');
     } catch (e) {
       _logger.w('[WeldWorkflow] Ledger append failed (non-fatal): $e');
+    }
+
+    // ── 6c. Append to global certification registry ────────────────────────
+    try {
+      await WeldRegistry.append(WeldRegistryEntry(
+        jointId:   jointId,
+        signature: signature,
+        timestamp: completedAt,
+        machineId: machineId,
+        diameter:  pipeDiameter,
+        material:  pipeMaterial,
+        sdr:       pipeSdr,
+      ));
+      _logger.d('[WeldWorkflow] Registry entry appended: $jointId');
+    } catch (e) {
+      _logger.w('[WeldWorkflow] Registry append failed (non-fatal): $e');
     }
 
     // ── 7. Mark weld IMMUTABLE ─────────────────────────────────────────────

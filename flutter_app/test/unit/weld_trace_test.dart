@@ -759,10 +759,12 @@ void main() {
         signature: _fakeSig,
       );
       final decoded = jsonDecode(json) as Map<String, dynamic>;
-      expect(decoded['app'],   equals('WeldTrace'));
-      expect(decoded['v'],     equals(1));
-      expect(decoded['joint'], equals('joint-001'));
-      expect(decoded['sig'],   equals(_fakeSig));
+      expect(decoded['app'],    equals('WeldTrace'));
+      expect(decoded['v'],      equals(1));
+      expect(decoded['joint'],  equals('joint-001'));
+      expect(decoded['sig'],    equals(_fakeSig));
+      expect(decoded['verify'], equals('registry'),
+          reason: 'QR payload must instruct scanners to cross-check the registry');
     });
 
     test('buildVerificationPayload stays under 200 characters', () {
