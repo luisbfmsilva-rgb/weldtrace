@@ -7,6 +7,28 @@ import 'package:path_provider/path_provider.dart';
 
 import 'weld_registry.dart';
 
+// ── CertSyncStatus ─────────────────────────────────────────────────────────────
+
+/// String constants for the [WeldCertificate.syncStatus] field.
+///
+/// | Value     | Meaning                                          |
+/// |-----------|--------------------------------------------------|
+/// | `pending` | Certificate generated; not yet uploaded to cloud.|
+/// | `synced`  | Successfully uploaded and acknowledged.          |
+/// | `offline` | Upload not attempted (sync disabled / no network)|
+abstract final class CertSyncStatus {
+  /// Certificate generated locally; upload has not been attempted.
+  static const String pending = 'pending';
+
+  /// Certificate successfully uploaded and acknowledged by the remote API.
+  static const String synced  = 'synced';
+
+  /// Sync is disabled or no network is available; upload was skipped.
+  static const String offline = 'offline';
+}
+
+// ── WeldCertificate ───────────────────────────────────────────────────────────
+
 /// A portable, versioned weld certificate.
 ///
 /// A [WeldCertificate] captures every field needed to independently prove
@@ -25,6 +47,7 @@ import 'weld_registry.dart';
 ///   [coolingTime], [beadHeight]
 /// - PDF integrity: [pdfHash] (SHA-256 of the PDF bytes, optional)
 /// - Provenance (optional): [software], [softwareVersion]
+/// - Sync status (optional, transient): [syncStatus] — not serialised to JSON
 ///
 /// ## JSON key ordering
 ///
@@ -86,6 +109,7 @@ class WeldCertificate {
     this.pdfHash,
     this.software,
     this.softwareVersion,
+    this.syncStatus,
   });
 
   // ── Schema constants ──────────────────────────────────────────────────────────
@@ -165,6 +189,17 @@ class WeldCertificate {
 
   /// Version string of [software] (e.g. `"1.0.0"`).
   final String? softwareVersion;
+
+  // ── Sync status ───────────────────────────────────────────────────────────────
+
+  /// Local synchronisation status for this certificate.
+  ///
+  /// One of [CertSyncStatus.pending], [CertSyncStatus.synced], or
+  /// [CertSyncStatus.offline].
+  ///
+  /// This field is **transient** — it is NOT included in [toJson] and is
+  /// NOT restored by [fromJson].  It tracks runtime upload state only.
+  final String? syncStatus;
 
   // ── Serialisation ────────────────────────────────────────────────────────────
 
@@ -268,6 +303,7 @@ class WeldCertificate {
     String? pdfHash,
     String? software,
     String? softwareVersion,
+    String? syncStatus,
   }) =>
       WeldCertificate(
         schemaType:      schemaType,
@@ -288,6 +324,7 @@ class WeldCertificate {
         pdfHash:         pdfHash,
         software:        software,
         softwareVersion: softwareVersion,
+        syncStatus:      syncStatus,
       );
 
   // ── PDF hash utility ─────────────────────────────────────────────────────────

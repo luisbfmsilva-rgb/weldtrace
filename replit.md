@@ -209,3 +209,64 @@ The plug-and-play sensor kit (hydraulic T-connector pressure sensor + PT100 temp
 
 ### Future: Digital Certification
 The `weld_certificates` and `weld_signatures` tables are reserved for the future digital certification module. They exist in the schema but are not yet fully implemented in the business logic.
+
+## Flutter Mobile App — Weld Traceability Layer
+
+Source: `flutter_app/lib/`
+
+### Certificate System (`services/welding_trace/`)
+
+| File | Purpose |
+|------|---------|
+| `weld_certificate.dart` | `WeldCertificate` model (schema v1 / `WeldTrace-CERT-1`), `CertSyncStatus` constants |
+| `weld_registry.dart` | Append-only local JSON registry (`registry_export.json`) |
+| `weld_ledger.dart` | Local JSON certification ledger |
+| `weld_public_verifier.dart` | Public verification (registry, schema, signature, PDF hash) |
+| `weld_report_generator.dart` | 11-section PDF engineering report |
+| `weld_sync_service.dart` | `SyncResult` model + `WeldSyncService` (offline-first default) |
+| `curve_compression.dart` | Gzip compression for pressure/time curves |
+
+### Configuration (`config/`)
+
+| File | Purpose |
+|------|---------|
+| `weldtrace_config.dart` | `WeldTraceConfig(syncEnabled, syncEndpoint)` — sync disabled by default |
+
+### Workflow Engine (`workflow/weld_workflow_engine.dart`)
+
+Steps executed on `completeWeld()`:
+1. Export pressure/time curve
+2. Generate SHA-256 joint signature
+3. Serialise + gzip-compress curve
+4. Generate PDF engineering report (non-fatal)
+5. Determine trace quality
+6. Persist trace data to SQLite (Drift)
+6b. Append to local certification ledger (non-fatal)
+6c. Append to global certification registry (non-fatal)
+6d. Attempt SaaS certificate upload via `WeldSyncService` (non-blocking, non-fatal)
+7. Mark weld IMMUTABLE
+
+### SaaS Sync Layer (Optional)
+
+`WeldSyncService` is offline-first: every method returns `SyncResult.offline()` by default.  
+No external dependencies are required.  The service is injected into `WeldWorkflowEngine`  
+via an optional constructor parameter (`syncService`).
+
+`SyncResult` factory constructors:
+- `SyncResult.offline()` — sync disabled / no network
+- `SyncResult.success([message])` — uploaded successfully
+- `SyncResult.failure(message)` — network/server error
+
+`CertSyncStatus` string constants: `pending`, `synced`, `offline`
+
+### Test Coverage (`test/unit/`)
+
+| File | Groups | Tests |
+|------|--------|-------|
+| `weld_trace_test.dart` | — | ~73 |
+| `weld_public_verifier_test.dart` | 4 | 29 |
+| `weld_registry_test.dart` | 3 | 23 |
+| `weld_certificate_test.dart` | 5 | 41 |
+| `weld_ledger_test.dart` | 3 | 15 |
+| `curve_compression_test.dart` | 2 | 11 |
+| `weld_sync_test.dart` | 3 | 27 |

@@ -11,8 +11,10 @@ import '../data/local/tables/weld_steps_table.dart';
 import '../services/sensor/sensor_reading.dart';
 import '../services/sensor/sensor_service.dart';
 import '../services/welding_trace/curve_compression.dart';
+import '../services/welding_trace/weld_certificate.dart';
 import '../services/welding_trace/weld_ledger.dart';
 import '../services/welding_trace/weld_registry.dart';
+import '../services/welding_trace/weld_sync_service.dart';
 import '../services/welding_trace/weld_trace_recorder.dart';
 import '../services/welding_trace/weld_trace_signature.dart';
 import '../services/welding_trace/weld_report_generator.dart';
@@ -63,6 +65,9 @@ class ParameterViolation {
 ///   4. Generates a professional PDF engineering report (non-fatal on failure)
 ///   5. Determines trace quality ('OK' / 'LOW_SAMPLE_COUNT')
 ///   6. Saves trace data to the DB row (compressed + plain JSON + PDF)
+///   6b. Appends entry to the local certification ledger (non-fatal)
+///   6c. Appends entry to the global certification registry (non-fatal)
+///   6d. Attempts SaaS certificate upload via [WeldSyncService] (non-blocking)
 ///   7. Marks the weld row as completed (IMMUTABLE after this)
 class WeldWorkflowEngine {
   WeldWorkflowEngine({
@@ -88,8 +93,10 @@ class WeldWorkflowEngine {
     this.coolingTimeSec    = 0.0,
     this.beadHeightMm      = 0.0,
     WeldTraceRecorder? traceRecorder,
-  })  : _logger   = logger ?? Logger(),
-        _recorder = traceRecorder ?? WeldTraceRecorder();
+    WeldSyncService?   syncService,
+  })  : _logger      = logger ?? Logger(),
+        _recorder    = traceRecorder ?? WeldTraceRecorder(),
+        _syncService = syncService  ?? const WeldSyncService();
 
   final AppDatabase db;
   final SensorService sensorService;
@@ -116,6 +123,7 @@ class WeldWorkflowEngine {
   final double beadHeightMm;
 
   final WeldTraceRecorder _recorder;
+  final WeldSyncService   _syncService;
 
   /// Read-only view of the live recording curve.
   List<WeldTracePoint> get traceCurve => _recorder.points;
@@ -334,6 +342,36 @@ class WeldWorkflowEngine {
       _logger.d('[WeldWorkflow] Registry entry appended: $jointId');
     } catch (e) {
       _logger.w('[WeldWorkflow] Registry append failed (non-fatal): $e');
+    }
+
+    // ── 6d. Optional SaaS sync (non-blocking, non-fatal) ──────────────────
+    try {
+      final cert = WeldCertificate.generateCertificate(
+        jointId:        jointId,
+        signature:      signature,
+        timestamp:      completedAt,
+        machineId:      machineId,
+        diameter:       pipeDiameter,
+        material:       pipeMaterial,
+        sdr:            pipeSdr,
+        traceQuality:   traceQuality,
+        fusionPressure: fusionPressureBar != 0.0 ? fusionPressureBar : null,
+        heatingTime:    heatingTimeSec   != 0.0 ? heatingTimeSec   : null,
+        coolingTime:    coolingTimeSec   != 0.0 ? coolingTimeSec   : null,
+        beadHeight:     beadHeightMm     != 0.0 ? beadHeightMm     : null,
+        syncStatus:     CertSyncStatus.pending,
+      );
+      final syncResult = await _syncService.uploadCertificate(cert);
+      if (syncResult.offline) {
+        _logger.d('[WeldWorkflow] Sync offline — certificate not uploaded: $jointId');
+      } else if (syncResult.success) {
+        _logger.i('[WeldWorkflow] Certificate synced to cloud: $jointId');
+      } else {
+        _logger.w('[WeldWorkflow] Certificate sync failed (non-fatal): '
+            '${syncResult.message}');
+      }
+    } catch (e) {
+      _logger.w('[WeldWorkflow] Certificate sync threw (non-fatal): $e');
     }
 
     // ── 7. Mark weld IMMUTABLE ─────────────────────────────────────────────
