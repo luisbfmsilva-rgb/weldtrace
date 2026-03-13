@@ -3,12 +3,13 @@ import 'dart:convert';
 import 'weld_trace_recorder.dart';
 import 'weld_trace_signature.dart';
 
-/// Provides weld verification utilities: signature recomputation and QR
-/// payload generation.
+/// Provides weld verification utilities: signature recomputation and
+/// optimised QR payload generation.
 ///
-/// The QR code embedded in every PDF report encodes a [buildVerificationPayload]
-/// JSON object.  A field inspector can scan the code, recompute the signature,
-/// and compare it to [WeldVerifier.verifySignature] to confirm authenticity.
+/// The QR code embedded in every PDF report encodes a compact
+/// [buildVerificationPayload] JSON object (< 200 characters).  A field
+/// inspector can scan the code, extract the joint ID and signature, then
+/// call [verifySignature] to confirm authenticity.
 class WeldVerifier {
   WeldVerifier._();
 
@@ -18,9 +19,6 @@ class WeldVerifier {
   /// it to [signature].
   ///
   /// Returns `true` only when every field and every curve sample match exactly.
-  ///
-  /// Parameters mirror [WeldTraceSignature.generate] exactly so that the same
-  /// deterministic payload is produced.
   static bool verifySignature({
     required String signature,
     required String machineId,
@@ -51,56 +49,46 @@ class WeldVerifier {
 
   // ── QR verification payload ────────────────────────────────────────────────
 
-  /// Builds the JSON string that is encoded into the QR code on every PDF.
+  /// Builds the optimised QR payload JSON string (< 200 characters).
   ///
   /// Structure:
   /// ```json
   /// {
-  ///   "app":       "WeldTrace",
-  ///   "version":   1,
-  ///   "signature": "<64-char SHA-256 hex>",
-  ///   "machine":   "<machineId>",
-  ///   "diameter":  160.0,
-  ///   "material":  "PE100",
-  ///   "sdr":       "11",
-  ///   "timestamp": "2025-06-15T08:30:00.000Z"
+  ///   "app":   "WeldTrace",
+  ///   "joint": "<UUID-v7 joint ID>",
+  ///   "sig":   "<64-char SHA-256 hex>",
+  ///   "v":     1
   /// }
   /// ```
   ///
-  /// The payload is designed to be compact enough for a QR code at error
-  /// correction level M (≈ 260 byte capacity).
+  /// Estimated size:
+  ///   27 (keys + braces) + 36 (UUID v7) + 64 (SHA-256) + separators ≈ 144 chars.
+  ///
+  /// This fits comfortably within a QR code at error correction level M
+  /// (≈ 260 byte capacity for alphanumeric data).
   static String buildVerificationPayload({
+    required String jointId,
     required String signature,
-    required String machineId,
-    required double diameter,
-    required String material,
-    required String sdr,
-    required DateTime timestamp,
   }) {
     return jsonEncode({
-      'app':       'WeldTrace',
-      'version':   1,
-      'signature': signature,
-      'machine':   machineId,
-      'diameter':  diameter,
-      'material':  material,
-      'sdr':       sdr,
-      'timestamp': timestamp.toUtc().toIso8601String(),
+      'app':   'WeldTrace',
+      'joint': jointId,
+      'sig':   signature,
+      'v':     1,
     });
   }
 
   /// Parses and validates a QR payload JSON string.
   ///
   /// Returns a [Map] with all fields when the payload is a valid WeldTrace
-  /// verification object (has `app == 'WeldTrace'` and `version == 1`).
-  /// Returns `null` when the string is invalid JSON or is not a WeldTrace
-  /// payload.
+  /// verification object (`app == 'WeldTrace'` and `v == 1`).
+  /// Returns `null` for invalid JSON or non-WeldTrace payloads.
   static Map<String, dynamic>? parsePayload(String json) {
     try {
       final decoded = jsonDecode(json);
       if (decoded is! Map<String, dynamic>) return null;
       if (decoded['app'] != 'WeldTrace') return null;
-      if (decoded['version'] != 1) return null;
+      if (decoded['v'] != 1) return null;
       return decoded;
     } catch (_) {
       return null;

@@ -44,7 +44,7 @@ class AppDatabase extends _$AppDatabase {
   AppDatabase([QueryExecutor? executor]) : super(executor ?? _openConnection());
 
   @override
-  int get schemaVersion => 6;
+  int get schemaVersion => 7;
 
   @override
   MigrationStrategy get migration => MigrationStrategy(
@@ -75,6 +75,10 @@ class AppDatabase extends _$AppDatabase {
           if (from < 6) {
             // v5 → v6: gzip-compressed curve BLOB column
             await m.addColumn(weldsTable, weldsTable.traceCurveCompressed);
+          }
+          if (from < 7) {
+            // v6 → v7: globally-unique joint ID for certification ledger
+            await m.addColumn(weldsTable, weldsTable.jointId);
           }
         },
       );

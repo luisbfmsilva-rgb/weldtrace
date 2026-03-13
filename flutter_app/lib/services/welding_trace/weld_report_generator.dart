@@ -63,11 +63,11 @@ class WeldReportGenerator {
     required String weldSignature,
     required DateTime timestamp,
     // ── Extended metadata (optional) ──────────────────────────────────────
-    String machineId       = '',
-    String operatorName    = '',
-    String jointId         = '',
+    String machineId        = '',
+    String operatorName     = '',
+    String jointId          = '',
     String wallThicknessStr = '',
-    String standardUsed    = '',
+    String standardUsed     = '',
     double fusionPressureBar = 0.0,
     double heatingTimeSec    = 0.0,
     double coolingTimeSec    = 0.0,
@@ -92,14 +92,11 @@ class WeldReportGenerator {
 
     final dateStr = DateFormat('dd MMM yyyy HH:mm').format(timestamp);
 
-    // ── QR verification payload ────────────────────────────────────────────
+    // ── QR verification payload (optimised — < 200 chars) ─────────────────
+    final effectiveJointId = jointId.isEmpty ? 'N/A' : jointId;
     final qrPayload = WeldVerifier.buildVerificationPayload(
+      jointId:   effectiveJointId,
       signature: weldSignature,
-      machineId: machineId.isEmpty ? 'N/A' : machineId,
-      diameter:  diameter,
-      material:  material,
-      sdr:       sdr,
-      timestamp: timestamp,
     );
 
     // ── Colour palette ─────────────────────────────────────────────────────
@@ -207,7 +204,14 @@ class WeldReportGenerator {
           _signatureBlock(weldSignature, rowAltColour, accentColour),
           pw.SizedBox(height: 16),
 
-          // ── 7. Verification ───────────────────────────────────────────────
+          // ── 7. Certification ──────────────────────────────────────────────
+          _sectionTitle('Certification', accentColour),
+          pw.SizedBox(height: 6),
+          _certificationBlock(
+            effectiveJointId, weldSignature, rowAltColour, accentColour),
+          pw.SizedBox(height: 16),
+
+          // ── 8. Verification ───────────────────────────────────────────────
           _sectionTitle('Weld Verification', accentColour),
           pw.SizedBox(height: 6),
           _verificationBlock(weldSignature, qrPayload, rowAltColour, accentColour),
@@ -423,9 +427,80 @@ class WeldReportGenerator {
     );
   }
 
+  /// Renders the CERTIFICATION section — Joint ID, signature, and ledger notice.
+  static pw.Widget _certificationBlock(
+      String jointId,
+      String signature,
+      PdfColor bgColour,
+      PdfColor accentColour) {
+    return pw.Container(
+      padding: const pw.EdgeInsets.all(10),
+      decoration: pw.BoxDecoration(
+        color:        bgColour,
+        border:       pw.Border.all(color: accentColour),
+        borderRadius: const pw.BorderRadius.all(pw.Radius.circular(4)),
+      ),
+      child: pw.Column(
+        crossAxisAlignment: pw.CrossAxisAlignment.start,
+        children: [
+          pw.Text(
+            'Certification Record',
+            style: pw.TextStyle(
+              fontSize:   9,
+              fontWeight: pw.FontWeight.bold,
+              color:      accentColour,
+            ),
+          ),
+          pw.SizedBox(height: 6),
+          _certRow('Joint ID',  jointId),
+          _certRow('Signature', signature),
+          pw.SizedBox(height: 6),
+          pw.Text(
+            'This weld is registered in the WeldTrace certification ledger. '
+            'The joint ID and signature above are immutable and uniquely identify '
+            'this weld joint in compliance with DVS 2207, ISO 21307, and ASTM F2620.',
+            style: pw.TextStyle(
+              fontSize:  7,
+              color:     PdfColors.grey600,
+              fontStyle: pw.FontStyle.italic,
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  static pw.Widget _certRow(String label, String value) {
+    return pw.Padding(
+      padding: const pw.EdgeInsets.only(bottom: 3),
+      child: pw.Row(
+        crossAxisAlignment: pw.CrossAxisAlignment.start,
+        children: [
+          pw.SizedBox(
+            width: 80,
+            child: pw.Text(
+              '$label:',
+              style: pw.TextStyle(
+                fontSize:   8,
+                fontWeight: pw.FontWeight.bold,
+              ),
+            ),
+          ),
+          pw.Expanded(
+            child: pw.Text(
+              value,
+              style: const pw.TextStyle(fontSize: 8),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
   /// Renders the QR code alongside scanner instructions.
   ///
-  /// The QR encodes the full verification JSON payload (see [WeldVerifier.buildVerificationPayload]).
+  /// The QR encodes the optimised verification JSON payload
+  /// (see [WeldVerifier.buildVerificationPayload]).
   static pw.Widget _verificationBlock(
       String signature,
       String qrPayload,

@@ -80,6 +80,13 @@ class WeldsTable extends Table {
   /// ratio is 10 : 1 for large curves (5 000 samples ≈ 400 kB → ~40 kB).
   BlobColumn get traceCurveCompressed => blob().nullable()();
 
+  // ── Weld certification — added in schema v7 ───────────────────────────────
+
+  /// Globally-unique joint identifier generated with UUID v7 at weld
+  /// completion.  Included in the QR verification payload and the local
+  /// certification ledger.  Null for welds completed before schema v7.
+  TextColumn get jointId => text().nullable()();
+
   @override
   Set<Column> get primaryKey => {id};
 }

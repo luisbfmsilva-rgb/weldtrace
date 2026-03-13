@@ -743,69 +743,55 @@ void main() {
       );
     });
 
-    // ── buildVerificationPayload ──────────────────────────────────────────────
+    // ── buildVerificationPayload (optimised — < 200 chars) ───────────────────
 
     test('buildVerificationPayload produces valid JSON', () {
-      final json    = WeldVerifier.buildVerificationPayload(
+      final json = WeldVerifier.buildVerificationPayload(
+        jointId:   'joint-001',
         signature: _fakeSig,
-        machineId: machId,
-        diameter:  diam,
-        material:  mat,
-        sdr:       sdrStr,
-        timestamp: ts,
       );
       expect(() => jsonDecode(json), returnsNormally);
     });
 
     test('buildVerificationPayload contains required keys', () {
       final json    = WeldVerifier.buildVerificationPayload(
+        jointId:   'joint-001',
         signature: _fakeSig,
-        machineId: machId,
-        diameter:  diam,
-        material:  mat,
-        sdr:       sdrStr,
-        timestamp: ts,
       );
       final decoded = jsonDecode(json) as Map<String, dynamic>;
-      expect(decoded['app'],       equals('WeldTrace'));
-      expect(decoded['version'],   equals(1));
-      expect(decoded['signature'], equals(_fakeSig));
-      expect(decoded['machine'],   equals(machId));
-      expect(decoded['diameter'],  equals(diam));
-      expect(decoded['material'],  equals(mat));
-      expect(decoded['sdr'],       equals(sdrStr));
-      expect(decoded['timestamp'], isA<String>());
+      expect(decoded['app'],   equals('WeldTrace'));
+      expect(decoded['v'],     equals(1));
+      expect(decoded['joint'], equals('joint-001'));
+      expect(decoded['sig'],   equals(_fakeSig));
     });
 
-    test('buildVerificationPayload timestamp is ISO-8601 UTC', () {
-      final json    = WeldVerifier.buildVerificationPayload(
+    test('buildVerificationPayload stays under 200 characters', () {
+      final json = WeldVerifier.buildVerificationPayload(
+        jointId:   '018f4e5a-1b2c-7d3e-9a4b-5c6d7e8f9a0b',
         signature: _fakeSig,
-        machineId: machId,
-        diameter:  diam,
-        material:  mat,
-        sdr:       sdrStr,
-        timestamp: ts,
       );
-      final decoded = jsonDecode(json) as Map<String, dynamic>;
-      final parsedTs = DateTime.parse(decoded['timestamp'] as String);
-      expect(parsedTs.isUtc, isTrue);
-      expect(parsedTs, equals(ts));
+      expect(json.length, lessThan(200),
+          reason: 'QR payload must fit within QR capacity at ECL-M');
+    });
+
+    test('buildVerificationPayload is deterministic for same inputs', () {
+      final a = WeldVerifier.buildVerificationPayload(
+        jointId: 'jnt-1', signature: _fakeSig);
+      final b = WeldVerifier.buildVerificationPayload(
+        jointId: 'jnt-1', signature: _fakeSig);
+      expect(a, equals(b));
     });
 
     // ── parsePayload ──────────────────────────────────────────────────────────
 
     test('parsePayload returns valid map for correct WeldTrace payload', () {
       final json   = WeldVerifier.buildVerificationPayload(
-        signature: _fakeSig,
-        machineId: machId,
-        diameter:  diam,
-        material:  mat,
-        sdr:       sdrStr,
-        timestamp: ts,
-      );
+        jointId: 'jnt-42', signature: _fakeSig);
       final parsed = WeldVerifier.parsePayload(json);
       expect(parsed, isNotNull);
-      expect(parsed!['app'], equals('WeldTrace'));
+      expect(parsed!['app'],   equals('WeldTrace'));
+      expect(parsed['joint'],  equals('jnt-42'));
+      expect(parsed['sig'],    equals(_fakeSig));
     });
 
     test('parsePayload returns null for invalid JSON', () {
@@ -813,12 +799,12 @@ void main() {
     });
 
     test('parsePayload returns null for non-WeldTrace payload', () {
-      final other = jsonEncode({'app': 'SomeOtherApp', 'version': 1});
+      final other = jsonEncode({'app': 'SomeOtherApp', 'v': 1});
       expect(WeldVerifier.parsePayload(other), isNull);
     });
 
     test('parsePayload returns null for wrong version', () {
-      final payload = jsonEncode({'app': 'WeldTrace', 'version': 99});
+      final payload = jsonEncode({'app': 'WeldTrace', 'v': 99});
       expect(WeldVerifier.parsePayload(payload), isNull);
     });
   });

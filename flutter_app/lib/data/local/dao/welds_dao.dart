@@ -87,6 +87,7 @@ class WeldsDao extends DatabaseAccessor<AppDatabase> with _$WeldsDaoMixin {
   ///                          compressed form via [loadTraceCurve].
   /// [pdfBytes]             — rendered PDF report as raw bytes (nullable)
   /// [traceQuality]         — 'OK' when ≥ 2 samples, 'LOW_SAMPLE_COUNT' otherwise
+  /// [jointId]              — globally-unique joint ID (UUID v7)
   Future<void> saveTraceData({
     required String id,
     required String signature,
@@ -94,6 +95,7 @@ class WeldsDao extends DatabaseAccessor<AppDatabase> with _$WeldsDaoMixin {
     Uint8List? traceCurveCompressed,
     Uint8List? pdfBytes,
     String? traceQuality,
+    String? jointId,
   }) =>
       (update(weldsTable)..where((t) => t.id.equals(id))).write(
         WeldsTableCompanion(
@@ -102,7 +104,8 @@ class WeldsDao extends DatabaseAccessor<AppDatabase> with _$WeldsDaoMixin {
           traceCurveCompressed: Value(traceCurveCompressed),
           tracePdf:             Value(pdfBytes),
           traceQuality:         Value(traceQuality),
-          updatedAt:            Value(DateTime.now()),
+          jointId:              Value(jointId),
+          updatedAt:            Value(DateTime.now().toUtc()),
         ),
       );
 

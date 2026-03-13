@@ -11,6 +11,7 @@ import '../data/local/tables/weld_steps_table.dart';
 import '../services/sensor/sensor_reading.dart';
 import '../services/sensor/sensor_service.dart';
 import '../services/welding_trace/curve_compression.dart';
+import '../services/welding_trace/weld_ledger.dart';
 import '../services/welding_trace/weld_trace_recorder.dart';
 import '../services/welding_trace/weld_trace_signature.dart';
 import '../services/welding_trace/weld_report_generator.dart';
@@ -225,7 +226,11 @@ class WeldWorkflowEngine {
       );
     }
 
-    final completedAt = DateTime.now();
+    final completedAt = DateTime.now().toUtc();
+
+    // ── 0. Generate globally-unique joint ID ──────────────────────────────
+    final jointId = const Uuid().v7();
+    _logger.d('[WeldWorkflow] Joint ID: $jointId');
 
     // ── 1. Export trace curve ─────────────────────────────────────────────
     final curve = _recorder.export();
@@ -267,7 +272,7 @@ class WeldWorkflowEngine {
         sdr:               pipeSdr,
         curve:             curve,
         weldSignature:     signature,
-        timestamp:         completedAt,
+        timestamp:         completedAt.toLocal(),
         operatorName:      operatorName,
         jointId:           jointId,
         wallThicknessStr:  wallThicknessStr,
@@ -296,11 +301,30 @@ class WeldWorkflowEngine {
       traceCurveCompressed: curveCompressed,
       pdfBytes:             pdfBytes,
       traceQuality:         traceQuality,
+      jointId:              jointId,
     );
+
+    // ── 6b. Append to local certification ledger ──────────────────────────
+    try {
+      await WeldLedger.append(WeldLedgerEntry(
+        jointId:   jointId,
+        signature: signature,
+        timestamp: completedAt,
+        machineId: machineId,
+        diameter:  pipeDiameter,
+        material:  pipeMaterial,
+      ));
+      _logger.d('[WeldWorkflow] Ledger entry appended: $jointId');
+    } catch (e) {
+      _logger.w('[WeldWorkflow] Ledger append failed (non-fatal): $e');
+    }
 
     // ── 7. Mark weld IMMUTABLE ─────────────────────────────────────────────
     await db.weldsDao.completeWeld(weldId, completedAt);
-    _logger.i('[WeldWorkflow] Weld completed: $weldId | signature: $signature');
+    _logger.i(
+      '[WeldWorkflow] Weld completed: $weldId | joint: $jointId | '
+      'signature: $signature',
+    );
   }
 
   void dispose() {

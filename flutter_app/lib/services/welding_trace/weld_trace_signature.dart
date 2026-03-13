@@ -65,7 +65,7 @@ class WeldTraceSignature {
       'diameter':         pipeDiameter,
       'material':         material,
       'sdr':              sdr,
-      'timestamp':        timestamp.toIso8601String(),
+      'timestamp':        timestamp.toUtc().toIso8601String(),
       // ── Extended welding parameters ───────────────────────────────────────
       'fusionPressureBar': fusionPressureBar,
       'heatingTimeSec':    heatingTimeSec,
