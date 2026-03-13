@@ -1,3 +1,4 @@
+import 'dart:convert';
 import 'dart:typed_data';
 
 import 'package:drift/drift.dart';
@@ -5,6 +6,8 @@ import 'package:drift/drift.dart';
 import '../database/app_database.dart';
 import '../tables/welds_table.dart';
 import '../tables/weld_steps_table.dart';
+import '../../services/welding_trace/curve_compression.dart';
+import '../../services/welding_trace/weld_trace_recorder.dart';
 
 part 'welds_dao.g.dart';
 
@@ -74,29 +77,62 @@ class WeldsDao extends DatabaseAccessor<AppDatabase> with _$WeldsDaoMixin {
   ///
   /// Must be called before [completeWeld] marks the row immutable.
   ///
-  /// [id]           — weld UUID
-  /// [signature]    — 64-char SHA-256 hex digest
-  /// [curveJson]    — JSON-encoded pressure × time curve
-  /// [pdfBytes]     — rendered PDF report as raw bytes (nullable — stored
-  ///                  only when PDF generation succeeded)
-  /// [traceQuality] — 'OK' when ≥ 2 samples recorded,
-  ///                  'LOW_SAMPLE_COUNT' when < 2 samples
+  /// [id]                   — weld UUID
+  /// [signature]            — 64-char SHA-256 hex digest
+  /// [curveJson]            — JSON-encoded pressure × time curve (kept for
+  ///                          backward compatibility; stored in TEXT column)
+  /// [traceCurveCompressed] — gzip-compressed curve bytes (preferred; stored
+  ///                          in BLOB column).  When provided, the DB stores
+  ///                          both representations; consumers prefer the
+  ///                          compressed form via [loadTraceCurve].
+  /// [pdfBytes]             — rendered PDF report as raw bytes (nullable)
+  /// [traceQuality]         — 'OK' when ≥ 2 samples, 'LOW_SAMPLE_COUNT' otherwise
   Future<void> saveTraceData({
     required String id,
     required String signature,
     required String curveJson,
+    Uint8List? traceCurveCompressed,
     Uint8List? pdfBytes,
     String? traceQuality,
   }) =>
       (update(weldsTable)..where((t) => t.id.equals(id))).write(
         WeldsTableCompanion(
-          traceSignature: Value(signature),
-          traceCurveJson: Value(curveJson),
-          tracePdf:       Value(pdfBytes),
-          traceQuality:   Value(traceQuality),
-          updatedAt:      Value(DateTime.now()),
+          traceSignature:       Value(signature),
+          traceCurveJson:       Value(curveJson),
+          traceCurveCompressed: Value(traceCurveCompressed),
+          tracePdf:             Value(pdfBytes),
+          traceQuality:         Value(traceQuality),
+          updatedAt:            Value(DateTime.now()),
         ),
       );
+
+  /// Loads and deserialises the pressure × time curve for a weld.
+  ///
+  /// Prefers the compressed BLOB column ([WeldsTable.traceCurveCompressed])
+  /// when available.  Falls back to the plain JSON TEXT column
+  /// ([WeldsTable.traceCurveJson]) for records from schema v4/v5.
+  ///
+  /// Returns `null` when the weld is not found or has no curve data.
+  Future<List<WeldTracePoint>?> loadTraceCurve(String id) async {
+    final weld = await getById(id);
+    if (weld == null) return null;
+
+    String? json;
+
+    if (weld.traceCurveCompressed != null) {
+      json = CurveCompression.decompressCurve(weld.traceCurveCompressed!);
+    } else if (weld.traceCurveJson != null) {
+      json = weld.traceCurveJson;
+    }
+
+    if (json == null) return null;
+
+    final decoded = jsonDecode(json);
+    if (decoded is! List) return null;
+    return decoded
+        .map((e) => WeldTracePoint.fromJson(Map<String, dynamic>.from(e as Map)))
+        .toList();
+  }
 
   // ── Weld steps ────────────────────────────────────────────────────────────
 

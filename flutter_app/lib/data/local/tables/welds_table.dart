@@ -54,7 +54,8 @@ class WeldsTable extends Table {
   TextColumn get traceSignature => text().nullable()();
 
   /// Full pressure × time curve serialised as a JSON array of
-  /// WeldTracePoint objects.  Null until the weld is completed.
+  /// WeldTracePoint objects.  Kept for backward compatibility with schema v4/v5.
+  /// New records should prefer [traceCurveCompressed].
   TextColumn get traceCurveJson => text().nullable()();
 
   /// PDF welding report as raw bytes.  Null until the weld is completed.
@@ -71,6 +72,13 @@ class WeldsTable extends Table {
   /// Null for welds completed before schema v5 or before the traceability
   /// feature was enabled.
   TextColumn get traceQuality => text().nullable()();
+
+  // ── Weld traceability — added in schema v6 ────────────────────────────────
+
+  /// Gzip-compressed pressure × time curve (replaces [traceCurveJson] for new
+  /// records).  Stored as raw bytes via a BLOB column.  Typical compression
+  /// ratio is 10 : 1 for large curves (5 000 samples ≈ 400 kB → ~40 kB).
+  BlobColumn get traceCurveCompressed => blob().nullable()();
 
   @override
   Set<Column> get primaryKey => {id};

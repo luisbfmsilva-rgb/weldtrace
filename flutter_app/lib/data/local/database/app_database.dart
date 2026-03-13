@@ -44,7 +44,7 @@ class AppDatabase extends _$AppDatabase {
   AppDatabase([QueryExecutor? executor]) : super(executor ?? _openConnection());
 
   @override
-  int get schemaVersion => 5;
+  int get schemaVersion => 6;
 
   @override
   MigrationStrategy get migration => MigrationStrategy(
@@ -71,6 +71,10 @@ class AppDatabase extends _$AppDatabase {
           if (from < 5) {
             // v4 → v5: trace quality indicator
             await m.addColumn(weldsTable, weldsTable.traceQuality);
+          }
+          if (from < 6) {
+            // v5 → v6: gzip-compressed curve BLOB column
+            await m.addColumn(weldsTable, weldsTable.traceCurveCompressed);
           }
         },
       );

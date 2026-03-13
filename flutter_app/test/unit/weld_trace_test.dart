@@ -1,8 +1,12 @@
+import 'dart:convert';
+
 import 'package:flutter_test/flutter_test.dart';
 
 import 'package:weldtrace/services/welding_trace/weld_trace_recorder.dart';
 import 'package:weldtrace/services/welding_trace/weld_trace_signature.dart';
 import 'package:weldtrace/services/welding_trace/weld_report_generator.dart';
+import 'package:weldtrace/services/welding_trace/weld_verifier.dart';
+import 'package:weldtrace/services/welding_trace/curve_compression.dart';
 
 // ── Helpers ───────────────────────────────────────────────────────────────────
 
@@ -594,6 +598,228 @@ void main() {
       );
       expect(String.fromCharCodes(shortBytes.sublist(0, 4)), equals('%PDF'));
       expect(String.fromCharCodes(longBytes.sublist(0, 4)),  equals('%PDF'));
+    });
+
+    test('generates valid PDF with all extended metadata fields', () async {
+      final bytes = await WeldReportGenerator.generate(
+        projectName:       'Pipeline P-01',
+        machineName:       'Ritmo Delta 160',
+        machineId:         'MACH-001',
+        diameter:          160,
+        material:          'PE100',
+        sdr:               '11',
+        curve:             _curve(50),
+        weldSignature:     _fakeSig,
+        timestamp:         DateTime.utc(2025, 6, 15),
+        operatorName:      'J. Silva',
+        jointId:           'JNT-042',
+        wallThicknessStr:  '14.6 mm',
+        standardUsed:      'DVS 2207',
+        fusionPressureBar: 0.153,
+        heatingTimeSec:    190,
+        coolingTimeSec:    180,
+        beadHeightMm:      3.2,
+      );
+      expect(String.fromCharCodes(bytes.sublist(0, 4)), equals('%PDF'));
+      expect(bytes.length, greaterThan(1024));
+    });
+
+    test('generates valid PDF with compressed curve (round-trip)', () async {
+      final originalCurve = _curve(200);
+      final json          = jsonEncode(originalCurve.map((p) => p.toJson()).toList());
+      final compressed    = CurveCompression.compressCurve(json);
+      final decompressed  = CurveCompression.decompressCurve(compressed);
+      final restoredCurve = (jsonDecode(decompressed) as List)
+          .map((e) => WeldTracePoint.fromJson(Map<String, dynamic>.from(e as Map)))
+          .toList();
+
+      final bytes = await WeldReportGenerator.generate(
+        projectName:   'Compressed Curve',
+        machineName:   'Machine A',
+        diameter:      200,
+        material:      'PE100',
+        sdr:           '11',
+        curve:         restoredCurve,
+        weldSignature: _fakeSig,
+        timestamp:     DateTime.utc(2025, 8, 1),
+      );
+      expect(String.fromCharCodes(bytes.sublist(0, 4)), equals('%PDF'));
+    });
+  });
+
+  // ── WeldVerifier ────────────────────────────────────────────────────────────
+
+  group('WeldVerifier', () {
+    final ts      = DateTime.utc(2025, 6, 15, 8, 30);
+    const machId  = 'MACH-001';
+    const diam    = 160.0;
+    const mat     = 'PE100';
+    const sdrStr  = '11';
+
+    List<WeldTracePoint> _buildCurve() => [
+          const WeldTracePoint(timeSeconds: 0.0, pressureBar: 0.15, phase: 'Heating'),
+          const WeldTracePoint(timeSeconds: 1.0, pressureBar: 0.16, phase: 'Heating'),
+          const WeldTracePoint(timeSeconds: 2.0, pressureBar: 0.14, phase: 'Cooling'),
+        ];
+
+    String _sig([List<WeldTracePoint>? curve]) => WeldTraceSignature.generate(
+          machineId:    machId,
+          pipeDiameter: diam,
+          material:     mat,
+          sdr:          sdrStr,
+          curve:        curve ?? _buildCurve(),
+          timestamp:    ts,
+        );
+
+    // ── verifySignature ───────────────────────────────────────────────────────
+
+    test('verifySignature returns true for correct inputs', () {
+      final sig = _sig();
+      expect(
+        WeldVerifier.verifySignature(
+          signature: sig,
+          machineId: machId,
+          diameter:  diam,
+          material:  mat,
+          sdr:       sdrStr,
+          curve:     _buildCurve(),
+          timestamp: ts,
+        ),
+        isTrue,
+      );
+    });
+
+    test('verifySignature returns false when signature is tampered', () {
+      final sig     = _sig();
+      final tampered = sig.replaceRange(0, 2, 'xx');
+      expect(
+        WeldVerifier.verifySignature(
+          signature: tampered,
+          machineId: machId,
+          diameter:  diam,
+          material:  mat,
+          sdr:       sdrStr,
+          curve:     _buildCurve(),
+          timestamp: ts,
+        ),
+        isFalse,
+      );
+    });
+
+    test('verifySignature returns false when curve is altered', () {
+      final sig = _sig();
+      final alteredCurve = [
+        const WeldTracePoint(timeSeconds: 0.0, pressureBar: 0.99, phase: 'Heating'),
+        const WeldTracePoint(timeSeconds: 1.0, pressureBar: 0.16, phase: 'Heating'),
+        const WeldTracePoint(timeSeconds: 2.0, pressureBar: 0.14, phase: 'Cooling'),
+      ];
+      expect(
+        WeldVerifier.verifySignature(
+          signature: sig,
+          machineId: machId,
+          diameter:  diam,
+          material:  mat,
+          sdr:       sdrStr,
+          curve:     alteredCurve,
+          timestamp: ts,
+        ),
+        isFalse,
+      );
+    });
+
+    test('verifySignature returns false when machineId changes', () {
+      final sig = _sig();
+      expect(
+        WeldVerifier.verifySignature(
+          signature: sig,
+          machineId: 'OTHER-MACHINE',
+          diameter:  diam,
+          material:  mat,
+          sdr:       sdrStr,
+          curve:     _buildCurve(),
+          timestamp: ts,
+        ),
+        isFalse,
+      );
+    });
+
+    // ── buildVerificationPayload ──────────────────────────────────────────────
+
+    test('buildVerificationPayload produces valid JSON', () {
+      final json    = WeldVerifier.buildVerificationPayload(
+        signature: _fakeSig,
+        machineId: machId,
+        diameter:  diam,
+        material:  mat,
+        sdr:       sdrStr,
+        timestamp: ts,
+      );
+      expect(() => jsonDecode(json), returnsNormally);
+    });
+
+    test('buildVerificationPayload contains required keys', () {
+      final json    = WeldVerifier.buildVerificationPayload(
+        signature: _fakeSig,
+        machineId: machId,
+        diameter:  diam,
+        material:  mat,
+        sdr:       sdrStr,
+        timestamp: ts,
+      );
+      final decoded = jsonDecode(json) as Map<String, dynamic>;
+      expect(decoded['app'],       equals('WeldTrace'));
+      expect(decoded['version'],   equals(1));
+      expect(decoded['signature'], equals(_fakeSig));
+      expect(decoded['machine'],   equals(machId));
+      expect(decoded['diameter'],  equals(diam));
+      expect(decoded['material'],  equals(mat));
+      expect(decoded['sdr'],       equals(sdrStr));
+      expect(decoded['timestamp'], isA<String>());
+    });
+
+    test('buildVerificationPayload timestamp is ISO-8601 UTC', () {
+      final json    = WeldVerifier.buildVerificationPayload(
+        signature: _fakeSig,
+        machineId: machId,
+        diameter:  diam,
+        material:  mat,
+        sdr:       sdrStr,
+        timestamp: ts,
+      );
+      final decoded = jsonDecode(json) as Map<String, dynamic>;
+      final parsedTs = DateTime.parse(decoded['timestamp'] as String);
+      expect(parsedTs.isUtc, isTrue);
+      expect(parsedTs, equals(ts));
+    });
+
+    // ── parsePayload ──────────────────────────────────────────────────────────
+
+    test('parsePayload returns valid map for correct WeldTrace payload', () {
+      final json   = WeldVerifier.buildVerificationPayload(
+        signature: _fakeSig,
+        machineId: machId,
+        diameter:  diam,
+        material:  mat,
+        sdr:       sdrStr,
+        timestamp: ts,
+      );
+      final parsed = WeldVerifier.parsePayload(json);
+      expect(parsed, isNotNull);
+      expect(parsed!['app'], equals('WeldTrace'));
+    });
+
+    test('parsePayload returns null for invalid JSON', () {
+      expect(WeldVerifier.parsePayload('not-valid-json'), isNull);
+    });
+
+    test('parsePayload returns null for non-WeldTrace payload', () {
+      final other = jsonEncode({'app': 'SomeOtherApp', 'version': 1});
+      expect(WeldVerifier.parsePayload(other), isNull);
+    });
+
+    test('parsePayload returns null for wrong version', () {
+      final payload = jsonEncode({'app': 'WeldTrace', 'version': 99});
+      expect(WeldVerifier.parsePayload(payload), isNull);
     });
   });
 }

@@ -10,6 +10,7 @@ import '../data/local/database/app_database.dart';
 import '../data/local/tables/weld_steps_table.dart';
 import '../services/sensor/sensor_reading.dart';
 import '../services/sensor/sensor_service.dart';
+import '../services/welding_trace/curve_compression.dart';
 import '../services/welding_trace/weld_trace_recorder.dart';
 import '../services/welding_trace/weld_trace_signature.dart';
 import '../services/welding_trace/weld_report_generator.dart';
@@ -48,19 +49,19 @@ class ParameterViolation {
 /// Drives a single weld session through its phase sequence.
 ///
 /// For each phase:
-///   1. Records phase start in local DB (weld_steps)
-///   2. Monitors sensor readings against [PhaseParameters]
-///   3. Emits [ParameterViolation] events on out-of-range readings
-///   4. Records each sensor reading into [WeldTraceRecorder]
-///   5. Records phase completion in local DB
+///   • Sensor readings are captured and checked against phase limits.
+///   • Violations are broadcast on [violationStream].
+///   • The pressure × time curve is recorded automatically.
 ///
 /// On [completeWeld]:
-///   1. Exports the pressure × time curve from [WeldTraceRecorder]
-///   2. Computes a SHA-256 joint signature via [WeldTraceSignature]
-///   3. Generates a PDF report via [WeldReportGenerator]
-///   4. Persists curve JSON, signature, and PDF to the weld DB row
-///
-/// The engine does NOT upload to the cloud — that is the [SyncService]'s job.
+///   1. Exports the pressure × time curve
+///   2. Generates a SHA-256 joint signature (includes welding parameters)
+///   3. Serialises the curve to JSON
+///   3b. Gzip-compresses the curve bytes
+///   4. Generates a professional PDF engineering report (non-fatal on failure)
+///   5. Determines trace quality ('OK' / 'LOW_SAMPLE_COUNT')
+///   6. Saves trace data to the DB row (compressed + plain JSON + PDF)
+///   7. Marks the weld row as completed (IMMUTABLE after this)
 class WeldWorkflowEngine {
   WeldWorkflowEngine({
     required this.db,
@@ -68,13 +69,22 @@ class WeldWorkflowEngine {
     required this.weldId,
     required this.phases,
     Logger? logger,
-    // ── Traceability metadata (optional — default to empty strings) ──────────
-    this.machineId    = '',
-    this.pipeDiameter = 0.0,
-    this.pipeMaterial = '',
-    this.pipeSdr      = '',
-    this.projectName  = '',
-    this.machineName  = '',
+    // ── Traceability metadata (optional — default to empty strings / zeros) ─
+    this.machineId         = '',
+    this.pipeDiameter      = 0.0,
+    this.pipeMaterial      = '',
+    this.pipeSdr           = '',
+    this.projectName       = '',
+    this.machineName       = '',
+    // ── Extended welding process parameters ──────────────────────────────────
+    this.operatorName      = '',
+    this.jointId           = '',
+    this.wallThicknessStr  = '',
+    this.standardUsed      = '',
+    this.fusionPressureBar = 0.0,
+    this.heatingTimeSec    = 0.0,
+    this.coolingTimeSec    = 0.0,
+    this.beadHeightMm      = 0.0,
     WeldTraceRecorder? traceRecorder,
   })  : _logger   = logger ?? Logger(),
         _recorder = traceRecorder ?? WeldTraceRecorder();
@@ -92,6 +102,17 @@ class WeldWorkflowEngine {
   final String pipeSdr;
   final String projectName;
   final String machineName;
+
+  // ── Extended welding process metadata ─────────────────────────────────────
+  final String operatorName;
+  final String jointId;
+  final String wallThicknessStr;
+  final String standardUsed;
+  final double fusionPressureBar;
+  final double heatingTimeSec;
+  final double coolingTimeSec;
+  final double beadHeightMm;
+
   final WeldTraceRecorder _recorder;
 
   /// Read-only view of the live recording curve.
@@ -183,14 +204,16 @@ class WeldWorkflowEngine {
 
   /// Complete the entire weld session.
   ///
-  /// In order:
-  ///   1. Exports the pressure × time curve from the trace recorder
-  ///   2. Generates a SHA-256 joint signature
-  ///   3. Serialises the curve to JSON
-  ///   4. Generates a PDF report (failure is logged, not rethrown)
-  ///   5. Determines trace quality ('OK' / 'LOW_SAMPLE_COUNT')
-  ///   6. Saves trace data to the DB row
-  ///   7. Marks the weld row as completed (IMMUTABLE after this)
+  /// Steps (in order):
+  ///   1. Export the pressure × time curve from the trace recorder
+  ///   2. Generate SHA-256 joint signature (includes welding process params)
+  ///   3. Serialise curve to JSON
+  ///   3b. Gzip-compress the curve bytes
+  ///   4. Generate professional PDF engineering report (failure is logged,
+  ///      not rethrown)
+  ///   5. Determine trace quality ('OK' / 'LOW_SAMPLE_COUNT')
+  ///   6. Persist trace data to DB (compressed + JSON + PDF)
+  ///   7. Mark the weld row IMMUTABLE
   Future<void> completeWeld() async {
     sensorService.stopCapture();
     _sensorSub?.cancel();
@@ -204,56 +227,78 @@ class WeldWorkflowEngine {
 
     final completedAt = DateTime.now();
 
-    // ── 1. Export trace curve ────────────────────────────────────────────────
+    // ── 1. Export trace curve ─────────────────────────────────────────────
     final curve = _recorder.export();
 
-    // ── 2. Generate joint signature ──────────────────────────────────────────
+    // ── 2. Generate joint signature ───────────────────────────────────────
     final signature = WeldTraceSignature.generate(
-      machineId:    machineId,
-      pipeDiameter: pipeDiameter,
-      material:     pipeMaterial,
-      sdr:          pipeSdr,
-      curve:        curve,
-      timestamp:    completedAt,
+      machineId:         machineId,
+      pipeDiameter:      pipeDiameter,
+      material:          pipeMaterial,
+      sdr:               pipeSdr,
+      curve:             curve,
+      timestamp:         completedAt,
+      fusionPressureBar: fusionPressureBar,
+      heatingTimeSec:    heatingTimeSec,
+      coolingTimeSec:    coolingTimeSec,
+      beadHeightMm:      beadHeightMm,
     );
 
-    // ── 3. Serialise curve to JSON ───────────────────────────────────────────
+    // ── 3. Serialise curve to JSON ─────────────────────────────────────────
     final curveJson = jsonEncode(curve.map((p) => p.toJson()).toList());
 
-    // ── 4. Generate PDF report (non-fatal on failure) ────────────────────────
+    // ── 3b. Gzip-compress curve ────────────────────────────────────────────
+    final curveCompressed = CurveCompression.compressCurve(curveJson);
+    _logger.d(
+      '[WeldWorkflow] Curve compressed: ${curveJson.length} chars → '
+      '${curveCompressed.length} bytes '
+      '(${(curveCompressed.length / curveJson.length * 100).toStringAsFixed(1)}%)',
+    );
+
+    // ── 4. Generate PDF report (non-fatal on failure) ─────────────────────
     Uint8List? pdfBytes;
     try {
       pdfBytes = await WeldReportGenerator.generate(
-        projectName:   projectName,
-        machineName:   machineName,
-        diameter:      pipeDiameter,
-        material:      pipeMaterial,
-        sdr:           pipeSdr,
-        curve:         curve,
-        weldSignature: signature,
-        timestamp:     completedAt,
+        projectName:       projectName,
+        machineName:       machineName,
+        machineId:         machineId,
+        diameter:          pipeDiameter,
+        material:          pipeMaterial,
+        sdr:               pipeSdr,
+        curve:             curve,
+        weldSignature:     signature,
+        timestamp:         completedAt,
+        operatorName:      operatorName,
+        jointId:           jointId,
+        wallThicknessStr:  wallThicknessStr,
+        standardUsed:      standardUsed,
+        fusionPressureBar: fusionPressureBar,
+        heatingTimeSec:    heatingTimeSec,
+        coolingTimeSec:    coolingTimeSec,
+        beadHeightMm:      beadHeightMm,
       );
       _logger.i('[WeldWorkflow] PDF report generated (${pdfBytes.length} bytes)');
     } catch (e) {
       _logger.w('[WeldWorkflow] PDF generation failed (non-fatal): $e');
     }
 
-    // ── 5. Determine trace quality ───────────────────────────────────────────
+    // ── 5. Determine trace quality ─────────────────────────────────────────
     final traceQuality = curve.length >= 2 ? 'OK' : 'LOW_SAMPLE_COUNT';
     if (traceQuality == 'LOW_SAMPLE_COUNT') {
       _logger.w('[WeldWorkflow] Low sample count: ${curve.length} samples recorded');
     }
 
-    // ── 6. Persist trace data before marking completed ───────────────────────
+    // ── 6. Persist trace data before marking completed ─────────────────────
     await db.weldsDao.saveTraceData(
-      id:           weldId,
-      signature:    signature,
-      curveJson:    curveJson,
-      pdfBytes:     pdfBytes,
-      traceQuality: traceQuality,
+      id:                   weldId,
+      signature:            signature,
+      curveJson:            curveJson,
+      traceCurveCompressed: curveCompressed,
+      pdfBytes:             pdfBytes,
+      traceQuality:         traceQuality,
     );
 
-    // ── 7. Mark weld IMMUTABLE ───────────────────────────────────────────────
+    // ── 7. Mark weld IMMUTABLE ─────────────────────────────────────────────
     await db.weldsDao.completeWeld(weldId, completedAt);
     _logger.i('[WeldWorkflow] Weld completed: $weldId | signature: $signature');
   }
@@ -275,7 +320,6 @@ class WeldWorkflowEngine {
 
   void _checkViolations(PhaseParameters params, SensorReading reading) {
     // Record into the trace curve (regardless of violation status).
-    // Guard inside recorder handles the case where start() was not yet called.
     if (reading.pressureBar != null) {
       _recorder.record(
         pressureBar: reading.pressureBar!,
