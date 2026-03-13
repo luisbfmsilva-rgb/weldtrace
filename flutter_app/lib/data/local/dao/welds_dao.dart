@@ -1,3 +1,5 @@
+import 'dart:typed_data';
+
 import 'package:drift/drift.dart';
 
 import '../database/app_database.dart';
@@ -65,6 +67,30 @@ class WeldsDao extends DatabaseAccessor<AppDatabase> with _$WeldsDaoMixin {
         WeldsTableCompanion(
           syncStatus: const Value('synced'),
           lastSyncedAt: Value(DateTime.now()),
+        ),
+      );
+
+  /// Persists the traceability payload for a completed weld.
+  ///
+  /// Must be called before [completeWeld] marks the row immutable.
+  ///
+  /// [id]            — weld UUID
+  /// [signature]     — 64-char SHA-256 hex digest
+  /// [curveJson]     — JSON-encoded pressure × time curve
+  /// [pdfBytes]      — rendered PDF report as raw bytes (nullable — stored
+  ///                   only when PDF generation succeeded)
+  Future<void> saveTraceData({
+    required String id,
+    required String signature,
+    required String curveJson,
+    Uint8List? pdfBytes,
+  }) =>
+      (update(weldsTable)..where((t) => t.id.equals(id))).write(
+        WeldsTableCompanion(
+          traceSignature: Value(signature),
+          traceCurveJson: Value(curveJson),
+          tracePdf:       Value(pdfBytes),
+          updatedAt:      Value(DateTime.now()),
         ),
       );
 

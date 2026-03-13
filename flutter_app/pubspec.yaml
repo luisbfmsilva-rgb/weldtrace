@@ -44,6 +44,13 @@ dependencies:
   # ── Camera (weld photos) ──────────────────────────────────────────────────
   image_picker: ^1.1.2
 
+  # ── Weld traceability — cryptographic signature ───────────────────────────
+  crypto: ^3.0.3
+
+  # ── Weld traceability — PDF report generation ─────────────────────────────
+  pdf: ^3.11.0
+  printing: ^5.13.1
+
   # ── Utilities ─────────────────────────────────────────────────────────────
   uuid: ^4.4.0
   intl: ^0.19.0

@@ -47,6 +47,19 @@ class WeldsTable extends Table {
       text().withDefault(const Constant('pending'))(); // pending | synced | conflict
   DateTimeColumn get lastSyncedAt => dateTime().nullable()();
 
+  // ── Weld traceability — added in schema v4 ────────────────────────────────
+
+  /// SHA-256 hex digest computed from the pressure × time curve + weld
+  /// metadata.  Null until the weld is completed.
+  TextColumn get traceSignature => text().nullable()();
+
+  /// Full pressure × time curve serialised as a JSON array of
+  /// WeldTracePoint objects.  Null until the weld is completed.
+  TextColumn get traceCurveJson => text().nullable()();
+
+  /// PDF welding report as raw bytes.  Null until the weld is completed.
+  BlobColumn get tracePdf => blob().nullable()();
+
   @override
   Set<Column> get primaryKey => {id};
 }
