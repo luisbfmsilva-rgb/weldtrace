@@ -6,6 +6,7 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:path/path.dart' as p;
 
 import 'package:weldtrace/services/welding_trace/weld_certificate.dart';
+import 'package:weldtrace/services/welding_trace/weld_public_verifier.dart';
 import 'package:weldtrace/services/welding_trace/weld_registry.dart';
 
 // ── Helpers ────────────────────────────────────────────────────────────────────
@@ -121,9 +122,11 @@ void main() {
       final json = _cert().toJson();
       final keys  = json.keys.toList();
       const expected = [
+        'schema', 'version',
         'jointId', 'signature', 'timestamp', 'machineId',
         'diameter', 'material', 'sdr', 'traceQuality',
         'fusionPressure', 'heatingTime', 'coolingTime', 'beadHeight', 'pdfHash',
+        'software', 'softwareVersion',
       ];
       expect(keys, equals(expected),
           reason: 'JSON key order must match the canonical schema');
@@ -337,6 +340,257 @@ void main() {
       expect(decoded.fusionPressure, closeTo(2.1,  0.001));
       expect(decoded.heatingTime,   closeTo(210.0, 0.001));
       expect(decoded.pdfHash,       equals(_fakeHash('a')));
+    });
+  });
+
+  // ── certificate_schema_validation ───────────────────────────────────────────
+
+  group('certificate_schema_validation', () {
+    test('toJson includes schema object as first key', () {
+      final json = _cert().toJson();
+      expect(json.keys.first, equals('schema'),
+          reason: 'schema must be the first key');
+    });
+
+    test('schema.type is "WeldTraceCertificate"', () {
+      final schema = _cert().toJson()['schema'] as Map<String, dynamic>;
+      expect(schema['type'], equals('WeldTraceCertificate'));
+    });
+
+    test('schema.version is "1.0"', () {
+      final schema = _cert().toJson()['schema'] as Map<String, dynamic>;
+      expect(schema['version'], equals('1.0'));
+    });
+
+    test('schemaType field on WeldCertificate has default value', () {
+      expect(_cert().schemaType, equals('WeldTraceCertificate'));
+    });
+
+    test('schemaVersion field on WeldCertificate has default value', () {
+      expect(_cert().schemaVersion, equals('1.0'));
+    });
+
+    test('fromJson reads schema type and version correctly', () {
+      final decoded = WeldCertificate.fromJson(_cert().toJson());
+      expect(decoded.schemaType,    equals('WeldTraceCertificate'));
+      expect(decoded.schemaVersion, equals('1.0'));
+    });
+
+    test('fromJson is backwards-compatible when schema key is absent', () {
+      // Simulate a pre-versioning certificate (no schema field)
+      final raw = <String, dynamic>{
+        'jointId':      'back-compat',
+        'signature':    _fakeSig(),
+        'timestamp':    '2025-01-01T00:00:00.000Z',
+        'machineId':    'M-01',
+        'diameter':     160.0,
+        'material':     'PE100',
+        'sdr':          '11',
+        'traceQuality': 'OK',
+      };
+      final decoded = WeldCertificate.fromJson(raw);
+      expect(decoded.schemaType,    equals('WeldTraceCertificate'),
+          reason: 'Missing schema defaults to WeldTraceCertificate');
+      expect(decoded.schemaVersion, equals('1.0'));
+    });
+
+    test('verifyCertificate rejects wrong schemaType', () async {
+      final dir = Directory.systemTemp.createTempSync('cert_schema_test_');
+      final reg = p.join(dir.path, 'registry_export.json');
+
+      final sig = _fakeSig('s');
+      await WeldRegistry.append(
+        WeldRegistryEntry(
+          jointId:   'schema-test',
+          signature: sig,
+          timestamp: DateTime.utc(2025, 1, 1),
+          machineId: 'M-01',
+          diameter:  160.0,
+          material:  'PE100',
+          sdr:       '11',
+        ),
+        registryPath: reg,
+      );
+
+      final badCert = WeldCertificate(
+        schemaType:    'WrongType',  // ← invalid
+        schemaVersion: '1.0',
+        jointId:       'schema-test',
+        signature:     sig,
+        timestamp:     DateTime.utc(2025, 1, 1),
+        machineId:     'M-01',
+        diameter:      160.0,
+        material:      'PE100',
+        sdr:           '11',
+        traceQuality:  'OK',
+      );
+
+      final result = await WeldPublicVerifier.verifyCertificate(
+        badCert,
+        registryPath: reg,
+      );
+      expect(result, isFalse,
+          reason: 'Wrong schemaType must be rejected');
+      dir.deleteSync(recursive: true);
+    });
+
+    test('verifyCertificate rejects wrong schemaVersion', () async {
+      final dir = Directory.systemTemp.createTempSync('cert_schema_v_test_');
+      final reg = p.join(dir.path, 'registry_export.json');
+
+      final sig = _fakeSig('v');
+      await WeldRegistry.append(
+        WeldRegistryEntry(
+          jointId:   'schema-v-test',
+          signature: sig,
+          timestamp: DateTime.utc(2025, 1, 1),
+          machineId: 'M-01',
+          diameter:  160.0,
+          material:  'PE100',
+          sdr:       '11',
+        ),
+        registryPath: reg,
+      );
+
+      final badCert = WeldCertificate(
+        schemaType:    'WeldTraceCertificate',
+        schemaVersion: '2.0',  // ← invalid
+        jointId:       'schema-v-test',
+        signature:     sig,
+        timestamp:     DateTime.utc(2025, 1, 1),
+        machineId:     'M-01',
+        diameter:      160.0,
+        material:      'PE100',
+        sdr:           '11',
+        traceQuality:  'OK',
+      );
+
+      final result = await WeldPublicVerifier.verifyCertificate(
+        badCert,
+        registryPath: reg,
+      );
+      expect(result, isFalse,
+          reason: 'Wrong schemaVersion must be rejected');
+      dir.deleteSync(recursive: true);
+    });
+
+    test('verifyCertificate accepts valid v1 certificate', () async {
+      final dir = Directory.systemTemp.createTempSync('cert_schema_ok_test_');
+      final reg = p.join(dir.path, 'registry_export.json');
+
+      final sig = _fakeSig('o');
+      await WeldRegistry.append(
+        WeldRegistryEntry(
+          jointId:   'ok-schema',
+          signature: sig,
+          timestamp: DateTime.utc(2025, 1, 1),
+          machineId: 'M-01',
+          diameter:  160.0,
+          material:  'PE100',
+          sdr:       '11',
+        ),
+        registryPath: reg,
+      );
+
+      final cert = WeldCertificate.generateCertificate(
+        jointId:      'ok-schema',
+        signature:    sig,
+        timestamp:    DateTime.utc(2025, 1, 1),
+        machineId:    'M-01',
+        diameter:     160.0,
+        material:     'PE100',
+        sdr:          '11',
+        traceQuality: 'OK',
+      );
+
+      final result = await WeldPublicVerifier.verifyCertificate(
+        cert,
+        registryPath: reg,
+      );
+      expect(result, isTrue);
+      dir.deleteSync(recursive: true);
+    });
+  });
+
+  // ── certificate_version_validation ──────────────────────────────────────────
+
+  group('certificate_version_validation', () {
+    test('version defaults to "WeldTrace-CERT-1"', () {
+      expect(_cert().version, equals('WeldTrace-CERT-1'));
+    });
+
+    test('version appears in toJson', () {
+      final json = _cert().toJson();
+      expect(json.containsKey('version'), isTrue);
+      expect(json['version'], equals('WeldTrace-CERT-1'));
+    });
+
+    test('version round-trips through fromJson', () {
+      final decoded = WeldCertificate.fromJson(_cert().toJson());
+      expect(decoded.version, equals('WeldTrace-CERT-1'));
+    });
+
+    test('fromJson is backwards-compatible when version key is absent', () {
+      final raw = <String, dynamic>{
+        'jointId':      'compat-v',
+        'signature':    _fakeSig(),
+        'timestamp':    '2025-01-01T00:00:00.000Z',
+        'machineId':    'M-01',
+        'diameter':     160.0,
+        'material':     'PE100',
+        'sdr':          '11',
+        'traceQuality': 'OK',
+      };
+      final decoded = WeldCertificate.fromJson(raw);
+      expect(decoded.version, equals('WeldTrace-CERT-1'));
+    });
+
+    test('generateCertificate sets version to default', () {
+      final cert = WeldCertificate.generateCertificate(
+        jointId:      'v-gen',
+        signature:    _fakeSig(),
+        timestamp:    DateTime.utc(2025, 1, 1),
+        machineId:    'M-01',
+        diameter:     160.0,
+        material:     'PE100',
+        sdr:          '11',
+        traceQuality: 'OK',
+      );
+      expect(cert.version, equals('WeldTrace-CERT-1'));
+    });
+
+    test('software and softwareVersion default to null', () {
+      expect(_cert().software,        isNull);
+      expect(_cert().softwareVersion, isNull);
+    });
+
+    test('software and softwareVersion round-trip correctly', () {
+      final cert = WeldCertificate.generateCertificate(
+        jointId:         'sw-test',
+        signature:       _fakeSig(),
+        timestamp:       DateTime.utc(2025, 1, 1),
+        machineId:       'M-01',
+        diameter:        160.0,
+        material:        'PE100',
+        sdr:             '11',
+        traceQuality:    'OK',
+        software:        'WeldTrace',
+        softwareVersion: '1.0.0',
+      );
+      final decoded = WeldCertificate.fromJson(cert.toJson());
+      expect(decoded.software,        equals('WeldTrace'));
+      expect(decoded.softwareVersion, equals('1.0.0'));
+    });
+
+    test('softwareVersion null in toJson when not set', () {
+      final json = _cert().toJson();
+      expect(json['software'],        isNull);
+      expect(json['softwareVersion'], isNull);
+    });
+
+    test('version appears before jointId in JSON key order', () {
+      final keys = _cert().toJson().keys.toList();
+      expect(keys.indexOf('version'), lessThan(keys.indexOf('jointId')));
     });
   });
 }

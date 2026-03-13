@@ -544,6 +544,7 @@ class WeldReportGenerator {
           _certRow('Joint ID',    jointId),
           _certRow('Signature',   signature),
           _certRow('Certificate', '$jointId.certificate.json'),
+          _certRow('Cert Format', 'WeldTrace-CERT-1'),
           pw.SizedBox(height: 4),
           pw.Text(
             'Certificate available for this weld.',

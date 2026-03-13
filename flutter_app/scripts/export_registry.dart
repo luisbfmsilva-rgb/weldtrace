@@ -131,19 +131,26 @@ Future<void> _generateCertificate(
 
   // Build certificate map with canonical key ordering
   final cert = <String, dynamic>{
-    'jointId':        entry['jointId'],
-    'signature':      entry['signature'],
-    'timestamp':      entry['timestamp'],
-    'machineId':      entry['machineId'],
-    'diameter':       entry['diameter'],
-    'material':       entry['material'],
-    'sdr':            entry['sdr'],
-    'traceQuality':   'OK',
-    'fusionPressure': null,
-    'heatingTime':    null,
-    'coolingTime':    null,
-    'beadHeight':     null,
-    'pdfHash':        null,
+    'schema': <String, dynamic>{
+      'type':    'WeldTraceCertificate',
+      'version': '1.0',
+    },
+    'version':         'WeldTrace-CERT-1',
+    'jointId':         entry['jointId'],
+    'signature':       entry['signature'],
+    'timestamp':       entry['timestamp'],
+    'machineId':       entry['machineId'],
+    'diameter':        entry['diameter'],
+    'material':        entry['material'],
+    'sdr':             entry['sdr'],
+    'traceQuality':    'OK',
+    'fusionPressure':  null,
+    'heatingTime':     null,
+    'coolingTime':     null,
+    'beadHeight':      null,
+    'pdfHash':         null,
+    'software':        'WeldTrace',
+    'softwareVersion': '1.0.0',
   };
 
   const encoder    = JsonEncoder.withIndent('  ');

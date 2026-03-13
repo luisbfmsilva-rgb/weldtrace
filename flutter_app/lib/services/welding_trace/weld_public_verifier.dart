@@ -194,7 +194,13 @@ class WeldPublicVerifier {
     List<WeldRegistryEntry>? registry,
     String? registryPath,
   }) async {
-    // ── 1. Registry entry check ──────────────────────────────────────────────
+    // ── 1. Schema type check ─────────────────────────────────────────────────
+    if (cert.schemaType != 'WeldTraceCertificate') return false;
+
+    // ── 2. Schema version check ──────────────────────────────────────────────
+    if (cert.schemaVersion != '1.0') return false;
+
+    // ── 3. Registry entry check ──────────────────────────────────────────────
     final bool registryOk;
     if (registry != null) {
       registryOk = verifyJoint(
@@ -211,11 +217,11 @@ class WeldPublicVerifier {
     }
     if (!registryOk) return false;
 
-    // ── 2. Signature format check (64 hex chars) ─────────────────────────────
+    // ── 4. Signature format check (64 hex chars) ─────────────────────────────
     final sigPattern = RegExp(r'^[0-9a-fA-F]{64}$');
     if (!sigPattern.hasMatch(cert.signature)) return false;
 
-    // ── 3. PDF hash format check (64 hex chars, when present) ────────────────
+    // ── 5. PDF hash format check (64 hex chars, when present) ────────────────
     if (cert.pdfHash != null && !sigPattern.hasMatch(cert.pdfHash!)) {
       return false;
     }
