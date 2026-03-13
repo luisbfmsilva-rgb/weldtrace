@@ -66,15 +66,21 @@ class WeldReportGenerator {
     required String weldSignature,
     required DateTime timestamp,
     // ── Extended metadata (optional) ──────────────────────────────────────
-    String machineId        = '',
-    String operatorName     = '',
-    String jointId          = '',
-    String wallThicknessStr = '',
-    String standardUsed     = '',
-    double fusionPressureBar = 0.0,
-    double heatingTimeSec    = 0.0,
-    double coolingTimeSec    = 0.0,
-    double beadHeightMm      = 0.0,
+    String machineId               = '',
+    String operatorName            = '',
+    String operatorId              = '',
+    String jointId                 = '',
+    String wallThicknessStr        = '',
+    String standardUsed            = '',
+    double fusionPressureBar        = 0.0,
+    double heatingTimeSec           = 0.0,
+    double coolingTimeSec           = 0.0,
+    double beadHeightMm             = 0.0,
+    // ── V1.0 additions ────────────────────────────────────────────────────
+    String traceQuality            = 'N/A',
+    String machineModel            = '',
+    String machineSerialNumber     = '',
+    double hydraulicCylinderAreaMm2 = 0.0,
   }) async {
     final pdf = pw.Document(
       author:  'WeldTrace',
@@ -125,38 +131,81 @@ class WeldReportGenerator {
         build: (context) => [
           pw.SizedBox(height: 12),
 
-          // ── 1. Project Information ────────────────────────────────────────
-          _sectionTitle('Project Information', accentColour),
+          // ── 1. Project ────────────────────────────────────────────────────
+          _sectionTitle('Project', accentColour),
           pw.SizedBox(height: 6),
           _infoTable(
             rows: [
-              ['Project',       projectName],
-              ['Machine',       machineName.isEmpty ? 'N/A' : machineName],
-              ['Operator',      operatorName.isEmpty ? 'N/A' : operatorName],
-              ['Date',          dateStr],
-              ['Joint ID',      jointId.isEmpty ? 'N/A' : jointId],
-              ['Standard',      standardUsed.isEmpty ? 'N/A' : standardUsed],
+              ['Project Name', projectName.isEmpty ? 'N/A' : projectName],
+              ['Date',         dateStr],
+              if (operatorName.isNotEmpty) ['Operator', operatorName],
+              if (operatorId.isNotEmpty)   ['Operator ID', operatorId],
             ],
             altColour: rowAltColour,
           ),
           pw.SizedBox(height: 16),
 
-          // ── 2. Pipe Information ───────────────────────────────────────────
-          _sectionTitle('Pipe Information', accentColour),
+          // ── 2. Joint Identification ───────────────────────────────────────
+          _sectionTitle('Joint Identification', accentColour),
           pw.SizedBox(height: 6),
           _infoTable(
             rows: [
+              ['Joint ID', jointId.isEmpty ? 'N/A' : jointId],
+            ],
+            altColour: rowAltColour,
+          ),
+          pw.SizedBox(height: 16),
+
+          // ── 3. Machine ────────────────────────────────────────────────────
+          _sectionTitle('Machine', accentColour),
+          pw.SizedBox(height: 6),
+          _infoTable(
+            rows: [
+              ['Model', () {
+                if (machineModel.isNotEmpty) return machineModel;
+                if (machineName.isNotEmpty)  return machineName;
+                return 'N/A';
+              }()],
+              ['Serial Number',
+                machineSerialNumber.isNotEmpty ? machineSerialNumber
+                    : (machineId.isNotEmpty ? machineId : 'N/A')],
+              ['Machine ID', machineId.isEmpty ? 'N/A' : machineId],
+              ['Hydraulic Cylinder Area',
+                hydraulicCylinderAreaMm2 > 0
+                    ? '${hydraulicCylinderAreaMm2.toStringAsFixed(1)} mm²'
+                    : 'N/A'],
+            ],
+            altColour: rowAltColour,
+          ),
+          pw.SizedBox(height: 16),
+
+          // ── 4. Pipe ───────────────────────────────────────────────────────
+          _sectionTitle('Pipe', accentColour),
+          pw.SizedBox(height: 6),
+          _infoTable(
+            rows: [
+              ['Material',       material.isEmpty ? 'N/A' : material],
               ['Diameter',       '${diameter.toStringAsFixed(1)} mm'],
-              ['Material',       material],
-              ['SDR',            sdr],
+              ['SDR',            sdr.isEmpty ? 'N/A' : sdr],
               ['Wall Thickness', wallThicknessStr.isEmpty ? 'N/A' : wallThicknessStr],
             ],
             altColour: rowAltColour,
           ),
           pw.SizedBox(height: 16),
 
-          // ── 3. Welding Parameters ─────────────────────────────────────────
-          _sectionTitle('Welding Parameters', accentColour),
+          // ── 5. Welding Standard ───────────────────────────────────────────
+          _sectionTitle('Welding Standard', accentColour),
+          pw.SizedBox(height: 6),
+          _infoTable(
+            rows: [
+              ['Standard', standardUsed.isEmpty ? 'N/A' : standardUsed],
+            ],
+            altColour: rowAltColour,
+          ),
+          pw.SizedBox(height: 16),
+
+          // ── 6. Weld Parameters ────────────────────────────────────────────
+          _sectionTitle('Weld Parameters', accentColour),
           pw.SizedBox(height: 6),
           _infoTable(
             rows: [
@@ -181,7 +230,19 @@ class WeldReportGenerator {
           ),
           pw.SizedBox(height: 16),
 
-          // ── 4. Curve Statistics ───────────────────────────────────────────
+          // ── 7. Trace Quality ──────────────────────────────────────────────
+          _sectionTitle('Trace Quality', accentColour),
+          pw.SizedBox(height: 6),
+          _infoTable(
+            rows: [
+              ['Quality', _traceQualityLabel(traceQuality)],
+              ['Samples', '${curve.length}'],
+            ],
+            altColour: rowAltColour,
+          ),
+          pw.SizedBox(height: 16),
+
+          // ── 8. Curve Statistics ───────────────────────────────────────────
           _sectionTitle('Curve Statistics', accentColour),
           pw.SizedBox(height: 6),
           _infoTable(
@@ -189,40 +250,39 @@ class WeldReportGenerator {
               ['Duration',         '${duration.toStringAsFixed(1)} s'],
               ['Max Pressure',     '${maxPressure.toStringAsFixed(3)} bar'],
               ['Average Pressure', '${avgPressure.toStringAsFixed(3)} bar'],
-              ['Total Samples',    '${curve.length}'],
             ],
             altColour: rowAltColour,
           ),
           pw.SizedBox(height: 16),
 
-          // ── 5. Pressure × Time Chart ──────────────────────────────────────
+          // ── 9. Pressure × Time Chart ──────────────────────────────────────
           _sectionTitle('Pressure × Time Curve', accentColour),
           pw.SizedBox(height: 6),
           _chart(curve, accentColour),
           pw.SizedBox(height: 16),
 
-          // ── 6. Digital Signature ──────────────────────────────────────────
-          _sectionTitle('Digital Weld Signature (SHA-256)', accentColour),
+          // ── 10. Signature ──────────────────────────────────────────────────
+          _sectionTitle('Signature (SHA-256)', accentColour),
           pw.SizedBox(height: 6),
           _signatureBlock(weldSignature, rowAltColour, accentColour),
           pw.SizedBox(height: 16),
 
-          // ── 7. Certification ──────────────────────────────────────────────
-          _sectionTitle('Certification', accentColour),
+          // ── 11. Certificate ────────────────────────────────────────────────
+          _sectionTitle('Certificate', accentColour),
           pw.SizedBox(height: 6),
           _certificationBlock(
             effectiveJointId, weldSignature, rowAltColour, accentColour),
           pw.SizedBox(height: 16),
 
-          // ── 8. Public Verification ────────────────────────────────────────
+          // ── 12. Public Verification ────────────────────────────────────────
           _sectionTitle('Public Verification', accentColour),
           pw.SizedBox(height: 6),
           _publicVerificationBlock(
             effectiveJointId, weldSignature, rowAltColour, accentColour),
           pw.SizedBox(height: 16),
 
-          // ── 9. Weld Verification QR ───────────────────────────────────────
-          _sectionTitle('Weld Verification', accentColour),
+          // ── 13. QR Verification ────────────────────────────────────────────
+          _sectionTitle('QR Verification', accentColour),
           pw.SizedBox(height: 6),
           _verificationBlock(weldSignature, qrPayload, rowAltColour, accentColour),
           pw.SizedBox(height: 8),
@@ -352,12 +412,27 @@ class WeldReportGenerator {
     );
   }
 
+  /// Maps an internal trace-quality code to a human-readable PDF label.
+  static String _traceQualityLabel(String quality) {
+    switch (quality) {
+      case 'OK':
+        return 'OK — trace curve complete';
+      case 'LOW_SAMPLE_COUNT':
+        return 'LOW SAMPLE COUNT — insufficient trace data';
+      default:
+        return quality.isEmpty ? 'N/A' : quality;
+    }
+  }
+
   static pw.Widget _chart(List<WeldTracePoint> curve, PdfColor accentColour) {
-    const chartHeight = 160.0;
-    const chartWidth  = 460.0;
+    const chartHeight  = 150.0;
+    const chartWidth   = 440.0;
+    const yLabelWidth  = 22.0;
+    final axisStyle    = pw.TextStyle(fontSize: 7, color: PdfColors.grey600);
 
+    pw.Widget chartBody;
     if (curve.length < 2) {
-      return pw.Container(
+      chartBody = pw.Container(
         width:  chartWidth,
         height: chartHeight,
         decoration: pw.BoxDecoration(
@@ -366,7 +441,7 @@ class WeldReportGenerator {
         ),
         child: pw.Center(
           child: pw.Text(
-            'No data recorded',
+            curve.isEmpty ? 'No data recorded' : 'Insufficient data (< 2 samples)',
             style: pw.TextStyle(
               color:     PdfColors.grey500,
               fontSize:  9,
@@ -375,41 +450,72 @@ class WeldReportGenerator {
           ),
         ),
       );
+    } else {
+      try {
+        chartBody = pw.Container(
+          width:  chartWidth,
+          height: chartHeight,
+          decoration: pw.BoxDecoration(
+            border: pw.Border.all(color: PdfColors.grey400),
+            color:  PdfColors.white,
+          ),
+          child: pw.CustomPaint(
+            painter: _CurvePainter(curve, accentColour),
+            child: pw.SizedBox(width: chartWidth, height: chartHeight),
+          ),
+        );
+      } catch (_) {
+        chartBody = pw.Container(
+          width:  chartWidth,
+          height: chartHeight,
+          decoration: pw.BoxDecoration(
+            border: pw.Border.all(color: PdfColors.grey400),
+            color:  PdfColors.white,
+          ),
+          child: pw.Center(
+            child: pw.Text(
+              'Chart unavailable',
+              style: pw.TextStyle(
+                color:     PdfColors.grey500,
+                fontSize:  9,
+                fontStyle: pw.FontStyle.italic,
+              ),
+            ),
+          ),
+        );
+      }
     }
 
-    try {
-      return pw.Container(
-        width:  chartWidth,
-        height: chartHeight,
-        decoration: pw.BoxDecoration(
-          border: pw.Border.all(color: PdfColors.grey400),
-          color:  PdfColors.white,
-        ),
-        child: pw.CustomPaint(
-          painter: _CurvePainter(curve, accentColour),
-          child: pw.SizedBox(width: chartWidth, height: chartHeight),
-        ),
-      );
-    } catch (_) {
-      return pw.Container(
-        width:  chartWidth,
-        height: chartHeight,
-        decoration: pw.BoxDecoration(
-          border: pw.Border.all(color: PdfColors.grey400),
-          color:  PdfColors.white,
-        ),
-        child: pw.Center(
-          child: pw.Text(
-            'Chart unavailable',
-            style: pw.TextStyle(
-              color:     PdfColors.grey500,
-              fontSize:  9,
-              fontStyle: pw.FontStyle.italic,
+    return pw.Column(
+      crossAxisAlignment: pw.CrossAxisAlignment.start,
+      children: [
+        pw.Row(
+          crossAxisAlignment: pw.CrossAxisAlignment.center,
+          children: [
+            // ── Y-axis label (rotated) ──────────────────────────────────────
+            pw.SizedBox(
+              width:  yLabelWidth,
+              height: chartHeight,
+              child: pw.Center(
+                child: pw.Transform.rotate(
+                  angle: -1.5708, // -π/2
+                  child: pw.Text('Pressure (bar)', style: axisStyle),
+                ),
+              ),
             ),
+            chartBody,
+          ],
+        ),
+        // ── X-axis label ────────────────────────────────────────────────────
+        pw.Container(
+          width:   yLabelWidth + chartWidth,
+          padding: const pw.EdgeInsets.only(left: yLabelWidth, top: 3),
+          child: pw.Center(
+            child: pw.Text('Time (s)', style: axisStyle),
           ),
         ),
-      );
-    }
+      ],
+    );
   }
 
   /// Renders the SHA-256 signature as a monospace text block.
@@ -733,6 +839,11 @@ class _CurvePainter extends pw.CustomPainter {
     for (int i = 1; i <= 3; i++) {
       final y = mb + (i / 4) * h;
       canvas.drawLine(ml, y, ml + w, y);
+      canvas.strokePath();
+    }
+    for (int i = 1; i <= 4; i++) {
+      final x = ml + (i / 5) * w;
+      canvas.drawLine(x, mb, x, mb + h);
       canvas.strokePath();
     }
 

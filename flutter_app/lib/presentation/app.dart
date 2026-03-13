@@ -52,10 +52,7 @@ class WeldTraceApp extends ConsumerWidget {
           path: '/weld/session',
           builder: (context, state) {
             final args = state.extra as WeldSessionArgs;
-            return WeldingSessionScreen(
-              weldId: args.weldId,
-              phases: args.phases,
-            );
+            return WeldingSessionScreen(args: args);
           },
         ),
 

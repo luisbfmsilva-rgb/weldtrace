@@ -31,9 +31,11 @@ class WeldSetupScreen extends ConsumerStatefulWidget {
 
 class _WeldSetupScreenState extends ConsumerState<WeldSetupScreen> {
   final _formKey = GlobalKey<FormState>();
-  final _ambientController = TextEditingController();
-  final _dragPressureController = TextEditingController();
-  final _notesController = TextEditingController();
+  final _ambientController       = TextEditingController();
+  final _dragPressureController  = TextEditingController();
+  final _notesController         = TextEditingController();
+  final _operatorNameController  = TextEditingController();
+  final _operatorIdController    = TextEditingController();
 
   @override
   void initState() {
@@ -53,6 +55,8 @@ class _WeldSetupScreenState extends ConsumerState<WeldSetupScreen> {
     _ambientController.dispose();
     _dragPressureController.dispose();
     _notesController.dispose();
+    _operatorNameController.dispose();
+    _operatorIdController.dispose();
     super.dispose();
   }
 
@@ -65,11 +69,34 @@ class _WeldSetupScreenState extends ConsumerState<WeldSetupScreen> {
     // Navigate when weld is created
     ref.listen<WeldSetupState>(weldSetupProvider, (_, next) {
       if (next.createdWeldId != null && next.createdPhases != null) {
+        final p          = next.matchedParameters;
+        final sdrRatio   = double.tryParse(next.sdrRating ?? '');
+        final wt         = (sdrRatio != null && sdrRatio > 1 && next.pipeDiameterMm != null)
+            ? next.pipeDiameterMm! / sdrRatio
+            : (p?.wallThicknessMm ?? 0.0);
+        final wallStr    = wt > 0 ? '${wt.toStringAsFixed(2)} mm' : '';
         context.go(
           '/weld/session',
           extra: WeldSessionArgs(
-            weldId: next.createdWeldId!,
-            phases: next.createdPhases!,
+            weldId:                  next.createdWeldId!,
+            phases:                  next.createdPhases!,
+            projectName:             next.projectName,
+            machineId:               next.selectedMachineId ?? '',
+            machineName:             next.machineName,
+            machineModel:            next.machineModel,
+            machineSerialNumber:     next.machineSerialNumber,
+            hydraulicCylinderAreaMm2: next.machineHydraulicAreaMm2 ?? 0.0,
+            operatorName:            next.operatorName,
+            operatorId:              next.operatorId,
+            pipeMaterial:            next.pipeMaterial ?? '',
+            pipeDiameter:            next.pipeDiameterMm ?? 0.0,
+            pipeSdr:                 next.sdrRating ?? '',
+            wallThicknessStr:        wallStr,
+            standardUsed:            next.standardUsed,
+            fusionPressureBar:       p?.fusionPressureBar ?? 0.0,
+            heatingTimeSec:          (p?.heatingTimeS ?? 0).toDouble(),
+            coolingTimeSec:          (p?.coolingTimeS ?? 0).toDouble(),
+            beadHeightMm:            0.0,
           ),
         );
         // Reset notifier so back-navigation does not re-navigate
@@ -195,14 +222,14 @@ class _WeldSetupScreenState extends ConsumerState<WeldSetupScreen> {
             // ── Section: Welding standard ────────────────────────────────
             _SectionHeader(title: 'Welding Standard'),
 
-            _SectionLabel(label: 'Standard'),
+            _SectionLabel(label: 'Welding Standard'),
             setup.standards.isEmpty
                 ? _NoDataWarning(
                     message:
-                        'No standards loaded. Sync to pull data from the cloud.',
+                        'No welding standards available. Using fallback calculation.',
                   )
                 : _DropdownField<String>(
-                    hint: 'Select standard',
+                    hint: 'Select welding standard',
                     value: setup.selectedStandardId,
                     items: setup.standards
                         .map((s) => DropdownMenuItem(
@@ -281,6 +308,31 @@ class _WeldSetupScreenState extends ConsumerState<WeldSetupScreen> {
 
             // ── Section: Optional fields ─────────────────────────────────
             _SectionHeader(title: 'Optional'),
+
+            // Operator name (optional)
+            _SectionLabel(label: 'Operator Name'),
+            TextFormField(
+              controller: _operatorNameController,
+              textCapitalization: TextCapitalization.words,
+              decoration: const InputDecoration(
+                hintText: 'e.g. João Silva',
+              ),
+              onChanged: (v) =>
+                  ref.read(weldSetupProvider.notifier).setOperatorName(v),
+            ),
+            const SizedBox(height: 14),
+
+            // Operator ID (optional)
+            _SectionLabel(label: 'Operator ID / Badge Number'),
+            TextFormField(
+              controller: _operatorIdController,
+              decoration: const InputDecoration(
+                hintText: 'e.g. OP-1042',
+              ),
+              onChanged: (v) =>
+                  ref.read(weldSetupProvider.notifier).setOperatorId(v),
+            ),
+            const SizedBox(height: 14),
 
             // Ambient temperature
             _SectionLabel(label: 'Ambient Temperature (°C)'),
@@ -573,7 +625,7 @@ class _FallbackWarningBadge extends StatelessWidget {
           const SizedBox(width: 8),
           Expanded(
             child: Text(
-              'Parameters generated automatically (verify with standard)',
+              'Parameters generated automatically — verify against official standard.',
               style: TextStyle(
                 fontSize: 12,
                 color: Colors.amber.shade900,

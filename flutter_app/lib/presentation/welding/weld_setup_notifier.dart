@@ -31,9 +31,19 @@ class WeldSetupState {
     this.ambientTemperature,
     this.notes,
 
-    // Machine hydraulics (loaded when machine is selected)
+    // Operator identification (entered in Optional section)
+    this.operatorName = '',
+    this.operatorId   = '',
+
+    // Machine metadata (loaded when machine is selected)
     this.machineHydraulicAreaMm2,
-    this.dragPressureBar = 0.0,
+    this.machineModel          = '',
+    this.machineSerialNumber   = '',
+    this.machineName           = '',
+    this.dragPressureBar       = 0.0,
+
+    // Project name (loaded when project is selected)
+    this.projectName = '',
 
     // Result of parameter lookup
     this.matchedParameters,
@@ -44,6 +54,9 @@ class WeldSetupState {
 
     // Computed welding table (machine gauge pressures)
     this.weldingTable,
+
+    // Standard display name (resolved from selectedStandardId)
+    this.standardUsed = '',
 
     // Submission
     this.isSubmitting = false,
@@ -65,9 +78,30 @@ class WeldSetupState {
   final double? ambientTemperature;
   final String? notes;
 
+  /// Operator name entered in the Optional section.
+  final String operatorName;
+
+  /// Operator ID entered in the Optional section.
+  final String operatorId;
+
   /// Hydraulic cylinder area of the selected machine [mm²].
   /// Null when the machine record does not have this value yet.
   final double? machineHydraulicAreaMm2;
+
+  /// Machine model loaded from the DB when a machine is selected.
+  final String machineModel;
+
+  /// Machine serial number loaded from the DB when a machine is selected.
+  final String machineSerialNumber;
+
+  /// Full display name of the machine (manufacturer + model).
+  final String machineName;
+
+  /// Project display name loaded when a project is selected.
+  final String projectName;
+
+  /// Standard code resolved from [selectedStandardId] at weld start.
+  final String standardUsed;
 
   /// Drag pressure measured by the operator before welding [bar].
   /// Defaults to 0 (no drag) when not entered.
@@ -118,7 +152,14 @@ class WeldSetupState {
     String? selectedStandardId,
     double? ambientTemperature,
     String? notes,
+    String? operatorName,
+    String? operatorId,
     double? machineHydraulicAreaMm2,
+    String? machineModel,
+    String? machineSerialNumber,
+    String? machineName,
+    String? projectName,
+    String? standardUsed,
     double? dragPressureBar,
     WeldingParameterRecord? matchedParameters,
     bool? parametersFromFallback,
@@ -154,9 +195,16 @@ class WeldSetupState {
         selectedStandardId: selectedStandardId ?? this.selectedStandardId,
         ambientTemperature: ambientTemperature ?? this.ambientTemperature,
         notes: notes ?? this.notes,
+        operatorName: operatorName ?? this.operatorName,
+        operatorId:   operatorId   ?? this.operatorId,
         machineHydraulicAreaMm2: clearMachineHydraulics
             ? null
             : (machineHydraulicAreaMm2 ?? this.machineHydraulicAreaMm2),
+        machineModel:        machineModel        ?? this.machineModel,
+        machineSerialNumber: machineSerialNumber ?? this.machineSerialNumber,
+        machineName:         machineName         ?? this.machineName,
+        projectName:         projectName         ?? this.projectName,
+        standardUsed:        standardUsed        ?? this.standardUsed,
         dragPressureBar: dragPressureBar ?? this.dragPressureBar,
         matchedParameters:
             clearParams ? null : (matchedParameters ?? this.matchedParameters),
@@ -207,8 +255,13 @@ class WeldSetupNotifier extends StateNotifier<WeldSetupState> {
 
   // ── Selector handlers ─────────────────────────────────────────────────────
 
-  void selectProject(String projectId) =>
-      state = state.copyWith(selectedProjectId: projectId);
+  Future<void> selectProject(String projectId) async {
+    state = state.copyWith(selectedProjectId: projectId);
+    final project = await db.projectsDao.getById(projectId);
+    if (project != null) {
+      state = state.copyWith(projectName: project.name);
+    }
+  }
 
   /// Selects the machine and loads its hydraulic cylinder area from the DB.
   Future<void> selectMachine(String machineId) async {
@@ -219,8 +272,12 @@ class WeldSetupNotifier extends StateNotifier<WeldSetupState> {
     );
     final machine = await db.machinesDao.getById(machineId);
     if (machine != null) {
+      final displayName = '${machine.manufacturer} ${machine.model}'.trim();
       state = state.copyWith(
         machineHydraulicAreaMm2: machine.hydraulicCylinderAreaMm2,
+        machineModel:            machine.model,
+        machineSerialNumber:     machine.serialNumber,
+        machineName:             displayName,
       );
     }
     _regenerateWeldingTable();
@@ -267,6 +324,11 @@ class WeldSetupNotifier extends StateNotifier<WeldSetupState> {
       state = state.copyWith(ambientTemperature: temp);
 
   void setNotes(String notes) => state = state.copyWith(notes: notes);
+
+  void setOperatorName(String name) =>
+      state = state.copyWith(operatorName: name);
+
+  void setOperatorId(String id) => state = state.copyWith(operatorId: id);
 
   /// Updates the measured drag pressure and recomputes machine gauge pressures.
   void setDragPressure(double bar) {
@@ -443,8 +505,11 @@ class WeldSetupNotifier extends StateNotifier<WeldSetupState> {
         return;
       }
 
-      // 3. Placeholder operator id (replaced by real auth in a later sprint)
-      const operatorId = 'unknown-operator';
+      // 3. Resolve operator id — use entered value or fallback placeholder
+      final operatorId = state.operatorId.isEmpty
+          ? 'unknown-operator'
+          : state.operatorId;
+      final resolvedStandardUsed = standard?.code ?? '';
 
       // 4. Resolve wall thickness for the DB record
       final sdrRatio = double.tryParse(state.sdrRating ?? '');
@@ -459,7 +524,7 @@ class WeldSetupNotifier extends StateNotifier<WeldSetupState> {
         id: Value(weldId),
         projectId: Value(state.selectedProjectId!),
         machineId: Value(state.selectedMachineId!),
-        operatorId: const Value(operatorId),
+        operatorId: Value(operatorId),
         weldType: Value(weldType),
         status: const Value('in_progress'),
         pipeMaterial: Value(state.pipeMaterial!),
@@ -484,6 +549,7 @@ class WeldSetupNotifier extends StateNotifier<WeldSetupState> {
         isSubmitting: false,
         createdWeldId: weldId,
         createdPhases: phases,
+        standardUsed: resolvedStandardUsed,
       );
     } catch (e) {
       state = state.copyWith(

@@ -16,10 +16,48 @@ class WeldSessionArgs {
   const WeldSessionArgs({
     required this.weldId,
     required this.phases,
+    // ── Traceability metadata ─────────────────────────────────────────────
+    this.projectName              = '',
+    this.machineId                = '',
+    this.machineName              = '',
+    this.machineModel             = '',
+    this.machineSerialNumber      = '',
+    this.hydraulicCylinderAreaMm2 = 0.0,
+    this.operatorName             = '',
+    this.operatorId               = '',
+    this.pipeMaterial             = '',
+    this.pipeDiameter             = 0.0,
+    this.pipeSdr                  = '',
+    this.wallThicknessStr         = '',
+    this.standardUsed             = '',
+    this.fusionPressureBar        = 0.0,
+    this.heatingTimeSec           = 0.0,
+    this.coolingTimeSec           = 0.0,
+    this.beadHeightMm             = 0.0,
+    this.jointId                  = '',
   });
 
   final String weldId;
   final List<PhaseParameters> phases;
+
+  final String projectName;
+  final String machineId;
+  final String machineName;
+  final String machineModel;
+  final String machineSerialNumber;
+  final double hydraulicCylinderAreaMm2;
+  final String operatorName;
+  final String operatorId;
+  final String pipeMaterial;
+  final double pipeDiameter;
+  final String pipeSdr;
+  final String wallThicknessStr;
+  final String standardUsed;
+  final double fusionPressureBar;
+  final double heatingTimeSec;
+  final double coolingTimeSec;
+  final double beadHeightMm;
+  final String jointId;
 }
 
 /// Live welding session screen.
@@ -35,12 +73,13 @@ class WeldSessionArgs {
 class WeldingSessionScreen extends ConsumerStatefulWidget {
   const WeldingSessionScreen({
     super.key,
-    required this.weldId,
-    required this.phases,
+    required this.args,
   });
 
-  final String weldId;
-  final List<PhaseParameters> phases;
+  final WeldSessionArgs args;
+
+  String get weldId  => args.weldId;
+  List<PhaseParameters> get phases => args.phases;
 
   @override
   ConsumerState<WeldingSessionScreen> createState() =>
@@ -82,13 +121,32 @@ class _WeldingSessionScreenState extends ConsumerState<WeldingSessionScreen> {
   }
 
   void _initEngine() {
-    final db = ref.read(databaseProvider);
+    final db     = ref.read(databaseProvider);
     final sensor = ref.read(sensorServiceProvider);
+    final a      = widget.args;
     _engine = WeldWorkflowEngine(
-      db: db,
-      sensorService: sensor,
-      weldId: widget.weldId,
-      phases: widget.phases,
+      db:                      db,
+      sensorService:           sensor,
+      weldId:                  a.weldId,
+      phases:                  a.phases,
+      projectName:             a.projectName,
+      machineId:               a.machineId,
+      machineName:             a.machineName,
+      machineModel:            a.machineModel,
+      machineSerialNumber:     a.machineSerialNumber,
+      hydraulicCylinderAreaMm2: a.hydraulicCylinderAreaMm2,
+      operatorName:            a.operatorName,
+      operatorId:              a.operatorId,
+      pipeMaterial:            a.pipeMaterial,
+      pipeDiameter:            a.pipeDiameter,
+      pipeSdr:                 a.pipeSdr,
+      wallThicknessStr:        a.wallThicknessStr,
+      standardUsed:            a.standardUsed,
+      fusionPressureBar:       a.fusionPressureBar,
+      heatingTimeSec:          a.heatingTimeSec,
+      coolingTimeSec:          a.coolingTimeSec,
+      beadHeightMm:            a.beadHeightMm,
+      jointId:                 a.jointId,
     );
 
     _subs.add(_engine!.stateStream.listen((s) {

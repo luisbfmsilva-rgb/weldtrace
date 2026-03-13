@@ -62,8 +62,8 @@ class ParameterViolation {
 ///   2. Generates a SHA-256 joint signature (includes welding parameters)
 ///   3. Serialises the curve to JSON
 ///   3b. Gzip-compresses the curve bytes
-///   4. Generates a professional PDF engineering report (non-fatal on failure)
-///   5. Determines trace quality ('OK' / 'LOW_SAMPLE_COUNT')
+///   4. Determines trace quality ('OK' / 'LOW_SAMPLE_COUNT') — before PDF
+///   5. Generates a professional PDF engineering report (non-fatal on failure)
 ///   6. Saves trace data to the DB row (compressed + plain JSON + PDF)
 ///   6b. Appends entry to the local certification ledger (non-fatal)
 ///   6c. Appends entry to the global certification registry (non-fatal)
@@ -77,21 +77,25 @@ class WeldWorkflowEngine {
     required this.phases,
     Logger? logger,
     // ── Traceability metadata (optional — default to empty strings / zeros) ─
-    this.machineId         = '',
-    this.pipeDiameter      = 0.0,
-    this.pipeMaterial      = '',
-    this.pipeSdr           = '',
-    this.projectName       = '',
-    this.machineName       = '',
+    this.machineId               = '',
+    this.pipeDiameter            = 0.0,
+    this.pipeMaterial            = '',
+    this.pipeSdr                 = '',
+    this.projectName             = '',
+    this.machineName             = '',
     // ── Extended welding process parameters ──────────────────────────────────
-    this.operatorName      = '',
-    this.jointId           = '',
-    this.wallThicknessStr  = '',
-    this.standardUsed      = '',
-    this.fusionPressureBar = 0.0,
-    this.heatingTimeSec    = 0.0,
-    this.coolingTimeSec    = 0.0,
-    this.beadHeightMm      = 0.0,
+    this.operatorName            = '',
+    this.operatorId              = '',
+    this.machineModel            = '',
+    this.machineSerialNumber     = '',
+    this.hydraulicCylinderAreaMm2 = 0.0,
+    this.jointId                 = '',
+    this.wallThicknessStr        = '',
+    this.standardUsed            = '',
+    this.fusionPressureBar       = 0.0,
+    this.heatingTimeSec          = 0.0,
+    this.coolingTimeSec          = 0.0,
+    this.beadHeightMm            = 0.0,
     WeldTraceRecorder? traceRecorder,
     WeldSyncService?   syncService,
   })  : _logger      = logger ?? Logger(),
@@ -114,6 +118,10 @@ class WeldWorkflowEngine {
 
   // ── Extended welding process metadata ─────────────────────────────────────
   final String operatorName;
+  final String operatorId;
+  final String machineModel;
+  final String machineSerialNumber;
+  final double hydraulicCylinderAreaMm2;
   final String jointId;
   final String wallThicknessStr;
   final String standardUsed;
@@ -269,37 +277,42 @@ class WeldWorkflowEngine {
       '(${(curveCompressed.length / curveJson.length * 100).toStringAsFixed(1)}%)',
     );
 
-    // ── 4. Generate PDF report (non-fatal on failure) ─────────────────────
+    // ── 4. Determine trace quality (moved before PDF so it is included) ──────
+    final traceQuality = curve.length >= 2 ? 'OK' : 'LOW_SAMPLE_COUNT';
+    if (traceQuality == 'LOW_SAMPLE_COUNT') {
+      _logger.w('[WeldWorkflow] Low sample count: ${curve.length} samples recorded');
+    }
+
+    // ── 5. Generate PDF report (non-fatal on failure) ─────────────────────
     Uint8List? pdfBytes;
     try {
       pdfBytes = await WeldReportGenerator.generate(
-        projectName:       projectName,
-        machineName:       machineName,
-        machineId:         machineId,
-        diameter:          pipeDiameter,
-        material:          pipeMaterial,
-        sdr:               pipeSdr,
-        curve:             curve,
-        weldSignature:     signature,
-        timestamp:         completedAt.toLocal(),
-        operatorName:      operatorName,
-        jointId:           jointId,
-        wallThicknessStr:  wallThicknessStr,
-        standardUsed:      standardUsed,
-        fusionPressureBar: fusionPressureBar,
-        heatingTimeSec:    heatingTimeSec,
-        coolingTimeSec:    coolingTimeSec,
-        beadHeightMm:      beadHeightMm,
+        projectName:            projectName,
+        machineName:            machineName,
+        machineId:              machineId,
+        diameter:               pipeDiameter,
+        material:               pipeMaterial,
+        sdr:                    pipeSdr,
+        curve:                  curve,
+        weldSignature:          signature,
+        timestamp:              completedAt.toLocal(),
+        operatorName:           operatorName,
+        operatorId:             operatorId,
+        jointId:                jointId,
+        wallThicknessStr:       wallThicknessStr,
+        standardUsed:           standardUsed,
+        fusionPressureBar:      fusionPressureBar,
+        heatingTimeSec:         heatingTimeSec,
+        coolingTimeSec:         coolingTimeSec,
+        beadHeightMm:           beadHeightMm,
+        traceQuality:           traceQuality,
+        machineModel:           machineModel,
+        machineSerialNumber:    machineSerialNumber,
+        hydraulicCylinderAreaMm2: hydraulicCylinderAreaMm2,
       );
       _logger.i('[WeldWorkflow] PDF report generated (${pdfBytes.length} bytes)');
     } catch (e) {
       _logger.w('[WeldWorkflow] PDF generation failed (non-fatal): $e');
-    }
-
-    // ── 5. Determine trace quality ─────────────────────────────────────────
-    final traceQuality = curve.length >= 2 ? 'OK' : 'LOW_SAMPLE_COUNT';
-    if (traceQuality == 'LOW_SAMPLE_COUNT') {
-      _logger.w('[WeldWorkflow] Low sample count: ${curve.length} samples recorded');
     }
 
     // ── 6. Persist trace data before marking completed ─────────────────────

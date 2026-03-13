@@ -222,7 +222,7 @@ Source: `flutter_app/lib/`
 | `weld_registry.dart` | Append-only local JSON registry (`registry_export.json`) |
 | `weld_ledger.dart` | Local JSON certification ledger |
 | `weld_public_verifier.dart` | Public verification (registry, schema, signature, PDF hash) |
-| `weld_report_generator.dart` | 11-section PDF engineering report |
+| `weld_report_generator.dart` | 13-section PDF engineering report (V1.0: PROJECT, JOINT ID, MACHINE, PIPE, STANDARD, WELD PARAMS, TRACE QUALITY, CURVE STATS, CHART, SIGNATURE, CERT, PUBLIC VERIFY, QR) |
 | `weld_sync_service.dart` | `SyncResult` model + `WeldSyncService` (offline-first default) |
 | `curve_compression.dart` | Gzip compression for pressure/time curves |
 
@@ -238,13 +238,15 @@ Steps executed on `completeWeld()`:
 1. Export pressure/time curve
 2. Generate SHA-256 joint signature
 3. Serialise + gzip-compress curve
-4. Generate PDF engineering report (non-fatal)
-5. Determine trace quality
+4. Determine trace quality (`OK` / `LOW_SAMPLE_COUNT`) — **moved before PDF so it is included in the report**
+5. Generate PDF engineering report (non-fatal) — receives `traceQuality`, `operatorId`, `machineModel`, `machineSerialNumber`, `hydraulicCylinderAreaMm2`
 6. Persist trace data to SQLite (Drift)
 6b. Append to local certification ledger (non-fatal)
 6c. Append to global certification registry (non-fatal)
 6d. Attempt SaaS certificate upload via `WeldSyncService` (non-blocking, non-fatal)
 7. Mark weld IMMUTABLE
+
+New constructor fields (V1.0): `operatorId`, `machineModel`, `machineSerialNumber`, `hydraulicCylinderAreaMm2`.
 
 ### SaaS Sync Layer (Optional)
 
