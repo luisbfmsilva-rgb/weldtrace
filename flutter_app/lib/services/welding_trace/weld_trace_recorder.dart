@@ -40,7 +40,7 @@ class WeldTracePoint {
 /// final recorder = WeldTraceRecorder();
 /// recorder.start();
 ///
-/// // called once per second from sensor subscription
+/// // called from sensor subscription (≈ 1 Hz)
 /// recorder.record(pressureBar: reading.pressureBar, phase: 'Fusion Pressure');
 ///
 /// final curve = recorder.export();
@@ -50,13 +50,27 @@ class WeldTracePoint {
 ///
 /// • [record] is a no-op if [start] has not been called yet.
 /// • Negative pressures are clamped to 0 before storage.
+/// • Sampling is rate-limited to at most one sample per [minSampleIntervalMs]
+///   milliseconds (default 1 000 ms) to prevent runaway curve growth.
+/// • The curve is capped at [maxPoints] samples (default 5 000) as a safety
+///   ceiling.  Samples beyond the cap are silently discarded.
 /// • [export] returns an unmodifiable copy — the internal list is not cleared
 ///   so the recorder can be inspected after the weld completes.
 class WeldTraceRecorder {
-  WeldTraceRecorder();
+  /// [minSampleIntervalMs] — minimum gap between accepted samples.
+  ///   Default 1 000 ms.  Pass 0 in unit tests that inject rapid samples.
+  WeldTraceRecorder({this.minSampleIntervalMs = 1000});
+
+  /// Minimum gap between stored samples [milliseconds].
+  final int minSampleIntervalMs;
+
+  /// Hard ceiling on stored sample count.
+  /// Prevents runaway recording from unbounded sensor streams.
+  static const int maxPoints = 5000;
 
   final List<WeldTracePoint> _points = [];
   DateTime? _startTime;
+  DateTime? _lastSampleTime;
 
   /// All recorded samples in chronological order (read-only).
   List<WeldTracePoint> get points => List.unmodifiable(_points);
@@ -74,28 +88,41 @@ class WeldTraceRecorder {
 
   /// Initialises the recording clock.  Must be called before [record].
   ///
-  /// Calling [start] a second time resets the recorder (points are cleared
-  /// and the clock restarts from zero).
+  /// Calling [start] a second time resets the recorder (points are cleared,
+  /// the clock restarts from zero, and the sampling timer resets).
   void start() {
-    _startTime = DateTime.now();
+    _startTime      = DateTime.now();
+    _lastSampleTime = null;
     _points.clear();
   }
 
   /// Records a single pressure sample at the current wall-clock offset.
   ///
-  /// Sampling frequency guidance: call once per second from the sensor loop
-  /// to match the ≈ 1 Hz resolution expected by [WeldReportGenerator].
+  /// Silently dropped if:
+  ///   • [start] has not been called yet
+  ///   • fewer than [minSampleIntervalMs] ms have elapsed since the last
+  ///     accepted sample (rate-limiting guard)
+  ///   • [maxPoints] samples have already been stored (overflow guard)
   ///
   /// [pressureBar] is clamped to ≥ 0.
-  /// If [start] has not been called this call is silently ignored.
   void record({
     required double pressureBar,
     required String phase,
   }) {
     if (_startTime == null) return; // guard: must call start() first
 
-    final timeSeconds =
-        DateTime.now().difference(_startTime!).inMilliseconds / 1000.0;
+    // ── Rate-limiting guard (default ≤ 1 sample / second) ─────────────────
+    if (minSampleIntervalMs > 0 && _lastSampleTime != null) {
+      final elapsed =
+          DateTime.now().difference(_lastSampleTime!).inMilliseconds;
+      if (elapsed < minSampleIntervalMs) return;
+    }
+
+    // ── Max-size guard (prevents unbounded growth) ─────────────────────────
+    if (_points.length >= maxPoints) return;
+
+    final now         = DateTime.now();
+    final timeSeconds = now.difference(_startTime!).inMilliseconds / 1000.0;
 
     // Clamp pressure to ≥ 0 — negative gauge readings are unphysical.
     final clampedPressure = math.max(0.0, pressureBar);
@@ -105,12 +132,14 @@ class WeldTraceRecorder {
       pressureBar:  clampedPressure,
       phase:        phase,
     ));
+
+    _lastSampleTime = now;
   }
 
   /// Returns an immutable snapshot of the recorded curve.
   ///
   /// Safe to call even if the recorder has not been started (returns empty
-  /// list) or has fewer than 10 samples (no minimum is enforced).
+  /// list) or has fewer than 2 samples (no minimum is enforced).
   List<WeldTracePoint> export() => List.unmodifiable(_points);
 
   // ── Derived statistics ──────────────────────────────────────────────────────

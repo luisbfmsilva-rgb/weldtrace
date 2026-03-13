@@ -186,9 +186,11 @@ class WeldWorkflowEngine {
   /// In order:
   ///   1. Exports the pressure × time curve from the trace recorder
   ///   2. Generates a SHA-256 joint signature
-  ///   3. Generates a PDF report (failure is logged, not rethrown)
-  ///   4. Saves trace data to the DB row
-  ///   5. Marks the weld row as completed (IMMUTABLE after this)
+  ///   3. Serialises the curve to JSON
+  ///   4. Generates a PDF report (failure is logged, not rethrown)
+  ///   5. Determines trace quality ('OK' / 'LOW_SAMPLE_COUNT')
+  ///   6. Saves trace data to the DB row
+  ///   7. Marks the weld row as completed (IMMUTABLE after this)
   Future<void> completeWeld() async {
     sensorService.stopCapture();
     _sensorSub?.cancel();
@@ -236,15 +238,22 @@ class WeldWorkflowEngine {
       _logger.w('[WeldWorkflow] PDF generation failed (non-fatal): $e');
     }
 
-    // ── 5. Persist trace data before marking completed ───────────────────────
+    // ── 5. Determine trace quality ───────────────────────────────────────────
+    final traceQuality = curve.length >= 2 ? 'OK' : 'LOW_SAMPLE_COUNT';
+    if (traceQuality == 'LOW_SAMPLE_COUNT') {
+      _logger.w('[WeldWorkflow] Low sample count: ${curve.length} samples recorded');
+    }
+
+    // ── 6. Persist trace data before marking completed ───────────────────────
     await db.weldsDao.saveTraceData(
-      id:        weldId,
-      signature: signature,
-      curveJson: curveJson,
-      pdfBytes:  pdfBytes,
+      id:           weldId,
+      signature:    signature,
+      curveJson:    curveJson,
+      pdfBytes:     pdfBytes,
+      traceQuality: traceQuality,
     );
 
-    // ── 6. Mark weld IMMUTABLE ───────────────────────────────────────────────
+    // ── 7. Mark weld IMMUTABLE ───────────────────────────────────────────────
     await db.weldsDao.completeWeld(weldId, completedAt);
     _logger.i('[WeldWorkflow] Weld completed: $weldId | signature: $signature');
   }

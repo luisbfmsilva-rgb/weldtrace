@@ -60,6 +60,18 @@ class WeldsTable extends Table {
   /// PDF welding report as raw bytes.  Null until the weld is completed.
   BlobColumn get tracePdf => blob().nullable()();
 
+  // ── Weld traceability — added in schema v5 ────────────────────────────────
+
+  /// Indicates the quality of the recorded trace data.
+  ///
+  /// 'OK'               — curve has ≥ 2 samples, considered valid
+  /// 'LOW_SAMPLE_COUNT' — curve has < 2 samples; signature still generated
+  ///                      but chart will show "No data recorded"
+  ///
+  /// Null for welds completed before schema v5 or before the traceability
+  /// feature was enabled.
+  TextColumn get traceQuality => text().nullable()();
+
   @override
   Set<Column> get primaryKey => {id};
 }

@@ -74,22 +74,26 @@ class WeldsDao extends DatabaseAccessor<AppDatabase> with _$WeldsDaoMixin {
   ///
   /// Must be called before [completeWeld] marks the row immutable.
   ///
-  /// [id]            — weld UUID
-  /// [signature]     — 64-char SHA-256 hex digest
-  /// [curveJson]     — JSON-encoded pressure × time curve
-  /// [pdfBytes]      — rendered PDF report as raw bytes (nullable — stored
-  ///                   only when PDF generation succeeded)
+  /// [id]           — weld UUID
+  /// [signature]    — 64-char SHA-256 hex digest
+  /// [curveJson]    — JSON-encoded pressure × time curve
+  /// [pdfBytes]     — rendered PDF report as raw bytes (nullable — stored
+  ///                  only when PDF generation succeeded)
+  /// [traceQuality] — 'OK' when ≥ 2 samples recorded,
+  ///                  'LOW_SAMPLE_COUNT' when < 2 samples
   Future<void> saveTraceData({
     required String id,
     required String signature,
     required String curveJson,
     Uint8List? pdfBytes,
+    String? traceQuality,
   }) =>
       (update(weldsTable)..where((t) => t.id.equals(id))).write(
         WeldsTableCompanion(
           traceSignature: Value(signature),
           traceCurveJson: Value(curveJson),
           tracePdf:       Value(pdfBytes),
+          traceQuality:   Value(traceQuality),
           updatedAt:      Value(DateTime.now()),
         ),
       );
