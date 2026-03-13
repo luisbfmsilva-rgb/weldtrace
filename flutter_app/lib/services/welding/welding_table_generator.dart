@@ -1,5 +1,8 @@
 import '../../data/local/tables/welding_parameters_table.dart';
 import '../../workflow/welding_phase.dart';
+import '../standards/dvs_2207.dart';
+import '../standards/iso_21307.dart';
+import '../standards/astm_f2620.dart';
 import 'pipe_spec.dart';
 import 'welding_table.dart';
 
@@ -267,6 +270,100 @@ class WeldingTableGenerator {
         maxDuration: ecT * 1.20,
       ),
     ];
+  }
+
+  // ── Convenience named-constructor alias ──────────────────────────────────────
+
+  /// Named alias for [generate] — preferred by callers that already have a
+  /// [WeldingParameterRecord] and want to make the intent explicit.
+  ///
+  /// Usage:
+  /// ```dart
+  /// final table = WeldingTableGenerator.buildFromRecord(
+  ///   record: record,
+  ///   pipeSpec: spec,
+  ///   machineSpec: machine,
+  ///   weldType: 'butt_fusion',
+  /// );
+  /// ```
+  static WeldingTable buildFromRecord({
+    required WeldingParameterRecord record,
+    required PipeSpec pipeSpec,
+    required MachineSpec machineSpec,
+    required String weldType,
+  }) =>
+      generate(
+        record: record,
+        pipeSpec: pipeSpec,
+        machineSpec: machineSpec,
+        weldType: weldType,
+      );
+
+  // ── Fallback generator dispatcher ────────────────────────────────────────────
+
+  /// Generates a [WeldingParametersTableCompanion] using the built-in
+  /// standard-specific fallback engine when **no DB record** is available.
+  ///
+  /// Dispatches to the correct engine based on [standardId]:
+  ///
+  ///   • Strings containing 'dvs'    → [Dvs2207.generateFallback]
+  ///   • Strings containing 'iso'    → [Iso21307.generateFallback]
+  ///       Sub-dispatch on [Iso21307Mode] via [iso21307Mode] parameter.
+  ///   • Strings containing 'astm'   → [AstmF2620.generateFallback]
+  ///   • Unrecognised ID             → DVS 2207 (safe conservative default)
+  ///
+  /// The returned companion stores **interfacial** pressures.  To get machine
+  /// gauge pressures, persist the companion, load a [WeldingParameterRecord],
+  /// and call [generate] or [buildFromRecord].
+  ///
+  /// [standardId]               — standard ID or code string from the DB
+  ///                              (e.g. 'DVS_2207', 'ISO_21307', 'ASTM_F2620')
+  /// [pipeDiameterMm]           — OD [mm]
+  /// [sdrRating]                — SDR string (e.g. 'SDR11', '17.6')
+  /// [pipeMaterial]             — 'PE' | 'PP'
+  /// [hydraulicCylinderAreaMm2] — cylinder area [mm²]; null = no machine data
+  /// [dragPressureBar]          — drag measured before welding [bar]
+  /// [iso21307Mode]             — selects low or high pressure for ISO 21307
+  static WeldingParametersTableCompanion generateFallbackForStandard({
+    required String standardId,
+    required double pipeDiameterMm,
+    required String sdrRating,
+    required String pipeMaterial,
+    double? hydraulicCylinderAreaMm2,
+    double dragPressureBar = 0.0,
+    Iso21307Mode iso21307Mode = Iso21307Mode.lowPressure,
+  }) {
+    final id = standardId.toLowerCase();
+
+    if (id.contains('iso')) {
+      return Iso21307.generateFallback(
+        pipeDiameterMm: pipeDiameterMm,
+        sdrRating: sdrRating,
+        pipeMaterial: pipeMaterial,
+        mode: iso21307Mode,
+        hydraulicCylinderAreaMm2: hydraulicCylinderAreaMm2,
+        dragPressureBar: dragPressureBar,
+      );
+    }
+
+    if (id.contains('astm')) {
+      return AstmF2620.generateFallback(
+        pipeDiameterMm: pipeDiameterMm,
+        sdrRating: sdrRating,
+        pipeMaterial: pipeMaterial,
+        hydraulicCylinderAreaMm2: hydraulicCylinderAreaMm2,
+        dragPressureBar: dragPressureBar,
+      );
+    }
+
+    // dvs — and catch-all (conservative default)
+    return Dvs2207.generateFallback(
+      pipeDiameterMm: pipeDiameterMm,
+      sdrRating: sdrRating,
+      pipeMaterial: pipeMaterial,
+      hydraulicCylinderAreaMm2: hydraulicCylinderAreaMm2,
+      dragPressureBar: dragPressureBar,
+    );
   }
 
   // ── Changeover time lookup ────────────────────────────────────────────────────
