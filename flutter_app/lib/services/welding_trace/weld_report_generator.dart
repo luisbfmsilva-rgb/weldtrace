@@ -515,6 +515,14 @@ class WeldReportGenerator {
               color:     PdfColors.grey800,
             ),
           ),
+          pw.SizedBox(height: 2),
+          pw.Text(
+            'Scan the QR code or verify using the WeldTrace public registry.',
+            style: pw.TextStyle(
+              fontSize:  8,
+              color:     PdfColors.grey800,
+            ),
+          ),
           pw.SizedBox(height: 6),
           _certRow('Joint ID',  jointId),
           _certRow('Signature', signature),
