@@ -1,0 +1,90 @@
+name: weldtrace
+description: WeldTrace — offline-first field welding traceability system for thermoplastic pipe welding.
+publish_to: none
+version: 1.0.0+1
+
+environment:
+  sdk: ">=3.3.0 <4.0.0"
+  flutter: ">=3.19.0"
+
+dependencies:
+  flutter:
+    sdk: flutter
+
+  # ── State management ───────────────────────────────────────────────────────
+  flutter_riverpod: ^2.5.1
+  riverpod_annotation: ^2.3.5
+
+  # ── Navigation ─────────────────────────────────────────────────────────────
+  go_router: ^13.2.4
+
+  # ── Local database (offline-first) ────────────────────────────────────────
+  drift: ^2.18.0
+  drift_flutter: ^0.2.1
+  sqlite3_flutter_libs: ^0.5.25   # SQLite native binaries for Android/iOS
+  path_provider: ^2.1.3
+  path: ^1.9.0
+
+  # ── Supabase (auth + cloud sync) ───────────────────────────────────────────
+  supabase_flutter: ^2.5.6
+  http: ^1.2.1
+
+  # ── Secure storage ────────────────────────────────────────────────────────
+  flutter_secure_storage: ^9.0.0
+
+  # ── BLE sensor connectivity ───────────────────────────────────────────────
+  flutter_blue_plus: ^1.32.12
+
+  # ── Charts (pressure / temperature graphs) ────────────────────────────────
+  fl_chart: ^0.68.0
+
+  # ── GPS / location ────────────────────────────────────────────────────────
+  geolocator: ^12.0.0
+
+  # ── Camera (weld photos) ──────────────────────────────────────────────────
+  image_picker: ^1.1.2
+
+  # ── Weld traceability — cryptographic signature ───────────────────────────
+  crypto: ^3.0.3
+
+  # ── Weld traceability — PDF report generation ─────────────────────────────
+  pdf: ^3.11.0
+  printing: ^5.13.1
+
+  # ── Weld traceability — QR code in PDF report ─────────────────────────────
+  qr: ^3.0.1
+
+  # ── Utilities ─────────────────────────────────────────────────────────────
+  uuid: ^4.4.0
+  intl: ^0.19.0
+  connectivity_plus: ^6.0.3
+  logger: ^2.3.0
+  shared_preferences: ^2.2.3
+
+dev_dependencies:
+  flutter_test:
+    sdk: flutter
+  drift_dev: ^2.18.0
+  build_runner: ^2.4.11
+  riverpod_generator: ^2.4.3
+  custom_lint: ^0.6.4
+  riverpod_lint: ^2.3.10
+  mockito: ^5.4.4
+  flutter_lints: ^3.0.2
+
+flutter:
+  uses-material-design: true
+
+  assets:
+    - assets/
+
+  fonts:
+    - family: Inter
+      fonts:
+        - asset: assets/fonts/Inter-Regular.ttf
+        - asset: assets/fonts/Inter-Medium.ttf
+          weight: 500
+        - asset: assets/fonts/Inter-SemiBold.ttf
+          weight: 600
+        - asset: assets/fonts/Inter-Bold.ttf
+          weight: 700
