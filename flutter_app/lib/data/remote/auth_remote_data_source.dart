@@ -1,5 +1,6 @@
 import 'package:supabase_flutter/supabase_flutter.dart'
-    hide AuthException; // use app's own AuthException
+    // Hides names that clash with our own models and exceptions
+    hide AuthException, AuthUser;
 
 import '../../core/errors/app_exception.dart';
 import '../../core/utils/result.dart';
@@ -35,10 +36,10 @@ class AuthRemoteDataSource {
       }
 
       final profileResult = await _fetchProfile(supabaseUser.id);
-      if (profileResult is Failure<AuthUser>) {
-        return Failure((profileResult as Failure<AuthUser>).exception);
+      if (profileResult is Failure<AppAuthUser>) {
+        return Failure((profileResult as Failure<AppAuthUser>).exception);
       }
-      final user = (profileResult as Success<AuthUser>).value;
+      final user = (profileResult as Success<AppAuthUser>).value;
 
       return Success(LoginResponse(
         accessToken: session.accessToken,
@@ -46,17 +47,18 @@ class AuthRemoteDataSource {
         expiresIn: session.expiresIn ?? 3600,
         user: user,
       ));
-    } on GoTrueException catch (e) {
-      final msg = e.message.isNotEmpty ? e.message : 'Invalid credentials';
-      return Failure(AuthException(msg));
     } catch (e) {
-      return Failure(NetworkException('Login failed: ${e.toString()}', e));
+      final msg = _extractMessage(e);
+      if (_isAuthError(e)) {
+        return Failure(AuthException(msg));
+      }
+      return Failure(NetworkException('Login failed: $msg', e));
     }
   }
 
   // ── Current user ──────────────────────────────────────────────────────────
 
-  Future<Result<AuthUser>> me() async {
+  Future<Result<AppAuthUser>> me() async {
     try {
       final supabaseUser = _supabase.auth.currentUser;
       if (supabaseUser == null) {
@@ -102,7 +104,7 @@ class AuthRemoteDataSource {
 
   // ── Private ───────────────────────────────────────────────────────────────
 
-  Future<Result<AuthUser>> _fetchProfile(String userId) async {
+  Future<Result<AppAuthUser>> _fetchProfile(String userId) async {
     try {
       final data = await _supabase
           .from('users')
@@ -125,7 +127,8 @@ class AuthRemoteDataSource {
           .select('role_in_project, project:projects(id, name, status, location)')
           .eq('user_id', userId);
 
-      final assignedProjects = (projectsData as List<dynamic>).map((row) {
+      final assignedProjects =
+          (projectsData as List<dynamic>).map((row) {
         final p = row['project'] as Map<String, dynamic>? ?? {};
         return AssignedProject(
           id: (p['id'] as String?) ?? '',
@@ -136,7 +139,7 @@ class AuthRemoteDataSource {
         );
       }).toList();
 
-      return Success(AuthUser(
+      return Success(AppAuthUser(
         id: data['id'] as String,
         email: data['email'] as String,
         role: data['role'] as String,
@@ -152,9 +155,7 @@ class AuthRemoteDataSource {
     } on PostgrestException catch (e) {
       if (e.code == 'PGRST116') {
         return const Failure(
-          AuthException(
-            'User profile not found. Contact your administrator.',
-          ),
+          AuthException('User profile not found. Contact your administrator.'),
         );
       }
       return Failure(NetworkException('Profile fetch failed: ${e.message}', e));
@@ -162,4 +163,25 @@ class AuthRemoteDataSource {
       return Failure(NetworkException('Profile fetch failed', e));
     }
   }
+
+  // ── Helpers ───────────────────────────────────────────────────────────────
+
+  String _extractMessage(Object e) {
+    // AuthException from gotrue has a 'message' getter
+    try {
+      return (e as dynamic).message as String? ?? e.toString();
+    } catch (_) {
+      return e.toString();
+    }
+  }
+
+  bool _isAuthError(Object e) {
+    final typeName = e.runtimeType.toString();
+    return typeName.contains('AuthException') ||
+        typeName.contains('GoTrue') ||
+        typeName.contains('AuthApiException');
+  }
 }
+
+// Local alias to avoid repeating the full name throughout the file
+typedef AppAuthUser = AuthUser;
