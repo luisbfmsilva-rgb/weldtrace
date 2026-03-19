@@ -1,4 +1,3 @@
-import 'package:drift/drift.dart';
 import 'package:logger/logger.dart';
 
 import '../../core/errors/app_exception.dart';

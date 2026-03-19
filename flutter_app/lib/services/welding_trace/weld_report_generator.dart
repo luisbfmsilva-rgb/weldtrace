@@ -460,7 +460,7 @@ class WeldReportGenerator {
             color:  PdfColors.white,
           ),
           child: pw.CustomPaint(
-            painter: _CurvePainter(curve, accentColour),
+            painter: _curvePainter(curve, accentColour),
             child: pw.SizedBox(width: chartWidth, height: chartHeight),
           ),
         );
@@ -784,7 +784,7 @@ class WeldReportGenerator {
                 color:  PdfColors.white,
               ),
               child: pw.CustomPaint(
-                painter: _QrPainter(qrPayload),
+                painter: _qrPainter(qrPayload),
                 child: pw.SizedBox(width: qrSize, height: qrSize),
               ),
             ),
@@ -809,96 +809,84 @@ class WeldReportGenerator {
 
 // ── Chart painter ──────────────────────────────────────────────────────────────
 
-class _CurvePainter implements pw.CustomPainter {
-  const _CurvePainter(this.curve, this.lineColour);
+/// Returns a [pw.CustomPainter] callback that draws the pressure-time curve.
+///
+/// [pw.CustomPainter] is a function typedef in pdf ≥ 3.11:
+///   `typedef CustomPainter = void Function(PdfGraphics, PdfPoint)`
+pw.CustomPainter _curvePainter(
+  List<WeldTracePoint> curve,
+  PdfColor lineColour,
+) =>
+    (PdfGraphics canvas, PdfPoint size) {
+      if (curve.length < 2) return;
 
-  final List<WeldTracePoint> curve;
-  final PdfColor lineColour;
+      final maxT = curve.map((p) => p.timeSeconds).reduce(math.max);
+      final maxP = curve.map((p) => p.pressureBar).reduce(math.max);
+      final effectiveMaxT = maxT > 0 ? maxT : 1.0;
+      final effectiveMaxP = maxP > 0 ? maxP : 1.0;
 
-  @override
-  void paint(PdfGraphics canvas, PdfPoint size) {
-    if (curve.length < 2) return;
+      const ml = 8.0;
+      const mb = 8.0;
+      final w  = size.x - ml - 4;
+      final h  = size.y - mb - 4;
 
-    final maxT = curve.map((p) => p.timeSeconds).reduce(math.max);
-    final maxP = curve.map((p) => p.pressureBar).reduce(math.max);
-    final effectiveMaxT = maxT > 0 ? maxT : 1.0;
-    final effectiveMaxP = maxP > 0 ? maxP : 1.0;
+      double cx(WeldTracePoint p) =>
+          ml + (p.timeSeconds / effectiveMaxT) * w;
+      double cy(WeldTracePoint p) =>
+          mb + (p.pressureBar / effectiveMaxP) * h;
 
-    const ml = 8.0;
-    const mb = 8.0;
-    final w  = size.x - ml - 4;
-    final h  = size.y - mb - 4;
+      canvas.setStrokeColor(PdfColors.grey300);
+      canvas.setLineWidth(0.4);
+      for (int i = 1; i <= 3; i++) {
+        final y = mb + (i / 4) * h;
+        canvas.drawLine(ml, y, ml + w, y);
+        canvas.strokePath();
+      }
+      for (int i = 1; i <= 4; i++) {
+        final x = ml + (i / 5) * w;
+        canvas.drawLine(x, mb, x, mb + h);
+        canvas.strokePath();
+      }
 
-    double cx(WeldTracePoint p) =>
-        ml + (p.timeSeconds / effectiveMaxT) * w;
-    double cy(WeldTracePoint p) =>
-        mb + (p.pressureBar / effectiveMaxP) * h;
-
-    canvas.setStrokeColor(PdfColors.grey300);
-    canvas.setLineWidth(0.4);
-    for (int i = 1; i <= 3; i++) {
-      final y = mb + (i / 4) * h;
-      canvas.drawLine(ml, y, ml + w, y);
+      canvas.setStrokeColor(lineColour);
+      canvas.setLineWidth(1.2);
+      canvas.moveTo(cx(curve.first), cy(curve.first));
+      for (int i = 1; i < curve.length; i++) {
+        canvas.lineTo(cx(curve[i]), cy(curve[i]));
+      }
       canvas.strokePath();
-    }
-    for (int i = 1; i <= 4; i++) {
-      final x = ml + (i / 5) * w;
-      canvas.drawLine(x, mb, x, mb + h);
-      canvas.strokePath();
-    }
-
-    canvas.setStrokeColor(lineColour);
-    canvas.setLineWidth(1.2);
-    canvas.moveTo(cx(curve.first), cy(curve.first));
-    for (int i = 1; i < curve.length; i++) {
-      canvas.lineTo(cx(curve[i]), cy(curve[i]));
-    }
-    canvas.strokePath();
-  }
-
-  @override
-  bool shouldRepaint(covariant pw.CustomPainter oldPainter) => false;
-}
+    };
 
 // ── QR code painter ────────────────────────────────────────────────────────────
 
 /// Renders a QR code for [data] (the full verification JSON payload) directly
 /// onto a PDF canvas.
-class _QrPainter implements pw.CustomPainter {
-  const _QrPainter(this.data);
+pw.CustomPainter _qrPainter(String data) =>
+    (PdfGraphics canvas, PdfPoint size) {
+      try {
+        final qrCode = QrCode.fromData(
+          data:              data,
+          errorCorrectLevel: QrErrorCorrectLevel.M,
+        );
+        final qrImage     = QrImage(qrCode);
+        final moduleCount = qrImage.moduleCount;
+        if (moduleCount <= 0) return;
 
-  final String data;
+        final moduleSize = size.x / moduleCount;
 
-  @override
-  void paint(PdfGraphics canvas, PdfPoint size) {
-    try {
-      final qrCode = QrCode.fromData(
-        data:              data,
-        errorCorrectLevel: QrErrorCorrectLevel.M,
-      );
-      final qrImage   = QrImage(qrCode);
-      final moduleCount = qrImage.moduleCount;
-      if (moduleCount <= 0) return;
+        canvas.setFillColor(PdfColors.black);
 
-      final moduleSize = size.x / moduleCount;
-
-      canvas.setFillColor(PdfColors.black);
-
-      for (int row = 0; row < moduleCount; row++) {
-        for (int col = 0; col < moduleCount; col++) {
-          if (qrImage.isDark(row, col)) {
-            final x = col * moduleSize;
-            final y = size.y - (row + 1) * moduleSize;
-            canvas.drawRect(x, y, moduleSize, moduleSize);
-            canvas.fillPath();
+        for (int row = 0; row < moduleCount; row++) {
+          for (int col = 0; col < moduleCount; col++) {
+            if (qrImage.isDark(row, col)) {
+              final x = col * moduleSize;
+              final y = size.y - (row + 1) * moduleSize;
+              canvas.drawRect(x, y, moduleSize, moduleSize);
+              canvas.fillPath();
+            }
           }
         }
+      } catch (_) {
+        // QR generation failure is non-fatal — leave the space blank.
       }
-    } catch (_) {
-      // QR generation failure is non-fatal — leave the space blank.
-    }
-  }
-
-  @override
-  bool shouldRepaint(covariant pw.CustomPainter oldPainter) => false;
-}
+    };

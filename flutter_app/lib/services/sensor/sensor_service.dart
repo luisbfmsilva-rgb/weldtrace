@@ -1,5 +1,4 @@
 import 'dart:async';
-import 'dart:math';
 import 'dart:typed_data';
 
 import 'package:flutter_blue_plus/flutter_blue_plus.dart';
@@ -8,7 +7,6 @@ import 'package:logger/logger.dart';
 import '../../core/errors/app_exception.dart';
 import '../../core/constants/app_constants.dart';
 import 'sensor_reading.dart';
-import '../../data/local/dao/sensor_logs_dao.dart';
 import '../../data/local/database/app_database.dart';
 import 'package:drift/drift.dart';
 import 'package:uuid/uuid.dart';

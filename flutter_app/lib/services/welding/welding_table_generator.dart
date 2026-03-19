@@ -423,8 +423,9 @@ class WeldingTableGenerator {
     required String id,
     required String standardId,
   }) {
-    // Helper: extract value or return null for absent fields.
-    T? val<T>(Value<T> v) => v.present ? v.value : null;
+    // Helper: extract value or return null for absent (nullable) fields.
+    // T must be non-nullable so Dart infers T=double from Value<double?>.
+    T? val<T extends Object>(Value<T?> v) => v.present ? v.value : null;
     // Helper: extract value or return a default for required fields.
     T def<T>(Value<T> v, T defaultVal) => v.present ? v.value : defaultVal;
 

@@ -1,0 +1,108 @@
+Run flutter analyze --no-fatal-infos --no-fatal-warnings
+  flutter analyze --no-fatal-infos --no-fatal-warnings
+  shell: /usr/bin/bash -e {0}
+  env:
+    JAVA_HOME: /opt/hostedtoolcache/Java_Temurin-Hotspot_jdk/17.0.18-8/x64
+    JAVA_HOME_17_X64: /opt/hostedtoolcache/Java_Temurin-Hotspot_jdk/17.0.18-8/x64
+    FLUTTER_ROOT: /opt/hostedtoolcache/flutter/stable-3.27.0-x64
+    PUB_CACHE: /home/runner/.pub-cache
+Analyzing flutter_app...                                        
+
+   info • The import of 'dart:typed_data' is unnecessary because all of the used elements are also provided by the import of 'package:drift/drift.dart' • lib/data/local/dao/welds_dao.dart:2:8 • unnecessary_import
+warning • Unused import: 'package:drift/drift.dart' • lib/data/repositories/weld_parameters_repository.dart:1:8 • unused_import
+   info • 'withOpacity' is deprecated and shouldn't be used. Use .withValues() to avoid precision loss • lib/presentation/auth/login_screen.dart:100:60 • deprecated_member_use
+   info • 'withOpacity' is deprecated and shouldn't be used. Use .withValues() to avoid precision loss • lib/presentation/auth/login_screen.dart:186:58 • deprecated_member_use
+   info • 'withOpacity' is deprecated and shouldn't be used. Use .withValues() to avoid precision loss • lib/presentation/auth/login_screen.dart:227:62 • deprecated_member_use
+   info • 'withOpacity' is deprecated and shouldn't be used. Use .withValues() to avoid precision loss • lib/presentation/machines/machines_screen.dart:56:47 • deprecated_member_use
+   info • 'withOpacity' is deprecated and shouldn't be used. Use .withValues() to avoid precision loss • lib/presentation/machines/machines_screen.dart:122:24 • deprecated_member_use
+   info • 'withOpacity' is deprecated and shouldn't be used. Use .withValues() to avoid precision loss • lib/presentation/projects/projects_screen.dart:101:36 • deprecated_member_use
+   info • 'withOpacity' is deprecated and shouldn't be used. Use .withValues() to avoid precision loss • lib/presentation/projects/projects_screen.dart:107:36 • deprecated_member_use
+   info • 'withOpacity' is deprecated and shouldn't be used. Use .withValues() to avoid precision loss • lib/presentation/projects/projects_screen.dart:130:38 • deprecated_member_use
+   info • 'withOpacity' is deprecated and shouldn't be used. Use .withValues() to avoid precision loss • lib/presentation/projects/projects_screen.dart:145:54 • deprecated_member_use
+   info • 'withOpacity' is deprecated and shouldn't be used. Use .withValues() to avoid precision loss • lib/presentation/projects/projects_screen.dart:168:57 • deprecated_member_use
+   info • 'withOpacity' is deprecated and shouldn't be used. Use .withValues() to avoid precision loss • lib/presentation/projects/projects_screen.dart:175:63 • deprecated_member_use
+   info • 'withOpacity' is deprecated and shouldn't be used. Use .withValues() to avoid precision loss • lib/presentation/sensors/sensor_screen.dart:135:54 • deprecated_member_use
+   info • 'withOpacity' is deprecated and shouldn't be used. Use .withValues() to avoid precision loss • lib/presentation/sensors/sensor_screen.dart:163:22 • deprecated_member_use
+   info • 'withOpacity' is deprecated and shouldn't be used. Use .withValues() to avoid precision loss • lib/presentation/sensors/sensor_screen.dart:165:41 • deprecated_member_use
+   info • 'withOpacity' is deprecated and shouldn't be used. Use .withValues() to avoid precision loss • lib/presentation/sensors/sensor_screen.dart:176:47 • deprecated_member_use
+   info • 'withOpacity' is deprecated and shouldn't be used. Use .withValues() to avoid precision loss • lib/presentation/sensors/sensor_screen.dart:207:22 • deprecated_member_use
+   info • 'withOpacity' is deprecated and shouldn't be used. Use .withValues() to avoid precision loss • lib/presentation/sensors/sensor_screen.dart:209:41 • deprecated_member_use
+   info • 'withOpacity' is deprecated and shouldn't be used. Use .withValues() to avoid precision loss • lib/presentation/welding/pressure_time_graph.dart:75:44 • deprecated_member_use
+   info • 'withOpacity' is deprecated and shouldn't be used. Use .withValues() to avoid precision loss • lib/presentation/welding/pressure_time_graph.dart:79:33 • deprecated_member_use
+   info • 'withOpacity' is deprecated and shouldn't be used. Use .withValues() to avoid precision loss • lib/presentation/welding/pressure_time_graph.dart:136:44 • deprecated_member_use
+   info • 'withOpacity' is deprecated and shouldn't be used. Use .withValues() to avoid precision loss • lib/presentation/welding/pressure_time_graph.dart:140:44 • deprecated_member_use
+   info • 'withOpacity' is deprecated and shouldn't be used. Use .withValues() to avoid precision loss • lib/presentation/welding/pressure_time_graph.dart:177:48 • deprecated_member_use
+   info • 'withOpacity' is deprecated and shouldn't be used. Use .withValues() to avoid precision loss • lib/presentation/welding/pressure_time_graph.dart:179:48 • deprecated_member_use
+   info • 'withOpacity' is deprecated and shouldn't be used. Use .withValues() to avoid precision loss • lib/presentation/welding/pressure_time_graph.dart:221:42 • deprecated_member_use
+   info • 'withOpacity' is deprecated and shouldn't be used. Use .withValues() to avoid precision loss • lib/presentation/welding/pressure_time_graph.dart:277:37 • deprecated_member_use
+   info • 'withOpacity' is deprecated and shouldn't be used. Use .withValues() to avoid precision loss • lib/presentation/welding/pressure_time_graph.dart:278:39 • deprecated_member_use
+   info • 'withOpacity' is deprecated and shouldn't be used. Use .withValues() to avoid precision loss • lib/presentation/welding/pressure_time_graph.dart:293:45 • deprecated_member_use
+   info • 'withOpacity' is deprecated and shouldn't be used. Use .withValues() to avoid precision loss • lib/presentation/welding/pressure_time_graph.dart:351:56 • deprecated_member_use
+   info • 'withOpacity' is deprecated and shouldn't be used. Use .withValues() to avoid precision loss • lib/presentation/welding/pressure_time_graph.dart:371:60 • deprecated_member_use
+   info • 'withOpacity' is deprecated and shouldn't be used. Use .withValues() to avoid precision loss • lib/presentation/welding/pressure_time_graph.dart:391:60 • deprecated_member_use
+   info • 'withOpacity' is deprecated and shouldn't be used. Use .withValues() to avoid precision loss • lib/presentation/welding/pressure_time_graph.dart:429:46 • deprecated_member_use
+   info • 'withOpacity' is deprecated and shouldn't be used. Use .withValues() to avoid precision loss • lib/presentation/welding/pressure_time_graph.dart:431:50 • deprecated_member_use
+   info • 'withOpacity' is deprecated and shouldn't be used. Use .withValues() to avoid precision loss • lib/presentation/welding/pressure_time_graph.dart:440:51 • deprecated_member_use
+   info • 'withOpacity' is deprecated and shouldn't be used. Use .withValues() to avoid precision loss • lib/presentation/welding/pressure_time_graph.dart:445:46 • deprecated_member_use
+   info • 'withOpacity' is deprecated and shouldn't be used. Use .withValues() to avoid precision loss • lib/presentation/welding/pressure_time_graph.dart:461:52 • deprecated_member_use
+   info • 'withOpacity' is deprecated and shouldn't be used. Use .withValues() to avoid precision loss • lib/presentation/welding/pressure_time_graph.dart:492:22 • deprecated_member_use
+   info • 'withOpacity' is deprecated and shouldn't be used. Use .withValues() to avoid precision loss • lib/presentation/welding/weld_setup_screen.dart:499:46 • deprecated_member_use
+   info • 'withOpacity' is deprecated and shouldn't be used. Use .withValues() to avoid precision loss • lib/presentation/welding/weld_setup_screen.dart:522:22 • deprecated_member_use
+   info • 'withOpacity' is deprecated and shouldn't be used. Use .withValues() to avoid precision loss • lib/presentation/welding/weld_setup_screen.dart:570:22 • deprecated_member_use
+   info • 'withOpacity' is deprecated and shouldn't be used. Use .withValues() to avoid precision loss • lib/presentation/welding/weld_setup_screen.dart:585:29 • deprecated_member_use
+   info • 'withOpacity' is deprecated and shouldn't be used. Use .withValues() to avoid precision loss • lib/presentation/welding/weld_setup_screen.dart:692:21 • deprecated_member_use
+   info • 'withOpacity' is deprecated and shouldn't be used. Use .withValues() to avoid precision loss • lib/presentation/welding/weld_setup_screen.dart:694:40 • deprecated_member_use
+   info • 'withOpacity' is deprecated and shouldn't be used. Use .withValues() to avoid precision loss • lib/presentation/welding/weld_setup_screen.dart:703:27 • deprecated_member_use
+   info • 'withOpacity' is deprecated and shouldn't be used. Use .withValues() to avoid precision loss • lib/presentation/welding/weld_setup_screen.dart:799:60 • deprecated_member_use
+   info • 'withOpacity' is deprecated and shouldn't be used. Use .withValues() to avoid precision loss • lib/presentation/welding/weld_setup_screen.dart:819:31 • deprecated_member_use
+   info • 'withOpacity' is deprecated and shouldn't be used. Use .withValues() to avoid precision loss • lib/presentation/welding/weld_setup_screen.dart:821:50 • deprecated_member_use
+   info • 'withOpacity' is deprecated and shouldn't be used. Use .withValues() to avoid precision loss • lib/presentation/welding/weld_setup_screen.dart:876:62 • deprecated_member_use
+   info • 'withOpacity' is deprecated and shouldn't be used. Use .withValues() to avoid precision loss • lib/presentation/welding/weld_setup_screen.dart:877:66 • deprecated_member_use
+   info • 'withOpacity' is deprecated and shouldn't be used. Use .withValues() to avoid precision loss • lib/presentation/welding/welding_session_screen.dart:446:48 • deprecated_member_use
+   info • 'withOpacity' is deprecated and shouldn't be used. Use .withValues() to avoid precision loss • lib/presentation/welding/welding_session_screen.dart:449:52 • deprecated_member_use
+   info • 'withOpacity' is deprecated and shouldn't be used. Use .withValues() to avoid precision loss • lib/presentation/welding/welding_session_screen.dart:589:20 • deprecated_member_use
+   info • 'withOpacity' is deprecated and shouldn't be used. Use .withValues() to avoid precision loss • lib/presentation/welding/welding_session_screen.dart:624:61 • deprecated_member_use
+   info • 'withOpacity' is deprecated and shouldn't be used. Use .withValues() to avoid precision loss • lib/presentation/welding/welding_session_screen.dart:645:49 • deprecated_member_use
+   info • 'withOpacity' is deprecated and shouldn't be used. Use .withValues() to avoid precision loss • lib/presentation/welding/welding_session_screen.dart:718:25 • deprecated_member_use
+   info • 'withOpacity' is deprecated and shouldn't be used. Use .withValues() to avoid precision loss • lib/presentation/welding/welding_session_screen.dart:720:44 • deprecated_member_use
+   info • 'withOpacity' is deprecated and shouldn't be used. Use .withValues() to avoid precision loss • lib/presentation/welding/welding_session_screen.dart:751:41 • deprecated_member_use
+   info • 'withOpacity' is deprecated and shouldn't be used. Use .withValues() to avoid precision loss • lib/presentation/welding/welding_session_screen.dart:760:66 • deprecated_member_use
+   info • 'withOpacity' is deprecated and shouldn't be used. Use .withValues() to avoid precision loss • lib/presentation/welding/welding_session_screen.dart:764:70 • deprecated_member_use
+   info • 'withOpacity' is deprecated and shouldn't be used. Use .withValues() to avoid precision loss • lib/presentation/welding/welding_session_screen.dart:810:29 • deprecated_member_use
+   info • 'withOpacity' is deprecated and shouldn't be used. Use .withValues() to avoid precision loss • lib/presentation/welding/welding_session_screen.dart:813:31 • deprecated_member_use
+warning • Unused import: 'dart:math' • lib/services/sensor/sensor_service.dart:2:8 • unused_import
+warning • Unused import: '../../data/local/dao/sensor_logs_dao.dart' • lib/services/sensor/sensor_service.dart:11:8 • unused_import
+  error • The argument type 'Value<double?>' can't be assigned to the parameter type 'Value<double>'.  • lib/services/welding/welding_table_generator.dart:437:28 • argument_type_not_assignable
+  error • The argument type 'Value<int?>' can't be assigned to the parameter type 'Value<int>'.  • lib/services/welding/welding_table_generator.dart:442:33 • argument_type_not_assignable
+  error • The argument type 'Value<double?>' can't be assigned to the parameter type 'Value<double>'.  • lib/services/welding/welding_table_generator.dart:443:33 • argument_type_not_assignable
+  error • The argument type 'Value<int?>' can't be assigned to the parameter type 'Value<int>'.  • lib/services/welding/welding_table_generator.dart:444:33 • argument_type_not_assignable
+  error • The argument type 'Value<double?>' can't be assigned to the parameter type 'Value<double>'.  • lib/services/welding/welding_table_generator.dart:445:33 • argument_type_not_assignable
+  error • The argument type 'Value<int?>' can't be assigned to the parameter type 'Value<int>'.  • lib/services/welding/welding_table_generator.dart:446:33 • argument_type_not_assignable
+  error • The argument type 'Value<int?>' can't be assigned to the parameter type 'Value<int>'.  • lib/services/welding/welding_table_generator.dart:447:33 • argument_type_not_assignable
+  error • The argument type 'Value<int?>' can't be assigned to the parameter type 'Value<int>'.  • lib/services/welding/welding_table_generator.dart:448:33 • argument_type_not_assignable
+  error • The argument type 'Value<double?>' can't be assigned to the parameter type 'Value<double>'.  • lib/services/welding/welding_table_generator.dart:449:33 • argument_type_not_assignable
+  error • The argument type 'Value<double?>' can't be assigned to the parameter type 'Value<double>'.  • lib/services/welding/welding_table_generator.dart:450:33 • argument_type_not_assignable
+  error • The argument type 'Value<double?>' can't be assigned to the parameter type 'Value<double>'.  • lib/services/welding/welding_table_generator.dart:451:33 • argument_type_not_assignable
+  error • The argument type 'Value<int?>' can't be assigned to the parameter type 'Value<int>'.  • lib/services/welding/welding_table_generator.dart:452:33 • argument_type_not_assignable
+  error • The argument type 'Value<double?>' can't be assigned to the parameter type 'Value<double>'.  • lib/services/welding/welding_table_generator.dart:453:33 • argument_type_not_assignable
+  error • The argument type 'Value<int?>' can't be assigned to the parameter type 'Value<int>'.  • lib/services/welding/welding_table_generator.dart:455:28 • argument_type_not_assignable
+  error • The argument type 'Value<double?>' can't be assigned to the parameter type 'Value<double>'.  • lib/services/welding/welding_table_generator.dart:456:29 • argument_type_not_assignable
+  error • The argument type 'Value<int?>' can't be assigned to the parameter type 'Value<int>'.  • lib/services/welding/welding_table_generator.dart:457:28 • argument_type_not_assignable
+  error • The argument type 'Value<double?>' can't be assigned to the parameter type 'Value<double>'.  • lib/services/welding/welding_table_generator.dart:459:38 • argument_type_not_assignable
+  error • The argument type 'Value<double?>' can't be assigned to the parameter type 'Value<double>'.  • lib/services/welding/welding_table_generator.dart:460:38 • argument_type_not_assignable
+  error • The argument type 'Value<double?>' can't be assigned to the parameter type 'Value<double>'.  • lib/services/welding/welding_table_generator.dart:461:38 • argument_type_not_assignable
+  error • The argument type 'Value<String?>' can't be assigned to the parameter type 'Value<String>'.  • lib/services/welding/welding_table_generator.dart:463:23 • argument_type_not_assignable
+  error • The argument type 'Value<DateTime?>' can't be assigned to the parameter type 'Value<DateTime>'.  • lib/services/welding/welding_table_generator.dart:465:23 • argument_type_not_assignable
+  error • The argument type 'Value<DateTime?>' can't be assigned to the parameter type 'Value<DateTime>'.  • lib/services/welding/welding_table_generator.dart:466:23 • argument_type_not_assignable
+  error • The argument type 'Value<DateTime?>' can't be assigned to the parameter type 'Value<DateTime>'.  • lib/services/welding/welding_table_generator.dart:468:25 • argument_type_not_assignable
+  error • The argument type '_CurvePainter' can't be assigned to the parameter type 'CustomPainter?'.  • lib/services/welding_trace/weld_report_generator.dart:463:22 • argument_type_not_assignable
+  error • The argument type '_QrPainter' can't be assigned to the parameter type 'CustomPainter?'.  • lib/services/welding_trace/weld_report_generator.dart:787:26 • argument_type_not_assignable
+  error • Classes and mixins can only implement other classes and mixins • lib/services/welding_trace/weld_report_generator.dart:812:32 • implements_non_class
+warning • The method doesn't override an inherited method • lib/services/welding_trace/weld_report_generator.dart:819:8 • override_on_non_overriding_member
+warning • The method doesn't override an inherited method • lib/services/welding_trace/weld_report_generator.dart:860:8 • override_on_non_overriding_member
+  error • Classes and mixins can only implement other classes and mixins • lib/services/welding_trace/weld_report_generator.dart:867:29 • implements_non_class
+warning • The method doesn't override an inherited method • lib/services/welding_trace/weld_report_generator.dart:873:8 • override_on_non_overriding_member
+warning • The method doesn't override an inherited method • lib/services/welding_trace/weld_report_generator.dart:903:8 • override_on_non_overriding_member
+
+95 issues found. (ran in 16.5s)
+Error: Process completed with exit code 1.
