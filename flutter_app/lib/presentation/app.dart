@@ -5,13 +5,22 @@ import 'package:go_router/go_router.dart';
 import '../core/theme/app_colors.dart';
 import '../di/providers.dart';
 import 'auth/login_screen.dart';
-import 'projects/projects_screen.dart';
-import 'splash/splash_screen.dart';
-import 'welding/weld_setup_screen.dart';
-import 'welding/welding_session_screen.dart';
+import 'dashboard/dashboard_screen.dart';
 import 'machines/machines_screen.dart';
+import 'machines/machine_form.dart';
+import 'projects/projects_screen.dart';
+import 'projects/project_form.dart';
+import 'projects/project_detail_screen.dart';
+import 'qr/qr_scan_screen.dart';
+import 'reports/reports_screen.dart';
 import 'sensors/sensor_screen.dart';
 import 'settings/settings_screen.dart';
+import 'shell/main_shell.dart';
+import 'splash/splash_screen.dart';
+import 'welds/welds_screen.dart';
+import 'welds/weld_detail_screen.dart';
+import 'welding/weld_setup_screen.dart';
+import 'welding/welding_session_screen.dart';
 
 class FusionCertifyApp extends ConsumerWidget {
   const FusionCertifyApp({super.key});
@@ -23,16 +32,18 @@ class FusionCertifyApp extends ConsumerWidget {
     final router = GoRouter(
       initialLocation: '/splash',
       redirect: (context, state) {
-        final onSplash = state.matchedLocation == '/splash';
-        if (onSplash) return null;
+        final loc = state.matchedLocation;
+        if (loc == '/splash') return null;
 
         final isAuth = authState.isAuthenticated;
-        final onLogin = state.matchedLocation == '/login';
+        final onLogin = loc == '/login';
+
         if (!isAuth && !onLogin) return '/login';
-        if (isAuth && onLogin) return '/projects';
+        if (isAuth && onLogin) return '/dashboard';
         return null;
       },
       routes: [
+        // ── Public routes ──────────────────────────────────────────────
         GoRoute(
           path: '/splash',
           builder: (context, state) => const SplashScreen(),
@@ -41,18 +52,94 @@ class FusionCertifyApp extends ConsumerWidget {
           path: '/login',
           builder: (context, state) => const LoginScreen(),
         ),
-        GoRoute(
-          path: '/projects',
-          builder: (context, state) => const ProjectsScreen(),
+
+        // ── Main shell with BottomNav ──────────────────────────────────
+        StatefulShellRoute.indexedStack(
+          builder: (context, state, shell) => MainShell(navigationShell: shell),
+          branches: [
+            // 0 – Dashboard
+            StatefulShellBranch(routes: [
+              GoRoute(
+                path: '/dashboard',
+                builder: (_, __) => const DashboardScreen(),
+              ),
+            ]),
+            // 1 – Projects
+            StatefulShellBranch(routes: [
+              GoRoute(
+                path: '/projects',
+                builder: (_, __) => const ProjectsScreen(),
+                routes: [
+                  GoRoute(
+                    path: 'new',
+                    builder: (_, __) => const ProjectFormScreen(),
+                  ),
+                  GoRoute(
+                    path: ':projectId',
+                    builder: (_, state) => ProjectDetailScreen(
+                      projectId: state.pathParameters['projectId']!,
+                    ),
+                    routes: [
+                      GoRoute(
+                        path: 'weld/setup',
+                        builder: (_, state) => WeldSetupScreen(
+                          preselectedProjectId: state.pathParameters['projectId'],
+                        ),
+                      ),
+                    ],
+                  ),
+                ],
+              ),
+            ]),
+            // 2 – Welds
+            StatefulShellBranch(routes: [
+              GoRoute(
+                path: '/welds',
+                builder: (_, __) => const WeldsScreen(),
+                routes: [
+                  GoRoute(
+                    path: ':weldId',
+                    builder: (_, state) => WeldDetailScreen(
+                      weldId: state.pathParameters['weldId']!,
+                    ),
+                  ),
+                ],
+              ),
+            ]),
+            // 3 – Machines
+            StatefulShellBranch(routes: [
+              GoRoute(
+                path: '/machines',
+                builder: (_, __) => const MachinesScreen(),
+                routes: [
+                  GoRoute(
+                    path: 'new',
+                    builder: (_, __) => const MachineFormScreen(),
+                  ),
+                ],
+              ),
+            ]),
+            // 4 – Reports
+            StatefulShellBranch(routes: [
+              GoRoute(
+                path: '/reports',
+                builder: (_, __) => const ReportsScreen(),
+              ),
+            ]),
+            // 5 – Settings
+            StatefulShellBranch(routes: [
+              GoRoute(
+                path: '/settings',
+                builder: (_, __) => const SettingsScreen(),
+              ),
+            ]),
+          ],
         ),
 
-        // ── Weld flow ──────────────────────────────────────────────────────────
+        // ── Weld flow (full-screen, outside shell) ─────────────────────
         GoRoute(
-          path: '/projects/:projectId/weld/setup',
-          builder: (context, state) {
-            final projectId = state.pathParameters['projectId']!;
-            return WeldSetupScreen(preselectedProjectId: projectId);
-          },
+          path: '/weld/setup',
+          builder: (_, __) => const WeldSetupScreen(),
         ),
         GoRoute(
           path: '/weld/session',
@@ -62,17 +149,16 @@ class FusionCertifyApp extends ConsumerWidget {
           },
         ),
 
+        // ── QR verification (full-screen) ─────────────────────────────
         GoRoute(
-          path: '/machines',
-          builder: (context, state) => const MachinesScreen(),
+          path: '/qr/verify',
+          builder: (_, __) => const QRScanScreen(),
         ),
+
+        // ── Sensor screen ─────────────────────────────────────────────
         GoRoute(
           path: '/sensors',
-          builder: (context, state) => const SensorScreen(),
-        ),
-        GoRoute(
-          path: '/settings',
-          builder: (context, state) => const SettingsScreen(),
+          builder: (_, __) => const SensorScreen(),
         ),
       ],
     );
@@ -131,9 +217,7 @@ class FusionCertifyApp extends ConsumerWidget {
         ),
       ),
       textButtonTheme: TextButtonThemeData(
-        style: TextButton.styleFrom(
-          foregroundColor: AppColors.sertecRed,
-        ),
+        style: TextButton.styleFrom(foregroundColor: AppColors.sertecRed),
       ),
       inputDecorationTheme: InputDecorationTheme(
         border: OutlineInputBorder(borderRadius: BorderRadius.circular(10)),
@@ -141,8 +225,7 @@ class FusionCertifyApp extends ConsumerWidget {
           borderRadius: BorderRadius.circular(10),
           borderSide: const BorderSide(color: AppColors.sertecRed, width: 1.8),
         ),
-        contentPadding:
-            const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
+        contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
         filled: true,
         fillColor: Colors.white,
       ),
@@ -153,6 +236,22 @@ class FusionCertifyApp extends ConsumerWidget {
         margin: const EdgeInsets.symmetric(horizontal: 16, vertical: 6),
         shadowColor: Colors.black12,
       ),
+      navigationBarTheme: NavigationBarThemeData(
+        height: 65,
+        labelTextStyle: WidgetStateProperty.resolveWith((states) {
+          if (states.contains(WidgetState.selected)) {
+            return const TextStyle(
+                fontSize: 11, fontWeight: FontWeight.w600, color: AppColors.sertecRed);
+          }
+          return const TextStyle(fontSize: 11, color: AppColors.neutralGray);
+        }),
+        iconTheme: WidgetStateProperty.resolveWith((states) {
+          if (states.contains(WidgetState.selected)) {
+            return const IconThemeData(color: AppColors.sertecRed);
+          }
+          return const IconThemeData(color: AppColors.neutralGray);
+        }),
+      ),
       checkboxTheme: CheckboxThemeData(
         fillColor: WidgetStateProperty.resolveWith(
           (s) => s.contains(WidgetState.selected) ? AppColors.sertecRed : null,
@@ -160,10 +259,7 @@ class FusionCertifyApp extends ConsumerWidget {
         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(4)),
       ),
       dividerTheme: const DividerThemeData(
-        color: Color(0xFFEEEEEE),
-        thickness: 1,
-        space: 1,
-      ),
+        color: Color(0xFFEEEEEE), thickness: 1, space: 1),
       extensions: [
         WeldTraceColors(
           warning: AppColors.warning,
@@ -176,7 +272,7 @@ class FusionCertifyApp extends ConsumerWidget {
   }
 }
 
-/// Custom theme extension for WeldTrace-specific semantic colors.
+/// Custom theme extension for FusionCertify semantic colors.
 class WeldTraceColors extends ThemeExtension<WeldTraceColors> {
   const WeldTraceColors({
     required this.warning,
@@ -211,8 +307,7 @@ class WeldTraceColors extends ThemeExtension<WeldTraceColors> {
       warning: Color.lerp(warning, other.warning, t)!,
       success: Color.lerp(success, other.success, t)!,
       sensorPressure: Color.lerp(sensorPressure, other.sensorPressure, t)!,
-      sensorTemperature:
-          Color.lerp(sensorTemperature, other.sensorTemperature, t)!,
+      sensorTemperature: Color.lerp(sensorTemperature, other.sensorTemperature, t)!,
     );
   }
 }

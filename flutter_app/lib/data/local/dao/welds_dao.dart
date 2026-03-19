@@ -16,6 +16,12 @@ class WeldsDao extends DatabaseAccessor<AppDatabase> with _$WeldsDaoMixin {
 
   // ── Welds ─────────────────────────────────────────────────────────────────
 
+  Stream<List<WeldRecord>> watchAll() =>
+      (select(weldsTable)..orderBy([(t) => OrderingTerm.desc(t.startedAt)])).watch();
+
+  Future<List<WeldRecord>> getAll() =>
+      (select(weldsTable)..orderBy([(t) => OrderingTerm.desc(t.startedAt)])).get();
+
   Stream<List<WeldRecord>> watchByProject(String projectId) =>
       (select(weldsTable)
             ..where((t) => t.projectId.equals(projectId))
@@ -27,6 +33,15 @@ class WeldsDao extends DatabaseAccessor<AppDatabase> with _$WeldsDaoMixin {
             ..where((t) => t.projectId.equals(projectId))
             ..orderBy([(t) => OrderingTerm.desc(t.startedAt)]))
           .get();
+
+  Stream<List<WeldRecord>> watchCompleted() =>
+      (select(weldsTable)
+            ..where((t) => t.status.equals('completed'))
+            ..orderBy([(t) => OrderingTerm.desc(t.completedAt)]))
+          .watch();
+
+  Future<void> deleteById(String id) =>
+      (delete(weldsTable)..where((t) => t.id.equals(id))).go();
 
   Future<WeldRecord?> getById(String id) =>
       (select(weldsTable)..where((t) => t.id.equals(id))).getSingleOrNull();

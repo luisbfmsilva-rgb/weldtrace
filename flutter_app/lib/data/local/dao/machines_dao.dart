@@ -36,4 +36,10 @@ class MachinesDao extends DatabaseAccessor<AppDatabase> with _$MachinesDaoMixin 
           lastSyncedAt: Value(DateTime.now()),
         ),
       );
+
+  Future<void> deleteById(String id) =>
+      (delete(machinesTable)..where((t) => t.id.equals(id))).go();
+
+  Future<void> updateMachine(MachinesTableCompanion row) =>
+      (update(machinesTable)..where((t) => t.id.equals(row.id.value))).write(row);
 }
