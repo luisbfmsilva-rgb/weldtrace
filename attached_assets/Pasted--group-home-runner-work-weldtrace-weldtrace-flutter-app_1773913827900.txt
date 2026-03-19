@@ -1,0 +1,41 @@
+::group::❌ /home/runner/work/weldtrace/weldtrace/flutter_app/test/unit/welding_table_generator_test.dart: DVS 2207-1 fallback companion has required pressure fields (failed)
+❌ /home/runner/work/weldtrace/weldtrace/flutter_app/test/unit/welding_table_generator_test.dart: DVS 2207-1 fallback companion has required pressure fields (failed)
+  FormatException: Invalid group (?i)sdr\s*
+  dart:core                                                    new RegExp
+  package:weldtrace/services/welding/pipe_geometry.dart 26:49  PipeGeometry.parseSdr
+  package:weldtrace/services/standards/dvs_2207.dart 109:30    Dvs2207.generateFallback
+  test/unit/welding_table_generator_test.dart 25:33            main.<fn>.<fn>
+  ::endgroup::
+::group::❌ /home/runner/work/weldtrace/weldtrace/flutter_app/test/unit/welding_table_generator_test.dart: DVS 2207-1 fallback PE100 fusion pressure > PE80 baseline (material correction) (failed)
+❌ /home/runner/work/weldtrace/weldtrace/flutter_app/test/unit/welding_table_generator_test.dart: DVS 2207-1 fallback PE100 fusion pressure > PE80 baseline (material correction) (failed)
+  FormatException: Invalid group (?i)sdr\s*
+  dart:core                                                    new RegExp
+  package:weldtrace/services/welding/pipe_geometry.dart 26:49  PipeGeometry.parseSdr
+  package:weldtrace/services/standards/dvs_2207.dart 109:30    Dvs2207.generateFallback
+  test/unit/welding_table_generator_test.dart 46:28            main.<fn>.<fn>
+  ::endgroup::
+::group::❌ /home/runner/work/weldtrace/weldtrace/flutter_app/test/unit/welding_table_generator_test.dart: DVS 2207-1 fallback PP fusion pressure < PE80 baseline (material correction) (failed)
+❌ /home/runner/work/weldtrace/weldtrace/flutter_app/test/unit/welding_table_generator_test.dart: DVS 2207-1 fallback PP fusion pressure < PE80 baseline (material correction) (failed)
+  FormatException: Invalid group (?i)sdr\s*
+  dart:core                                                    new RegExp
+  package:weldtrace/services/welding/pipe_geometry.dart 26:49  PipeGeometry.parseSdr
+  package:weldtrace/services/standards/dvs_2207.dart 109:30    Dvs2207.generateFallback
+  test/unit/welding_table_generator_test.dart 64:28            main.<fn>.<fn>
+  ::endgroup::
+::group::❌ /home/runner/work/weldtrace/weldtrace/flutter_app/test/unit/welding_table_generator_test.dart: DVS 2207-1 fallback heat soak time scales with diameter (failed)
+❌ /home/runner/work/weldtrace/weldtrace/flutter_app/test/unit/welding_table_generator_test.dart: DVS 2207-1 fallback heat soak time scales with diameter (failed)
+  FormatException: Invalid group (?i)sdr\s*
+  dart:core                                                    new RegExp
+  package:weldtrace/services/welding/pipe_geometry.dart 26:49  PipeGeometry.parseSdr
+  package:weldtrace/services/standards/dvs_2207.dart 109:30    Dvs2207.generateFallback
+  test/unit/welding_table_generator_test.dart 82:29            main.<fn>.<fn>
+  ::endgroup::
+::group::❌ /home/runner/work/weldtrace/weldtrace/flutter_app/test/unit/welding_table_generator_test.dart: DVS 2207-1 fallback cooling time scales with wall thickness (failed)
+❌ /home/runner/work/weldtrace/weldtrace/flutter_app/test/unit/welding_table_generator_test.dart: DVS 2207-1 fallback cooling time scales with wall thickness (failed)
+  FormatException: Invalid group (?i)sdr\s*
+  dart:core                                                    new RegExp
+  package:weldtrace/services/welding/pipe_geometry.dart 26:49  PipeGeometry.parseSdr
+  package:weldtrace/services/standards/dvs_2207.dart 109:30    Dvs2207.generateFallback
+  test/unit/welding_table_generator_test.dart 100:32           main.<fn>.<fn>
+  ::endgroup::
+::group::❌ /home/runner/work/weldtrace/weldtrace/flutter_app/test/unit/welding_table_generator_test.dart: DVS 2207-1 fallback full pipeline — phases exist and machine pressure ≥ 0 (failed)

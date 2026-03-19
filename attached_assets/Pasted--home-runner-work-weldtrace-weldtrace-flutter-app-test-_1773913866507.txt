@@ -1,0 +1,25 @@
+
+❌ /home/runner/work/weldtrace/weldtrace/flutter_app/test/unit/welding_table_generator_test.dart: ASTM F2620 fallback companion has higher base pressure than DVS 2207 for same pipe (failed)
+  FormatException: Invalid group (?i)sdr\s*
+  dart:core                                                    new RegExp
+  package:weldtrace/services/welding/pipe_geometry.dart 26:49  PipeGeometry.parseSdr
+  package:weldtrace/services/standards/dvs_2207.dart 109:30    Dvs2207.generateFallback
+  test/unit/welding_table_generator_test.dart 258:27           main.<fn>.<fn>
+  ::endgroup::
+::group::❌ /home/runner/work/weldtrace/weldtrace/flutter_app/test/unit/welding_table_generator_test.dart: ASTM F2620 fallback full pipeline — phases exist and pressures ≥ 0 (failed)
+❌ /home/runner/work/weldtrace/weldtrace/flutter_app/test/unit/welding_table_generator_test.dart: ASTM F2620 fallback full pipeline — phases exist and pressures ≥ 0 (failed)
+  FormatException: Invalid group (?i)sdr\s*
+  dart:core                                                    new RegExp
+  package:weldtrace/services/welding/pipe_geometry.dart 26:49  PipeGeometry.parseSdr
+  package:weldtrace/services/standards/astm_f2620.dart 106:30  AstmF2620.generateFallback
+  test/unit/welding_table_generator_test.dart 276:35           main.<fn>.<fn>
+  ::endgroup::
+::group::❌ /home/runner/work/weldtrace/weldtrace/flutter_app/test/unit/welding_table_generator_test.dart: generateFallbackForStandard dispatcher routes DVS_2207 to Dvs2207 engine (failed)
+❌ /home/runner/work/weldtrace/weldtrace/flutter_app/test/unit/welding_table_generator_test.dart: generateFallbackForStandard dispatcher routes DVS_2207 to Dvs2207 engine (failed)
+  FormatException: Invalid group (?i)sdr\s*
+  dart:core                                                    new RegExp
+  package:weldtrace/services/welding/pipe_geometry.dart 26:49  PipeGeometry.parseSdr
+  package:weldtrace/services/standards/dvs_2207.dart 109:30    Dvs2207.generateFallback
+  test/unit/welding_table_generator_test.dart 319:33           main.<fn>.<fn>
+  ::endgroup::
+::group::❌ /home/runner/work/weldtrace/weldtrace/flutter_app/test/unit/welding_table_generator_test.dart: generateFallbackForStandard dispatcher routes ASTM_F2620 to AstmF2620 engine (failed)

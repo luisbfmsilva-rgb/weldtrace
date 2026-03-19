@@ -23,7 +23,7 @@ class PipeGeometry {
   /// Throws [FormatException] when the numeric part cannot be parsed.
   static double parseSdr(String sdrRating) {
     // Strip any leading 'SDR' prefix (case-insensitive) and whitespace.
-    final cleaned = sdrRating.trim().replaceAll(RegExp(r'(?i)sdr\s*'), '');
+    final cleaned = sdrRating.trim().replaceAll(RegExp(r'sdr\s*', caseSensitive: false), '');
     final value = double.tryParse(cleaned);
     if (value == null || value <= 1) {
       throw FormatException(

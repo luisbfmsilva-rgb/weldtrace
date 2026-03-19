@@ -1,0 +1,33 @@
+
+❌ /home/runner/work/weldtrace/weldtrace/flutter_app/test/unit/welding_table_generator_test.dart: DVS 2207-1 fallback full pipeline — phases exist and machine pressure ≥ 0 (failed)
+  FormatException: Invalid group (?i)sdr\s*
+  dart:core                                                    new RegExp
+  package:weldtrace/services/welding/pipe_geometry.dart 26:49  PipeGeometry.parseSdr
+  package:weldtrace/services/standards/dvs_2207.dart 109:30    Dvs2207.generateFallback
+  test/unit/welding_table_generator_test.dart 118:33           main.<fn>.<fn>
+  ::endgroup::
+::group::❌ /home/runner/work/weldtrace/weldtrace/flutter_app/test/unit/welding_table_generator_test.dart: ISO 21307 fallback low-pressure companion has fusion pressure present (failed)
+❌ /home/runner/work/weldtrace/weldtrace/flutter_app/test/unit/welding_table_generator_test.dart: ISO 21307 fallback low-pressure companion has fusion pressure present (failed)
+  FormatException: Invalid group (?i)sdr\s*
+  dart:core                                                    new RegExp
+  package:weldtrace/services/welding/pipe_geometry.dart 26:49  PipeGeometry.parseSdr
+  package:weldtrace/services/standards/iso_21307.dart 117:30   Iso21307.generateFallback
+  test/unit/welding_table_generator_test.dart 182:34           main.<fn>.<fn>
+  ::endgroup::
+::group::❌ /home/runner/work/weldtrace/weldtrace/flutter_app/test/unit/welding_table_generator_test.dart: ISO 21307 fallback high-pressure fusion > low-pressure fusion (failed)
+❌ /home/runner/work/weldtrace/weldtrace/flutter_app/test/unit/welding_table_generator_test.dart: ISO 21307 fallback high-pressure fusion > low-pressure fusion (failed)
+  FormatException: Invalid group (?i)sdr\s*
+  dart:core                                                    new RegExp
+  package:weldtrace/services/welding/pipe_geometry.dart 26:49  PipeGeometry.parseSdr
+  package:weldtrace/services/standards/iso_21307.dart 117:30   Iso21307.generateFallback
+  test/unit/welding_table_generator_test.dart 194:28           main.<fn>.<fn>
+  ::endgroup::
+::group::❌ /home/runner/work/weldtrace/weldtrace/flutter_app/test/unit/welding_table_generator_test.dart: ISO 21307 fallback full pipeline (high-pressure) — phases exist and pressures ≥ 0 (failed)
+❌ /home/runner/work/weldtrace/weldtrace/flutter_app/test/unit/welding_table_generator_test.dart: ISO 21307 fallback full pipeline (high-pressure) — phases exist and pressures ≥ 0 (failed)
+  FormatException: Invalid group (?i)sdr\s*
+  dart:core                                                    new RegExp
+  package:weldtrace/services/welding/pipe_geometry.dart 26:49  PipeGeometry.parseSdr
+  package:weldtrace/services/standards/iso_21307.dart 117:30   Iso21307.generateFallback
+  test/unit/welding_table_generator_test.dart 214:34           main.<fn>.<fn>
+  ::endgroup::
+::group::❌ /home/runner/work/weldtrace/weldtrace/flutter_app/test/unit/welding_table_generator_test.dart: ASTM F2620 fallback companion has higher base pressure than DVS 2207 for same pipe (failed)
