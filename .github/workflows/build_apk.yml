@@ -45,6 +45,19 @@ jobs:
         working-directory: flutter_app
         run: flutter test
 
+      - name: Create local.properties
+        working-directory: flutter_app/android
+        run: |
+          echo "flutter.sdk=$FLUTTER_ROOT" > local.properties
+          echo "sdk.dir=$ANDROID_HOME" >> local.properties
+
+      - name: Install Gradle and generate wrapper JAR
+        working-directory: flutter_app/android
+        run: |
+          curl -fsSL https://services.gradle.org/distributions/gradle-8.9-bin.zip -o /tmp/gradle.zip
+          unzip -q /tmp/gradle.zip -d /tmp/gradle-dist
+          /tmp/gradle-dist/gradle-8.9/bin/gradle wrapper --gradle-version=8.9 --distribution-type=all
+
       - name: Build debug APK
         working-directory: flutter_app
         run: flutter build apk --debug
