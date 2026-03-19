@@ -119,7 +119,7 @@ Future<void> _generateCertificate(
   Map<String, dynamic>? entry;
   for (final e in entries) {
     if (e is Map && e['jointId'] == jointId) {
-      entry = Map<String, dynamic>.from(e as Map);
+      entry = Map<String, dynamic>.from(e);
       break;
     }
   }

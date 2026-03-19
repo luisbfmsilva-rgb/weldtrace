@@ -1,6 +1,5 @@
 import 'dart:math' as math;
 
-import 'package:drift/drift.dart';
 import 'package:flutter_test/flutter_test.dart';
 
 import 'package:weldtrace/services/standards/dvs_2207.dart';

@@ -96,6 +96,7 @@ class _WeldingSessionScreenState extends ConsumerState<WeldingSessionScreen> {
   final List<ParameterViolation> _violations = [];
 
   int _currentPhaseIndex = 0;
+  // ignore: unused_field
   DateTime? _phaseStartedAt;
   Timer? _phaseTimer;
   int _phaseElapsedSeconds = 0;
@@ -636,7 +637,6 @@ class _PhaseProgressStepper extends StatelessWidget {
             final phase = e.value;
             final isDone = i < currentIndex;
             final isActive = i == currentIndex;
-            final isPending = i > currentIndex;
 
             final color = isDone
                 ? const Color(0xFF2E7D32)

@@ -1,0 +1,159 @@
+Run flutter analyze --no-fatal-infos --no-fatal-warnings
+  
+Analyzing flutter_app...                                        
+
+  error • Target of URI doesn't exist: '../../services/welding_trace/curve_compression.dart' • lib/data/local/dao/welds_dao.dart:9:8 • uri_does_not_exist
+  error • Target of URI doesn't exist: '../../services/welding_trace/weld_trace_recorder.dart' • lib/data/local/dao/welds_dao.dart:10:8 • uri_does_not_exist
+  error • A value of type 'Future<int>' can't be returned from the method 'insertWeld' because it has a return type of 'Future<String>' • lib/data/local/dao/welds_dao.dart:42:7 • return_of_invalid_type
+  error • The name 'WeldTracePoint' isn't a type, so it can't be used as a type argument • lib/data/local/dao/welds_dao.dart:119:15 • non_type_as_type_argument
+  error • Undefined name 'CurveCompression' • lib/data/local/dao/welds_dao.dart:126:14 • undefined_identifier
+  error • Undefined name 'WeldTracePoint' • lib/data/local/dao/welds_dao.dart:136:21 • undefined_identifier
+warning • Unused import: '../../core/errors/app_exception.dart' • lib/data/remote/auth_remote_data_source.dart:1:8 • unused_import
+warning • Unused import: '../local/dao/projects_dao.dart' • lib/data/repositories/auth_repository.dart:9:8 • unused_import
+warning • Unused import: '../local/tables/projects_table.dart' • lib/data/repositories/auth_repository.dart:10:8 • unused_import
+warning • Unused import: '../local/dao/welds_dao.dart' • lib/data/repositories/sync_repository.dart:6:8 • unused_import
+warning • Unused import: '../local/dao/projects_dao.dart' • lib/data/repositories/sync_repository.dart:7:8 • unused_import
+warning • Unused import: '../local/dao/machines_dao.dart' • lib/data/repositories/sync_repository.dart:8:8 • unused_import
+warning • Unused import: '../local/dao/sensor_logs_dao.dart' • lib/data/repositories/sync_repository.dart:9:8 • unused_import
+warning • Unused import: '../local/tables/projects_table.dart' • lib/data/repositories/sync_repository.dart:10:8 • unused_import
+warning • Unused import: '../local/tables/machines_table.dart' • lib/data/repositories/sync_repository.dart:11:8 • unused_import
+warning • Unused import: '../local/tables/welding_standards_table.dart' • lib/data/repositories/sync_repository.dart:12:8 • unused_import
+warning • Unused import: '../local/tables/welding_parameters_table.dart' • lib/data/repositories/sync_repository.dart:13:8 • unused_import
+warning • Unused import: 'package:drift/drift.dart' • lib/data/repositories/weld_parameters_repository.dart:1:8 • unused_import
+warning • Unused import: '../local/tables/welding_standards_table.dart' • lib/data/repositories/weld_parameters_repository.dart:7:8 • unused_import
+warning • Unused import: '../local/tables/welding_parameters_table.dart' • lib/data/repositories/weld_parameters_repository.dart:8:8 • unused_import
+warning • Unused import: 'di/providers.dart' • lib/main.dart:6:8 • unused_import
+   info • 'withOpacity' is deprecated and shouldn't be used. Use .withValues() to avoid precision loss • lib/presentation/auth/login_screen.dart:100:60 • deprecated_member_use
+   info • 'withOpacity' is deprecated and shouldn't be used. Use .withValues() to avoid precision loss • lib/presentation/auth/login_screen.dart:186:58 • deprecated_member_use
+   info • 'withOpacity' is deprecated and shouldn't be used. Use .withValues() to avoid precision loss • lib/presentation/auth/login_screen.dart:227:62 • deprecated_member_use
+  error • The name 'MachineRecord' isn't a type, so it can't be used as a type argument • lib/presentation/machines/machines_screen.dart:16:32 • non_type_as_type_argument
+  error • Undefined class 'MachineRecord' • lib/presentation/machines/machines_screen.dart:41:9 • undefined_class
+   info • 'withOpacity' is deprecated and shouldn't be used. Use .withValues() to avoid precision loss • lib/presentation/machines/machines_screen.dart:56:47 • deprecated_member_use
+   info • 'withOpacity' is deprecated and shouldn't be used. Use .withValues() to avoid precision loss • lib/presentation/machines/machines_screen.dart:122:24 • deprecated_member_use
+  error • The name 'ProjectRecord' isn't a type, so it can't be used as a type argument • lib/presentation/projects/projects_screen.dart:41:32 • non_type_as_type_argument
+  error • Undefined class 'ProjectRecord' • lib/presentation/projects/projects_screen.dart:68:9 • undefined_class
+   info • 'withOpacity' is deprecated and shouldn't be used. Use .withValues() to avoid precision loss • lib/presentation/projects/projects_screen.dart:101:36 • deprecated_member_use
+   info • 'withOpacity' is deprecated and shouldn't be used. Use .withValues() to avoid precision loss • lib/presentation/projects/projects_screen.dart:107:36 • deprecated_member_use
+   info • 'withOpacity' is deprecated and shouldn't be used. Use .withValues() to avoid precision loss • lib/presentation/projects/projects_screen.dart:130:38 • deprecated_member_use
+   info • 'withOpacity' is deprecated and shouldn't be used. Use .withValues() to avoid precision loss • lib/presentation/projects/projects_screen.dart:145:54 • deprecated_member_use
+   info • 'withOpacity' is deprecated and shouldn't be used. Use .withValues() to avoid precision loss • lib/presentation/projects/projects_screen.dart:168:57 • deprecated_member_use
+   info • 'withOpacity' is deprecated and shouldn't be used. Use .withValues() to avoid precision loss • lib/presentation/projects/projects_screen.dart:175:63 • deprecated_member_use
+   info • 'withOpacity' is deprecated and shouldn't be used. Use .withValues() to avoid precision loss • lib/presentation/sensors/sensor_screen.dart:135:54 • deprecated_member_use
+   info • 'withOpacity' is deprecated and shouldn't be used. Use .withValues() to avoid precision loss • lib/presentation/sensors/sensor_screen.dart:163:22 • deprecated_member_use
+   info • 'withOpacity' is deprecated and shouldn't be used. Use .withValues() to avoid precision loss • lib/presentation/sensors/sensor_screen.dart:165:41 • deprecated_member_use
+   info • 'withOpacity' is deprecated and shouldn't be used. Use .withValues() to avoid precision loss • lib/presentation/sensors/sensor_screen.dart:176:47 • deprecated_member_use
+   info • 'withOpacity' is deprecated and shouldn't be used. Use .withValues() to avoid precision loss • lib/presentation/sensors/sensor_screen.dart:207:22 • deprecated_member_use
+   info • 'withOpacity' is deprecated and shouldn't be used. Use .withValues() to avoid precision loss • lib/presentation/sensors/sensor_screen.dart:209:41 • deprecated_member_use
+warning • The value of the local variable 'cursor' isn't used • lib/presentation/welding/nominal_curve_builder.dart:164:12 • unused_local_variable
+warning • The value of the field '_idxNominal' isn't used • lib/presentation/welding/pressure_time_graph.dart:57:16 • unused_field
+   info • 'withOpacity' is deprecated and shouldn't be used. Use .withValues() to avoid precision loss • lib/presentation/welding/pressure_time_graph.dart:74:44 • deprecated_member_use
+   info • 'withOpacity' is deprecated and shouldn't be used. Use .withValues() to avoid precision loss • lib/presentation/welding/pressure_time_graph.dart:78:33 • deprecated_member_use
+   info • 'withOpacity' is deprecated and shouldn't be used. Use .withValues() to avoid precision loss • lib/presentation/welding/pressure_time_graph.dart:135:44 • deprecated_member_use
+   info • 'withOpacity' is deprecated and shouldn't be used. Use .withValues() to avoid precision loss • lib/presentation/welding/pressure_time_graph.dart:139:44 • deprecated_member_use
+   info • 'withOpacity' is deprecated and shouldn't be used. Use .withValues() to avoid precision loss • lib/presentation/welding/pressure_time_graph.dart:176:48 • deprecated_member_use
+   info • 'withOpacity' is deprecated and shouldn't be used. Use .withValues() to avoid precision loss • lib/presentation/welding/pressure_time_graph.dart:178:48 • deprecated_member_use
+   info • 'withOpacity' is deprecated and shouldn't be used. Use .withValues() to avoid precision loss • lib/presentation/welding/pressure_time_graph.dart:220:42 • deprecated_member_use
+   info • 'withOpacity' is deprecated and shouldn't be used. Use .withValues() to avoid precision loss • lib/presentation/welding/pressure_time_graph.dart:276:37 • deprecated_member_use
+   info • 'withOpacity' is deprecated and shouldn't be used. Use .withValues() to avoid precision loss • lib/presentation/welding/pressure_time_graph.dart:277:39 • deprecated_member_use
+   info • 'withOpacity' is deprecated and shouldn't be used. Use .withValues() to avoid precision loss • lib/presentation/welding/pressure_time_graph.dart:292:45 • deprecated_member_use
+   info • 'withOpacity' is deprecated and shouldn't be used. Use .withValues() to avoid precision loss • lib/presentation/welding/pressure_time_graph.dart:350:56 • deprecated_member_use
+   info • 'withOpacity' is deprecated and shouldn't be used. Use .withValues() to avoid precision loss • lib/presentation/welding/pressure_time_graph.dart:370:60 • deprecated_member_use
+   info • 'withOpacity' is deprecated and shouldn't be used. Use .withValues() to avoid precision loss • lib/presentation/welding/pressure_time_graph.dart:390:60 • deprecated_member_use
+   info • 'withOpacity' is deprecated and shouldn't be used. Use .withValues() to avoid precision loss • lib/presentation/welding/pressure_time_graph.dart:428:46 • deprecated_member_use
+   info • 'withOpacity' is deprecated and shouldn't be used. Use .withValues() to avoid precision loss • lib/presentation/welding/pressure_time_graph.dart:430:50 • deprecated_member_use
+   info • 'withOpacity' is deprecated and shouldn't be used. Use .withValues() to avoid precision loss • lib/presentation/welding/pressure_time_graph.dart:439:51 • deprecated_member_use
+   info • 'withOpacity' is deprecated and shouldn't be used. Use .withValues() to avoid precision loss • lib/presentation/welding/pressure_time_graph.dart:444:46 • deprecated_member_use
+   info • 'withOpacity' is deprecated and shouldn't be used. Use .withValues() to avoid precision loss • lib/presentation/welding/pressure_time_graph.dart:460:52 • deprecated_member_use
+   info • 'withOpacity' is deprecated and shouldn't be used. Use .withValues() to avoid precision loss • lib/presentation/welding/pressure_time_graph.dart:491:22 • deprecated_member_use
+warning • Unused import: '../../core/utils/result.dart' • lib/presentation/welding/weld_setup_notifier.dart:5:8 • unused_import
+warning • Unused import: '../../data/local/tables/welds_table.dart' • lib/presentation/welding/weld_setup_notifier.dart:7:8 • unused_import
+warning • Unused import: '../../data/local/tables/welding_standards_table.dart' • lib/presentation/welding/weld_setup_notifier.dart:8:8 • unused_import
+warning • Unused import: '../../data/local/tables/welding_parameters_table.dart' • lib/presentation/welding/weld_setup_notifier.dart:9:8 • unused_import
+  error • The name 'ProjectRecord' isn't a type, so it can't be used as a type argument • lib/presentation/welding/weld_setup_screen.dart:119:32 • non_type_as_type_argument
+  error • The property 'id' can't be unconditionally accessed because the receiver can be 'null' • lib/presentation/welding/weld_setup_screen.dart:128:38 • unchecked_use_of_nullable_value
+  error • The property 'name' can't be unconditionally accessed because the receiver can be 'null' • lib/presentation/welding/weld_setup_screen.dart:129:43 • unchecked_use_of_nullable_value
+  error • The name 'MachineRecord' isn't a type, so it can't be used as a type argument • lib/presentation/welding/weld_setup_screen.dart:147:32 • non_type_as_type_argument
+  error • The property 'isApproved' can't be unconditionally accessed because the receiver can be 'null' • lib/presentation/welding/weld_setup_screen.dart:151:37 • unchecked_use_of_nullable_value
+  error • The property 'isActive' can't be unconditionally accessed because the receiver can be 'null' • lib/presentation/welding/weld_setup_screen.dart:151:53 • unchecked_use_of_nullable_value
+  error • The property 'id' can't be unconditionally accessed because the receiver can be 'null' • lib/presentation/welding/weld_setup_screen.dart:163:42 • unchecked_use_of_nullable_value
+  error • The property 'manufacturer' can't be unconditionally accessed because the receiver can be 'null' • lib/presentation/welding/weld_setup_screen.dart:165:40 • unchecked_use_of_nullable_value
+  error • The property 'model' can't be unconditionally accessed because the receiver can be 'null' • lib/presentation/welding/weld_setup_screen.dart:165:58 • unchecked_use_of_nullable_value
+  error • The property 'serialNumber' can't be unconditionally accessed because the receiver can be 'null' • lib/presentation/welding/weld_setup_screen.dart:165:71 • unchecked_use_of_nullable_value
+   info • 'withOpacity' is deprecated and shouldn't be used. Use .withValues() to avoid precision loss • lib/presentation/welding/weld_setup_screen.dart:501:46 • deprecated_member_use
+   info • 'withOpacity' is deprecated and shouldn't be used. Use .withValues() to avoid precision loss • lib/presentation/welding/weld_setup_screen.dart:524:22 • deprecated_member_use
+   info • 'withOpacity' is deprecated and shouldn't be used. Use .withValues() to avoid precision loss • lib/presentation/welding/weld_setup_screen.dart:572:22 • deprecated_member_use
+warning • The value of the local variable 'theme' isn't used • lib/presentation/welding/weld_setup_screen.dart:584:11 • unused_local_variable
+   info • 'withOpacity' is deprecated and shouldn't be used. Use .withValues() to avoid precision loss • lib/presentation/welding/weld_setup_screen.dart:588:29 • deprecated_member_use
+   info • 'withOpacity' is deprecated and shouldn't be used. Use .withValues() to avoid precision loss • lib/presentation/welding/weld_setup_screen.dart:695:21 • deprecated_member_use
+   info • 'withOpacity' is deprecated and shouldn't be used. Use .withValues() to avoid precision loss • lib/presentation/welding/weld_setup_screen.dart:697:40 • deprecated_member_use
+   info • 'withOpacity' is deprecated and shouldn't be used. Use .withValues() to avoid precision loss • lib/presentation/welding/weld_setup_screen.dart:706:27 • deprecated_member_use
+   info • 'withOpacity' is deprecated and shouldn't be used. Use .withValues() to avoid precision loss • lib/presentation/welding/weld_setup_screen.dart:802:60 • deprecated_member_use
+  error • Undefined class 'WeldingParameterRecord' • lib/presentation/welding/weld_setup_screen.dart:812:9 • undefined_class
+warning • The value of the local variable 'theme' isn't used • lib/presentation/welding/weld_setup_screen.dart:816:11 • unused_local_variable
+   info • 'withOpacity' is deprecated and shouldn't be used. Use .withValues() to avoid precision loss • lib/presentation/welding/weld_setup_screen.dart:823:31 • deprecated_member_use
+   info • 'withOpacity' is deprecated and shouldn't be used. Use .withValues() to avoid precision loss • lib/presentation/welding/weld_setup_screen.dart:825:50 • deprecated_member_use
+   info • 'withOpacity' is deprecated and shouldn't be used. Use .withValues() to avoid precision loss • lib/presentation/welding/weld_setup_screen.dart:880:62 • deprecated_member_use
+   info • 'withOpacity' is deprecated and shouldn't be used. Use .withValues() to avoid precision loss • lib/presentation/welding/weld_setup_screen.dart:881:66 • deprecated_member_use
+warning • The value of the field '_phaseStartedAt' isn't used • lib/presentation/welding/welding_session_screen.dart:99:13 • unused_field
+   info • 'withOpacity' is deprecated and shouldn't be used. Use .withValues() to avoid precision loss • lib/presentation/welding/welding_session_screen.dart:445:48 • deprecated_member_use
+   info • 'withOpacity' is deprecated and shouldn't be used. Use .withValues() to avoid precision loss • lib/presentation/welding/welding_session_screen.dart:448:52 • deprecated_member_use
+   info • 'withOpacity' is deprecated and shouldn't be used. Use .withValues() to avoid precision loss • lib/presentation/welding/welding_session_screen.dart:588:20 • deprecated_member_use
+   info • 'withOpacity' is deprecated and shouldn't be used. Use .withValues() to avoid precision loss • lib/presentation/welding/welding_session_screen.dart:623:61 • deprecated_member_use
+warning • The value of the local variable 'isPending' isn't used • lib/presentation/welding/welding_session_screen.dart:639:19 • unused_local_variable
+   info • 'withOpacity' is deprecated and shouldn't be used. Use .withValues() to avoid precision loss • lib/presentation/welding/welding_session_screen.dart:645:49 • deprecated_member_use
+   info • 'withOpacity' is deprecated and shouldn't be used. Use .withValues() to avoid precision loss • lib/presentation/welding/welding_session_screen.dart:718:25 • deprecated_member_use
+   info • 'withOpacity' is deprecated and shouldn't be used. Use .withValues() to avoid precision loss • lib/presentation/welding/welding_session_screen.dart:720:44 • deprecated_member_use
+   info • 'withOpacity' is deprecated and shouldn't be used. Use .withValues() to avoid precision loss • lib/presentation/welding/welding_session_screen.dart:751:41 • deprecated_member_use
+   info • 'withOpacity' is deprecated and shouldn't be used. Use .withValues() to avoid precision loss • lib/presentation/welding/welding_session_screen.dart:760:66 • deprecated_member_use
+   info • 'withOpacity' is deprecated and shouldn't be used. Use .withValues() to avoid precision loss • lib/presentation/welding/welding_session_screen.dart:764:70 • deprecated_member_use
+   info • 'withOpacity' is deprecated and shouldn't be used. Use .withValues() to avoid precision loss • lib/presentation/welding/welding_session_screen.dart:810:29 • deprecated_member_use
+   info • 'withOpacity' is deprecated and shouldn't be used. Use .withValues() to avoid precision loss • lib/presentation/welding/welding_session_screen.dart:813:31 • deprecated_member_use
+  error • Target of URI doesn't exist: '../../../lib/data/local/dao/sensor_logs_dao.dart' • lib/services/sensor/sensor_service.dart:9:8 • uri_does_not_exist
+  error • Target of URI doesn't exist: '../../../lib/data/local/database/app_database.dart' • lib/services/sensor/sensor_service.dart:10:8 • uri_does_not_exist
+  error • Target of URI doesn't exist: '../../../lib/data/local/tables/sensor_logs_table.dart' • lib/services/sensor/sensor_service.dart:11:8 • uri_does_not_exist
+  error • Undefined class 'AppDatabase' • lib/services/sensor/sensor_service.dart:45:9 • undefined_class
+  error • Undefined name 'ByteData' • lib/services/sensor/sensor_service.dart:201:28 • undefined_identifier
+  error • Undefined name 'Endian' • lib/services/sensor/sensor_service.dart:203:29 • undefined_identifier
+  error • Undefined name 'ByteData' • lib/services/sensor/sensor_service.dart:212:26 • undefined_identifier
+  error • Undefined name 'Endian' • lib/services/sensor/sensor_service.dart:214:29 • undefined_identifier
+  error • The method 'SensorLogsTableCompanion' isn't defined for the type 'SensorService' • lib/services/sensor/sensor_service.dart:257:35 • undefined_method
+  error • Undefined class 'WeldingParametersTableCompanion' • lib/services/standards/astm_f2620.dart:94:10 • undefined_class
+  error • The method 'WeldingParametersTableCompanion' isn't defined for the type 'AstmF2620' • lib/services/standards/astm_f2620.dart:175:12 • undefined_method
+  error • Undefined class 'WeldingParametersTableCompanion' • lib/services/standards/dvs_2207.dart:97:10 • undefined_class
+  error • The method 'WeldingParametersTableCompanion' isn't defined for the type 'Dvs2207' • lib/services/standards/dvs_2207.dart:179:12 • undefined_method
+  error • Undefined class 'WeldingParametersTableCompanion' • lib/services/standards/iso_21307.dart:104:10 • undefined_class
+  error • The method 'WeldingParametersTableCompanion' isn't defined for the type 'Iso21307' • lib/services/standards/iso_21307.dart:195:12 • undefined_method
+  error • Undefined class 'WeldingParameterRecord' • lib/services/welding/welding_table_generator.dart:53:14 • undefined_class
+  error • Undefined class 'WeldingParameterRecord' • lib/services/welding/welding_table_generator.dart:79:14 • undefined_class
+  error • Undefined class 'WeldingParameterRecord' • lib/services/welding/welding_table_generator.dart:155:5 • undefined_class
+  error • Undefined class 'WeldingParameterRecord' • lib/services/welding/welding_table_generator.dart:287:5 • undefined_class
+  error • Undefined class 'WeldingParameterRecord' • lib/services/welding/welding_table_generator.dart:333:14 • undefined_class
+  error • Undefined class 'WeldingParametersTableCompanion' • lib/services/welding/welding_table_generator.dart:370:10 • undefined_class
+  error • Undefined class 'WeldingParameterRecord' • lib/services/welding/welding_table_generator.dart:421:10 • undefined_class
+  error • Undefined class 'WeldingParametersTableCompanion' • lib/services/welding/welding_table_generator.dart:422:14 • undefined_class
+  error • The method 'WeldingParameterRecord' isn't defined for the type 'WeldingTableGenerator' • lib/services/welding/welding_table_generator.dart:431:12 • undefined_method
+  error • The argument type '_CurvePainter' can't be assigned to the parameter type 'CustomPainter?'.  • lib/services/welding_trace/weld_report_generator.dart:463:22 • argument_type_not_assignable
+  error • The argument type '_QrPainter' can't be assigned to the parameter type 'CustomPainter?'.  • lib/services/welding_trace/weld_report_generator.dart:787:26 • argument_type_not_assignable
+  error • Classes can only extend other classes • lib/services/welding_trace/weld_report_generator.dart:812:29 • extends_non_class
+warning • The method doesn't override an inherited method • lib/services/welding_trace/weld_report_generator.dart:819:8 • override_on_non_overriding_member
+warning • The method doesn't override an inherited method • lib/services/welding_trace/weld_report_generator.dart:860:8 • override_on_non_overriding_member
+  error • Classes can only extend other classes • lib/services/welding_trace/weld_report_generator.dart:867:26 • extends_non_class
+warning • The method doesn't override an inherited method • lib/services/welding_trace/weld_report_generator.dart:873:8 • override_on_non_overriding_member
+  error • The method 'isDark' isn't defined for the type 'QrCode' • lib/services/welding_trace/weld_report_generator.dart:888:22 • undefined_method
+warning • The method doesn't override an inherited method • lib/services/welding_trace/weld_report_generator.dart:902:8 • override_on_non_overriding_member
+   info • The import of 'dart:typed_data' is unnecessary because all of the used elements are also provided by the import of 'package:drift/drift.dart' • lib/workflow/weld_workflow_engine.dart:3:8 • unnecessary_import
+warning • Unused import: '../data/local/tables/weld_steps_table.dart' • lib/workflow/weld_workflow_engine.dart:10:8 • unused_import
+warning • The asset directory 'assets/' doesn't exist • pubspec.yaml:78:7 • asset_directory_does_not_exist
+warning • Unnecessary cast • scripts/export_registry.dart:122:41 • unnecessary_cast
+  error • Undefined name '_fakeSig' • test/unit/weld_trace_test.dart:751:20 • undefined_identifier
+  error • Undefined name '_fakeSig' • test/unit/weld_trace_test.dart:759:20 • undefined_identifier
+  error • Undefined name '_fakeSig' • test/unit/weld_trace_test.dart:765:40 • undefined_identifier
+  error • Undefined name '_fakeSig' • test/unit/weld_trace_test.dart:773:20 • undefined_identifier
+  error • Undefined name '_fakeSig' • test/unit/weld_trace_test.dart:781:38 • undefined_identifier
+  error • Undefined name '_fakeSig' • test/unit/weld_trace_test.dart:783:38 • undefined_identifier
+  error • Undefined name '_fakeSig' • test/unit/weld_trace_test.dart:791:39 • undefined_identifier
+  error • Undefined name '_fakeSig' • test/unit/weld_trace_test.dart:796:39 • undefined_identifier
+warning • Unused import: 'package:drift/drift.dart' • test/unit/welding_table_generator_test.dart:3:8 • unused_import
+
+152 issues found. (ran in 16.1s)
+Error: Process completed with exit code 1.

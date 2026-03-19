@@ -14,6 +14,10 @@ import 'package:weldtrace/services/welding_trace/curve_compression.dart';
 /// samples in a tight loop without waiting for wall-clock delays.
 WeldTraceRecorder _fastRecorder() => WeldTraceRecorder(minSampleIntervalMs: 0);
 
+/// 64-character hex string used as a deterministic fake SHA-256 in tests.
+const _fakeSig = 'aabbccddeeff00112233445566778899'
+    'aabbccddeeff00112233445566778899';
+
 void main() {
   // ── WeldTraceRecorder ───────────────────────────────────────────────────────
 

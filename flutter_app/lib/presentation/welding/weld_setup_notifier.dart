@@ -2,11 +2,7 @@ import 'package:drift/drift.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:uuid/uuid.dart';
 
-import '../../core/utils/result.dart';
 import '../../data/local/database/app_database.dart';
-import '../../data/local/tables/welds_table.dart';
-import '../../data/local/tables/welding_standards_table.dart';
-import '../../data/local/tables/welding_parameters_table.dart';
 import '../../data/repositories/weld_parameters_repository.dart';
 import '../../services/welding/pipe_spec.dart';
 import '../../services/welding/welding_table.dart';

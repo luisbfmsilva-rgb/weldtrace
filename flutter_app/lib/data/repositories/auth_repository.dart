@@ -6,8 +6,6 @@ import '../../core/utils/result.dart';
 import '../models/auth_models.dart';
 import '../remote/auth_remote_data_source.dart';
 import '../local/database/app_database.dart';
-import '../local/dao/projects_dao.dart';
-import '../local/tables/projects_table.dart';
 import 'package:drift/drift.dart';
 
 /// Manages authentication state:

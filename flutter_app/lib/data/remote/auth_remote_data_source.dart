@@ -1,4 +1,3 @@
-import '../../core/errors/app_exception.dart';
 import '../../core/network/api_client.dart';
 import '../../core/utils/result.dart';
 import '../models/auth_models.dart';

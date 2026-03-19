@@ -2,7 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../di/providers.dart';
-import '../../data/local/tables/machines_table.dart';
+import '../../data/local/database/app_database.dart';
 
 class MachinesScreen extends ConsumerWidget {
   const MachinesScreen({super.key});

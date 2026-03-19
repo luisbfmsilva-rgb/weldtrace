@@ -2,7 +2,7 @@ import 'dart:math' as math;
 
 import 'package:drift/drift.dart';
 
-import '../../data/local/tables/welding_parameters_table.dart';
+import '../../data/local/database/app_database.dart';
 import '../../workflow/welding_phase.dart';
 import '../standards/dvs_2207.dart';
 import '../standards/iso_21307.dart';

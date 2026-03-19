@@ -6,8 +6,8 @@ import 'package:drift/drift.dart';
 import '../database/app_database.dart';
 import '../tables/welds_table.dart';
 import '../tables/weld_steps_table.dart';
-import '../../services/welding_trace/curve_compression.dart';
-import '../../services/welding_trace/weld_trace_recorder.dart';
+import '../../../services/welding_trace/curve_compression.dart';
+import '../../../services/welding_trace/weld_trace_recorder.dart';
 
 part 'welds_dao.g.dart';
 
@@ -38,7 +38,7 @@ class WeldsDao extends DatabaseAccessor<AppDatabase> with _$WeldsDaoMixin {
   Future<List<WeldRecord>> getPendingSync() =>
       (select(weldsTable)..where((t) => t.syncStatus.equals('pending'))).get();
 
-  Future<String> insertWeld(WeldsTableCompanion row) =>
+  Future<int> insertWeld(WeldsTableCompanion row) =>
       into(weldsTable).insert(row);
 
   Future<void> upsert(WeldsTableCompanion row) =>

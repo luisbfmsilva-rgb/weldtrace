@@ -3,7 +3,6 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 
 import 'core/constants/app_constants.dart';
-import 'di/providers.dart';
 import 'presentation/app.dart';
 
 Future<void> main() async {

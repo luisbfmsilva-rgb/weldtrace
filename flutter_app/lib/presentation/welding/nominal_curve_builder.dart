@@ -161,7 +161,6 @@ class NominalCurveBuilder {
     List<PhaseParameters> phases,
     int currentPhaseIndex,
   ) {
-    double cursor = 0;
     final updatedMarkers = <PhaseMarker>[];
 
     for (int i = 0; i < data.phaseMarkers.length; i++) {

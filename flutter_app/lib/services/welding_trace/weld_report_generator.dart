@@ -809,7 +809,7 @@ class WeldReportGenerator {
 
 // ── Chart painter ──────────────────────────────────────────────────────────────
 
-class _CurvePainter extends pw.CustomPainter {
+class _CurvePainter implements pw.CustomPainter {
   const _CurvePainter(this.curve, this.lineColour);
 
   final List<WeldTracePoint> curve;
@@ -857,14 +857,14 @@ class _CurvePainter extends pw.CustomPainter {
   }
 
   @override
-  bool shouldRepaint() => false;
+  bool shouldRepaint(covariant pw.CustomPainter oldPainter) => false;
 }
 
 // ── QR code painter ────────────────────────────────────────────────────────────
 
 /// Renders a QR code for [data] (the full verification JSON payload) directly
 /// onto a PDF canvas.
-class _QrPainter extends pw.CustomPainter {
+class _QrPainter implements pw.CustomPainter {
   const _QrPainter(this.data);
 
   final String data;
@@ -876,7 +876,8 @@ class _QrPainter extends pw.CustomPainter {
         data:              data,
         errorCorrectLevel: QrErrorCorrectLevel.M,
       );
-      final moduleCount = qrCode.moduleCount;
+      final qrImage   = QrImage(qrCode);
+      final moduleCount = qrImage.moduleCount;
       if (moduleCount <= 0) return;
 
       final moduleSize = size.x / moduleCount;
@@ -885,7 +886,7 @@ class _QrPainter extends pw.CustomPainter {
 
       for (int row = 0; row < moduleCount; row++) {
         for (int col = 0; col < moduleCount; col++) {
-          if (qrCode.isDark(row, col)) {
+          if (qrImage.isDark(row, col)) {
             final x = col * moduleSize;
             final y = size.y - (row + 1) * moduleSize;
             canvas.drawRect(x, y, moduleSize, moduleSize);
@@ -899,5 +900,5 @@ class _QrPainter extends pw.CustomPainter {
   }
 
   @override
-  bool shouldRepaint() => false;
+  bool shouldRepaint(covariant pw.CustomPainter oldPainter) => false;
 }

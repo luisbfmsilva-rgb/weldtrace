@@ -4,8 +4,6 @@ import 'package:logger/logger.dart';
 import '../../core/errors/app_exception.dart';
 import '../../core/utils/result.dart';
 import '../local/database/app_database.dart';
-import '../local/tables/welding_standards_table.dart';
-import '../local/tables/welding_parameters_table.dart';
 import '../../workflow/welding_phase.dart';
 
 /// Provides read access to welding standards and parameter records stored

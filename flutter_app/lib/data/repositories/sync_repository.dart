@@ -3,14 +3,6 @@ import 'package:drift/drift.dart';
 import '../../core/errors/app_exception.dart';
 import '../../core/utils/result.dart';
 import '../local/database/app_database.dart';
-import '../local/dao/welds_dao.dart';
-import '../local/dao/projects_dao.dart';
-import '../local/dao/machines_dao.dart';
-import '../local/dao/sensor_logs_dao.dart';
-import '../local/tables/projects_table.dart';
-import '../local/tables/machines_table.dart';
-import '../local/tables/welding_standards_table.dart';
-import '../local/tables/welding_parameters_table.dart';
 import '../models/sync_models.dart';
 import '../remote/sync_remote_data_source.dart';
 

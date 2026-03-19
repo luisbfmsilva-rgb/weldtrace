@@ -3,9 +3,7 @@ import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
-import '../../data/local/tables/projects_table.dart';
-import '../../data/local/tables/machines_table.dart';
-import '../../data/local/tables/welding_parameters_table.dart';
+import '../../data/local/database/app_database.dart';
 import '../../services/welding/welding_table.dart';
 import '../../di/providers.dart';
 import 'weld_setup_notifier.dart';
@@ -581,7 +579,6 @@ class _NoDataWarning extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final theme = Theme.of(context);
     return Container(
       padding: const EdgeInsets.all(12),
       decoration: BoxDecoration(
@@ -813,7 +810,6 @@ class _ParameterPreviewCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final theme = Theme.of(context);
     const weldTraceGreen = Color(0xFF2E7D32);
 
     return Container(

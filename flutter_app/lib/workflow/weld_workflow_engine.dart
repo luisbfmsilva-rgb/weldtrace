@@ -1,13 +1,11 @@
 import 'dart:async';
 import 'dart:convert';
-import 'dart:typed_data';
 
 import 'package:logger/logger.dart';
 import 'package:uuid/uuid.dart';
 import 'package:drift/drift.dart';
 
 import '../data/local/database/app_database.dart';
-import '../data/local/tables/weld_steps_table.dart';
 import '../services/sensor/sensor_reading.dart';
 import '../services/sensor/sensor_service.dart';
 import '../services/welding_trace/curve_compression.dart';

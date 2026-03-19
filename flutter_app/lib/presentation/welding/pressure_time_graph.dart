@@ -54,6 +54,7 @@ class PressureTimeGraph extends StatelessWidget {
   //   2: min-band edge      (transparent — used for BetweenBarsData)
   //   3: max-band edge      (transparent — used for BetweenBarsData)
   static const _idxActual = 0;
+  // ignore: unused_field
   static const _idxNominal = 1;
   static const _idxMinBand = 2;
   static const _idxMaxBand = 3;
