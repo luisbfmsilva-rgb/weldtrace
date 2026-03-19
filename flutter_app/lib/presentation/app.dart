@@ -2,33 +2,41 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
+import '../core/theme/app_colors.dart';
 import '../di/providers.dart';
 import 'auth/login_screen.dart';
 import 'projects/projects_screen.dart';
+import 'splash/splash_screen.dart';
 import 'welding/weld_setup_screen.dart';
 import 'welding/welding_session_screen.dart';
 import 'machines/machines_screen.dart';
 import 'sensors/sensor_screen.dart';
 import 'settings/settings_screen.dart';
 
-class WeldTraceApp extends ConsumerWidget {
-  const WeldTraceApp({super.key});
+class FusionCertifyApp extends ConsumerWidget {
+  const FusionCertifyApp({super.key});
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final authState = ref.watch(authProvider);
 
     final router = GoRouter(
-      initialLocation: authState.isAuthenticated ? '/projects' : '/login',
+      initialLocation: '/splash',
       redirect: (context, state) {
-        final isAuth = authState.isAuthenticated;
-        final isOnLogin = state.matchedLocation == '/login';
+        final onSplash = state.matchedLocation == '/splash';
+        if (onSplash) return null;
 
-        if (!isAuth && !isOnLogin) return '/login';
-        if (isAuth && isOnLogin) return '/projects';
+        final isAuth = authState.isAuthenticated;
+        final onLogin = state.matchedLocation == '/login';
+        if (!isAuth && !onLogin) return '/login';
+        if (isAuth && onLogin) return '/projects';
         return null;
       },
       routes: [
+        GoRoute(
+          path: '/splash',
+          builder: (context, state) => const SplashScreen(),
+        ),
         GoRoute(
           path: '/login',
           builder: (context, state) => const LoginScreen(),
@@ -38,8 +46,7 @@ class WeldTraceApp extends ConsumerWidget {
           builder: (context, state) => const ProjectsScreen(),
         ),
 
-        // ── Weld flow ─────────────────────────────────────────────────────
-        // Step 1: Setup — select all parameters, create local record
+        // ── Weld flow ──────────────────────────────────────────────────────────
         GoRoute(
           path: '/projects/:projectId/weld/setup',
           builder: (context, state) {
@@ -47,7 +54,6 @@ class WeldTraceApp extends ConsumerWidget {
             return WeldSetupScreen(preselectedProjectId: projectId);
           },
         ),
-        // Step 2: Session — live sensor monitoring and phase workflow
         GoRoute(
           path: '/weld/session',
           builder: (context, state) {
@@ -72,7 +78,7 @@ class WeldTraceApp extends ConsumerWidget {
     );
 
     return MaterialApp.router(
-      title: 'WeldTrace',
+      title: 'Sertec FusionCertify',
       debugShowCheckedModeBanner: false,
       theme: _buildTheme(),
       routerConfig: router,
@@ -80,49 +86,90 @@ class WeldTraceApp extends ConsumerWidget {
   }
 
   ThemeData _buildTheme() {
-    const primaryColor = Color(0xFF0052CC);
-    const errorColor = Color(0xFFD32F2F);
-    const warningColor = Color(0xFFF57F17);
-
     return ThemeData(
       useMaterial3: true,
       colorScheme: ColorScheme.fromSeed(
-        seedColor: primaryColor,
-        error: errorColor,
+        seedColor: AppColors.sertecRed,
+        primary: AppColors.sertecRed,
+        secondary: AppColors.darkRed,
+        error: AppColors.error,
+        surface: Colors.white,
         brightness: Brightness.light,
       ),
+      scaffoldBackgroundColor: AppColors.lightGray,
       fontFamily: 'Inter',
       appBarTheme: const AppBarTheme(
-        backgroundColor: primaryColor,
+        backgroundColor: AppColors.sertecRed,
         foregroundColor: Colors.white,
         elevation: 0,
+        centerTitle: false,
+        titleTextStyle: TextStyle(
+          fontFamily: 'Inter',
+          fontSize: 18,
+          fontWeight: FontWeight.w600,
+          color: Colors.white,
+        ),
       ),
       elevatedButtonTheme: ElevatedButtonThemeData(
         style: ElevatedButton.styleFrom(
-          backgroundColor: primaryColor,
+          backgroundColor: AppColors.sertecRed,
           foregroundColor: Colors.white,
-          padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 16),
-          textStyle: const TextStyle(fontSize: 16, fontWeight: FontWeight.w600),
-          minimumSize: const Size(double.infinity, 56),
-          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
+          padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 14),
+          textStyle: const TextStyle(fontSize: 15, fontWeight: FontWeight.w600),
+          minimumSize: const Size(double.infinity, 52),
+          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+          elevation: 0,
+        ),
+      ),
+      outlinedButtonTheme: OutlinedButtonThemeData(
+        style: OutlinedButton.styleFrom(
+          foregroundColor: AppColors.sertecRed,
+          side: const BorderSide(color: AppColors.sertecRed, width: 1.5),
+          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+          textStyle: const TextStyle(fontSize: 15, fontWeight: FontWeight.w600),
+          minimumSize: const Size(double.infinity, 52),
+        ),
+      ),
+      textButtonTheme: TextButtonThemeData(
+        style: TextButton.styleFrom(
+          foregroundColor: AppColors.sertecRed,
         ),
       ),
       inputDecorationTheme: InputDecorationTheme(
-        border: OutlineInputBorder(borderRadius: BorderRadius.circular(8)),
+        border: OutlineInputBorder(borderRadius: BorderRadius.circular(10)),
+        focusedBorder: OutlineInputBorder(
+          borderRadius: BorderRadius.circular(10),
+          borderSide: const BorderSide(color: AppColors.sertecRed, width: 1.8),
+        ),
         contentPadding:
             const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
+        filled: true,
+        fillColor: Colors.white,
       ),
       cardTheme: CardTheme(
-        elevation: 2,
-        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+        color: Colors.white,
+        elevation: 0,
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
         margin: const EdgeInsets.symmetric(horizontal: 16, vertical: 6),
+        shadowColor: Colors.black12,
+      ),
+      checkboxTheme: CheckboxThemeData(
+        fillColor: WidgetStateProperty.resolveWith(
+          (s) => s.contains(WidgetState.selected) ? AppColors.sertecRed : null,
+        ),
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(4)),
+      ),
+      dividerTheme: const DividerThemeData(
+        color: Color(0xFFEEEEEE),
+        thickness: 1,
+        space: 1,
       ),
       extensions: [
         WeldTraceColors(
-          warning: warningColor,
-          success: const Color(0xFF2E7D32),
-          sensorPressure: const Color(0xFF0052CC),
-          sensorTemperature: const Color(0xFFD32F2F),
+          warning: AppColors.warning,
+          success: AppColors.success,
+          sensorPressure: AppColors.chartPressure,
+          sensorTemperature: AppColors.chartTemperature,
         ),
       ],
     );

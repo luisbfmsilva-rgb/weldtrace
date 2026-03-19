@@ -2,8 +2,10 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
+import '../../core/theme/app_colors.dart';
 import '../../di/providers.dart';
 import '../../data/local/database/app_database.dart';
+import '../widgets/status_badge.dart';
 
 class ProjectsScreen extends ConsumerWidget {
   const ProjectsScreen({super.key});
@@ -14,11 +16,18 @@ class ProjectsScreen extends ConsumerWidget {
     final authState = ref.watch(authProvider);
 
     return Scaffold(
+      backgroundColor: AppColors.lightGray,
       appBar: AppBar(
-        title: const Text('Projects'),
+        title: Row(
+          children: [
+            Image.asset('assets/logo_symbol.png', height: 28),
+            const SizedBox(width: 10),
+            const Text('Projects'),
+          ],
+        ),
         actions: [
           IconButton(
-            icon: const Icon(Icons.sync),
+            icon: const Icon(Icons.sync_outlined),
             tooltip: 'Sync',
             onPressed: () async {
               final service = ref.read(syncServiceProvider);
@@ -42,7 +51,9 @@ class ProjectsScreen extends ConsumerWidget {
         stream: db.projectsDao.watchAll(),
         builder: (context, snapshot) {
           if (snapshot.connectionState == ConnectionState.waiting) {
-            return const Center(child: CircularProgressIndicator());
+            return const Center(
+              child: CircularProgressIndicator(color: AppColors.sertecRed),
+            );
           }
           final projects = snapshot.data ?? [];
           if (projects.isEmpty) {
@@ -54,7 +65,7 @@ class ProjectsScreen extends ConsumerWidget {
           }
           return ListView.builder(
             itemCount: projects.length,
-            padding: const EdgeInsets.symmetric(vertical: 8),
+            padding: const EdgeInsets.symmetric(vertical: 12),
             itemBuilder: (context, i) => _ProjectCard(project: projects[i]),
           );
         },
@@ -71,79 +82,113 @@ class _ProjectCard extends StatelessWidget {
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
     final isActive = project.status == 'active';
-    final statusColor = isActive ? const Color(0xFF2E7D32) : theme.colorScheme.outline;
 
-    return Card(
-      child: InkWell(
-        borderRadius: BorderRadius.circular(12),
-        // Navigate to WeldSetupScreen pre-seeded with this project
-        onTap: () => context.push('/projects/${project.id}/weld/setup'),
-        child: Padding(
-          padding: const EdgeInsets.all(16),
-          child: Row(
-            children: [
-              Expanded(
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Text(
-                      project.name,
-                      style: theme.textTheme.titleMedium
-                          ?.copyWith(fontWeight: FontWeight.w600),
-                    ),
-                    if (project.location != null) ...[
-                      const SizedBox(height: 4),
-                      Row(
-                        children: [
-                          Icon(Icons.location_on_outlined,
-                              size: 14,
-                              color: theme.colorScheme.onSurface
-                                  .withOpacity(0.5)),
-                          const SizedBox(width: 4),
-                          Text(
-                            project.location!,
-                            style: theme.textTheme.bodySmall?.copyWith(
-                              color: theme.colorScheme.onSurface
-                                  .withOpacity(0.5),
-                            ),
-                          ),
-                        ],
-                      ),
-                    ],
-                    const SizedBox(height: 6),
-                    Text(
-                      isActive ? 'Tap to start a new weld →' : 'Project inactive',
-                      style: theme.textTheme.bodySmall?.copyWith(
-                        color: isActive
-                            ? theme.colorScheme.primary
-                            : theme.colorScheme.outline,
-                        fontWeight: FontWeight.w500,
-                      ),
-                    ),
-                  ],
-                ),
-              ),
-              Container(
-                padding:
-                    const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
-                decoration: BoxDecoration(
-                  color: statusColor.withOpacity(0.1),
-                  borderRadius: BorderRadius.circular(12),
-                ),
-                child: Text(
-                  project.status.toUpperCase(),
-                  style: TextStyle(
-                    fontSize: 10,
-                    fontWeight: FontWeight.w700,
-                    color: statusColor,
-                    letterSpacing: 0.5,
+    return Container(
+      margin: const EdgeInsets.symmetric(horizontal: 16, vertical: 5),
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(14),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withOpacity(0.055),
+            blurRadius: 10,
+            offset: const Offset(0, 2),
+          ),
+        ],
+      ),
+      child: Material(
+        color: Colors.transparent,
+        borderRadius: BorderRadius.circular(14),
+        child: InkWell(
+          borderRadius: BorderRadius.circular(14),
+          onTap: isActive
+              ? () => context.push('/projects/${project.id}/weld/setup')
+              : null,
+          child: Padding(
+            padding: const EdgeInsets.all(16),
+            child: Row(
+              children: [
+                // ── Icon ──────────────────────────────────────────────────
+                Container(
+                  width: 44,
+                  height: 44,
+                  decoration: BoxDecoration(
+                    color: isActive
+                        ? AppColors.sertecRed.withOpacity(0.09)
+                        : AppColors.lightGray,
+                    borderRadius: BorderRadius.circular(10),
+                  ),
+                  child: Icon(
+                    Icons.account_tree_outlined,
+                    size: 22,
+                    color: isActive
+                        ? AppColors.sertecRed
+                        : AppColors.neutralGray,
                   ),
                 ),
-              ),
-              const SizedBox(width: 8),
-              Icon(Icons.chevron_right,
-                  color: theme.colorScheme.onSurface.withOpacity(0.4)),
-            ],
+                const SizedBox(width: 14),
+
+                // ── Content ───────────────────────────────────────────────
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        project.name,
+                        style: theme.textTheme.titleMedium?.copyWith(
+                          fontWeight: FontWeight.w600,
+                          color: Colors.grey.shade800,
+                        ),
+                      ),
+                      if (project.location != null) ...[
+                        const SizedBox(height: 3),
+                        Row(
+                          children: [
+                            Icon(Icons.location_on_outlined,
+                                size: 13,
+                                color: AppColors.neutralGray),
+                            const SizedBox(width: 3),
+                            Text(
+                              project.location!,
+                              style: TextStyle(
+                                fontSize: 12,
+                                color: AppColors.neutralGray,
+                              ),
+                            ),
+                          ],
+                        ),
+                      ],
+                      const SizedBox(height: 6),
+                      if (isActive)
+                        const Text(
+                          'Tap to start a new weld →',
+                          style: TextStyle(
+                            fontSize: 12,
+                            color: AppColors.sertecRed,
+                            fontWeight: FontWeight.w500,
+                          ),
+                        ),
+                    ],
+                  ),
+                ),
+
+                // ── Status badge ──────────────────────────────────────────
+                Column(
+                  crossAxisAlignment: CrossAxisAlignment.end,
+                  children: [
+                    StatusBadge(
+                      label: project.status,
+                      status: isActive ? BadgeStatus.active : BadgeStatus.inactive,
+                    ),
+                    if (isActive) ...[
+                      const SizedBox(height: 8),
+                      Icon(Icons.chevron_right,
+                          color: AppColors.sertecRed.withOpacity(0.6)),
+                    ],
+                  ],
+                ),
+              ],
+            ),
           ),
         ),
       ),
@@ -158,25 +203,36 @@ class _EmptyState extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Center(
-      child: Column(
-        mainAxisAlignment: MainAxisAlignment.center,
-        children: [
-          Icon(
-            Icons.folder_open,
-            size: 64,
-            color:
-                Theme.of(context).colorScheme.onSurface.withOpacity(0.2),
-          ),
-          const SizedBox(height: 16),
-          Text(
-            message,
-            style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                  color:
-                      Theme.of(context).colorScheme.onSurface.withOpacity(0.4),
-                ),
-            textAlign: TextAlign.center,
-          ),
-        ],
+      child: Padding(
+        padding: const EdgeInsets.all(32),
+        child: Column(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            Container(
+              width: 80,
+              height: 80,
+              decoration: BoxDecoration(
+                color: AppColors.sertecRed.withOpacity(0.07),
+                shape: BoxShape.circle,
+              ),
+              child: const Icon(
+                Icons.folder_open_outlined,
+                size: 36,
+                color: AppColors.sertecRed,
+              ),
+            ),
+            const SizedBox(height: 20),
+            Text(
+              message,
+              style: const TextStyle(
+                fontSize: 15,
+                color: AppColors.neutralGray,
+                height: 1.5,
+              ),
+              textAlign: TextAlign.center,
+            ),
+          ],
+        ),
       ),
     );
   }

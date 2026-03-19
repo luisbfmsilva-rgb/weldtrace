@@ -92,7 +92,7 @@ class SettingsScreen extends ConsumerWidget {
             },
           ),
           ListTile(
-            leading: const Icon(Icons.info_outline),
+            leading: const Icon(Icons.verified_outlined),
             title: const Text('Standards'),
             subtitle: const Text('DVS 2207 · ISO 21307 · ASTM F2620'),
             onTap: () {},

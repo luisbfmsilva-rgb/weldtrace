@@ -2,7 +2,10 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
+import '../../core/theme/app_colors.dart';
 import '../../di/providers.dart';
+import '../widgets/app_text_field.dart';
+import '../widgets/primary_button.dart';
 
 class LoginScreen extends ConsumerStatefulWidget {
   const LoginScreen({super.key});
@@ -51,90 +54,94 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
     await ref.read(authProvider.notifier).requestPasswordReset(email);
     if (!mounted) return;
     ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(
-        content: Text('Password reset email sent to $email'),
-      ),
+      SnackBar(content: Text('Password reset email sent to $email')),
     );
   }
 
   @override
   Widget build(BuildContext context) {
     final authState = ref.watch(authProvider);
-    final theme = Theme.of(context);
 
     return Scaffold(
-      backgroundColor: theme.colorScheme.surface,
+      backgroundColor: Colors.white,
       body: SafeArea(
         child: Center(
           child: SingleChildScrollView(
-            padding: const EdgeInsets.all(32),
+            padding: const EdgeInsets.symmetric(horizontal: 28, vertical: 24),
             child: ConstrainedBox(
               constraints: const BoxConstraints(maxWidth: 420),
               child: Form(
                 key: _formKey,
                 child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
+                  crossAxisAlignment: CrossAxisAlignment.center,
                   children: [
-                    // Logo / brand
-                    Row(
-                      children: [
-                        Icon(
-                          Icons.hardware,
-                          size: 40,
-                          color: theme.colorScheme.primary,
-                        ),
-                        const SizedBox(width: 12),
-                        Text(
-                          'WeldTrace',
-                          style: theme.textTheme.headlineMedium?.copyWith(
-                            fontWeight: FontWeight.w700,
-                            color: theme.colorScheme.primary,
-                          ),
-                        ),
-                      ],
+                    const SizedBox(height: 16),
+
+                    // ── Logo ────────────────────────────────────────────────
+                    Image.asset(
+                      'assets/logo_primary.png',
+                      width: 220,
+                      fit: BoxFit.contain,
                     ),
-                    const SizedBox(height: 8),
-                    Text(
-                      'Sign in to your account',
-                      style: theme.textTheme.bodyLarge?.copyWith(
-                        color: theme.colorScheme.onSurface.withOpacity(0.6),
+                    const SizedBox(height: 10),
+                    const Text(
+                      'Industrial Welding Certification Platform',
+                      style: TextStyle(
+                        fontSize: 12,
+                        color: AppColors.neutralGray,
+                        letterSpacing: 0.3,
                       ),
+                      textAlign: TextAlign.center,
                     ),
+
                     const SizedBox(height: 40),
 
-                    // Email
-                    TextFormField(
+                    // ── Section label ───────────────────────────────────────
+                    Align(
+                      alignment: Alignment.centerLeft,
+                      child: Text(
+                        'Sign in to your account',
+                        style: TextStyle(
+                          fontSize: 20,
+                          fontWeight: FontWeight.w700,
+                          color: Colors.grey.shade800,
+                        ),
+                      ),
+                    ),
+                    const SizedBox(height: 24),
+
+                    // ── Email ───────────────────────────────────────────────
+                    AppTextField(
                       controller: _emailController,
+                      label: 'Email',
+                      prefixIcon: Icons.email_outlined,
                       keyboardType: TextInputType.emailAddress,
                       textInputAction: TextInputAction.next,
-                      decoration: const InputDecoration(
-                        labelText: 'Email',
-                        prefixIcon: Icon(Icons.email_outlined),
-                      ),
                       validator: (v) {
                         if (v == null || v.isEmpty) return 'Email is required';
                         if (!v.contains('@')) return 'Enter a valid email';
                         return null;
                       },
                     ),
-                    const SizedBox(height: 16),
+                    const SizedBox(height: 14),
 
-                    // Password
-                    TextFormField(
+                    // ── Password ────────────────────────────────────────────
+                    AppTextField(
                       controller: _passwordController,
+                      label: 'Password',
+                      prefixIcon: Icons.lock_outline,
                       obscureText: _obscurePassword,
                       textInputAction: TextInputAction.done,
                       onFieldSubmitted: (_) => _submit(),
-                      decoration: InputDecoration(
-                        labelText: 'Password',
-                        prefixIcon: const Icon(Icons.lock_outline),
-                        suffixIcon: IconButton(
-                          icon: Icon(_obscurePassword
+                      suffixIcon: IconButton(
+                        icon: Icon(
+                          _obscurePassword
                               ? Icons.visibility_off_outlined
-                              : Icons.visibility_outlined),
-                          onPressed: () => setState(
-                              () => _obscurePassword = !_obscurePassword),
+                              : Icons.visibility_outlined,
+                          color: AppColors.neutralGray,
                         ),
+                        onPressed: () =>
+                            setState(() => _obscurePassword = !_obscurePassword),
                       ),
                       validator: (v) {
                         if (v == null || v.isEmpty) return 'Password is required';
@@ -142,21 +149,29 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
                         return null;
                       },
                     ),
-                    const SizedBox(height: 4),
+                    const SizedBox(height: 6),
 
-                    // Remember me + Forgot password row
+                    // ── Remember me + Forgot password ───────────────────────
                     Row(
                       children: [
-                        Checkbox(
-                          value: _rememberMe,
-                          onChanged: (v) =>
-                              setState(() => _rememberMe = v ?? false),
-                          materialTapTargetSize:
-                              MaterialTapTargetSize.shrinkWrap,
-                          visualDensity: VisualDensity.compact,
+                        Transform.scale(
+                          scale: 0.9,
+                          child: Checkbox(
+                            value: _rememberMe,
+                            onChanged: (v) =>
+                                setState(() => _rememberMe = v ?? false),
+                            materialTapTargetSize:
+                                MaterialTapTargetSize.shrinkWrap,
+                            visualDensity: VisualDensity.compact,
+                          ),
                         ),
-                        const Text('Remember login',
-                            style: TextStyle(fontSize: 13)),
+                        const Text(
+                          'Remember login',
+                          style: TextStyle(
+                            fontSize: 13,
+                            color: AppColors.neutralGray,
+                          ),
+                        ),
                         const Spacer(),
                         TextButton(
                           onPressed:
@@ -165,70 +180,70 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
                             padding: EdgeInsets.zero,
                             minimumSize: const Size(0, 36),
                           ),
-                          child: Text(
+                          child: const Text(
                             'Forgot password?',
                             style: TextStyle(
                               fontSize: 13,
-                              color: theme.colorScheme.primary,
+                              color: AppColors.sertecRed,
+                              fontWeight: FontWeight.w500,
                             ),
                           ),
                         ),
                       ],
                     ),
-                    const SizedBox(height: 8),
 
-                    // Error message
-                    if (authState.error != null)
+                    // ── Error banner ────────────────────────────────────────
+                    if (authState.error != null) ...[
+                      const SizedBox(height: 12),
                       Container(
-                        margin: const EdgeInsets.only(top: 8),
-                        padding: const EdgeInsets.all(12),
+                        width: double.infinity,
+                        padding: const EdgeInsets.symmetric(
+                            horizontal: 14, vertical: 12),
                         decoration: BoxDecoration(
-                          color: theme.colorScheme.error.withOpacity(0.1),
-                          borderRadius: BorderRadius.circular(8),
+                          color: AppColors.error.withOpacity(0.08),
+                          borderRadius: BorderRadius.circular(10),
+                          border: Border.all(
+                              color: AppColors.error.withOpacity(0.25)),
                         ),
                         child: Row(
                           children: [
-                            Icon(Icons.error_outline,
-                                color: theme.colorScheme.error, size: 18),
-                            const SizedBox(width: 8),
+                            const Icon(Icons.error_outline,
+                                color: AppColors.error, size: 18),
+                            const SizedBox(width: 10),
                             Expanded(
                               child: Text(
                                 authState.error!,
-                                style: TextStyle(
-                                    color: theme.colorScheme.error,
-                                    fontSize: 13),
+                                style: const TextStyle(
+                                    color: AppColors.error, fontSize: 13),
                               ),
                             ),
                           ],
                         ),
                       ),
+                    ],
+
                     const SizedBox(height: 28),
 
-                    // Login button
-                    ElevatedButton(
-                      onPressed: authState.isLoading ? null : _submit,
-                      child: authState.isLoading
-                          ? const SizedBox(
-                              height: 22,
-                              width: 22,
-                              child: CircularProgressIndicator(
-                                strokeWidth: 2.5,
-                                color: Colors.white,
-                              ),
-                            )
-                          : const Text('Sign In'),
+                    // ── Sign In button ──────────────────────────────────────
+                    PrimaryButton(
+                      label: 'Sign In',
+                      onPressed: _submit,
+                      isLoading: authState.isLoading,
                     ),
 
-                    const SizedBox(height: 24),
-                    Center(
-                      child: Text(
-                        'WeldTrace v1.0 · DVS 2207 · ISO 21307 · ASTM F2620',
-                        style: theme.textTheme.bodySmall?.copyWith(
-                          color: theme.colorScheme.onSurface.withOpacity(0.4),
-                        ),
-                        textAlign: TextAlign.center,
+                    const SizedBox(height: 32),
+
+                    // ── Footer ──────────────────────────────────────────────
+                    const Text(
+                      'Sertec FusionCertify™  ·  DVS 2207  ·  ISO 21307  ·  ASTM F2620',
+                      style: TextStyle(
+                        fontSize: 10,
+                        color: AppColors.neutralGray,
+                        letterSpacing: 0.2,
                       ),
+                      textAlign: TextAlign.center,
                     ),
+                    const SizedBox(height: 8),
                   ],
                 ),
               ),

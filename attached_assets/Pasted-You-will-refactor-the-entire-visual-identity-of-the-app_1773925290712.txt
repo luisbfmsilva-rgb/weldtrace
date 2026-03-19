@@ -1,0 +1,177 @@
+You will refactor the entire visual identity of the app to align with the new official branding:
+
+PRODUCT NAME:
+Sertec FusionCertify™
+
+POSITIONING:
+A professional industrial-grade welding certification system.
+
+GOAL:
+Transform the app from a generic tool into a premium, trustworthy certification platform with consistent branding across UI, reports, and system experience.
+
+---------------------------------------
+🎨 1. DESIGN SYSTEM (MANDATORY)
+---------------------------------------
+
+Define and centralize all colors and styles.
+
+PRIMARY COLORS:
+- Sertec Red: #8B1E2D
+- Dark Red (accent): #6E1723
+- Neutral Gray: #7A7A7A
+- Light Gray: #F5F5F5
+- Background Dark (optional screens): #121212
+
+Create:
+- AppColors class
+- AppTheme (ThemeData)
+
+Typography:
+- Modern sans-serif (Inter or similar)
+- Strong hierarchy:
+  - Titles: bold
+  - Labels: medium
+  - Data: regular
+
+---------------------------------------
+🚀 2. SPLASH SCREEN (HIGH PRIORITY)
+---------------------------------------
+
+Create a professional splash screen:
+
+Layout:
+- Center logo (Sertec + FusionCertify)
+- Below text:
+  "Welding Certification System"
+
+Behavior:
+- Fade-in animation (300–500ms)
+- Optional subtle scale effect
+- Navigate automatically after load
+
+Background:
+- White or dark (based on theme)
+
+---------------------------------------
+🔐 3. LOGIN SCREEN IMPROVEMENTS
+---------------------------------------
+
+Update login screen to reflect premium product:
+
+Add:
+- Logo at top
+- Subtitle:
+  "Industrial Welding Certification Platform"
+
+Improve layout:
+- Better spacing
+- Rounded inputs
+- Modern buttons
+
+Add:
+- "Remember me" (if not already present)
+- "Forgot password"
+
+Visual:
+- Use primary red for CTA button
+- Neutral gray for secondary text
+
+---------------------------------------
+📊 4. DASHBOARD / MAIN UI
+---------------------------------------
+
+Improve perceived quality:
+
+- Use cards with elevation
+- Better spacing and alignment
+- Consistent paddings
+- Use color hierarchy:
+  - Red → actions
+  - Gray → metadata
+
+---------------------------------------
+📄 5. PDF REPORT REDESIGN (CRITICAL)
+---------------------------------------
+
+Update weld report layout:
+
+HEADER:
+Sertec FusionCertify™
+Certified Welding Report
+
+SUBHEADER:
+- Joint ID
+- Date
+- Operator
+- Machine
+
+BODY:
+- Welding parameters
+- Graph
+- Trace data
+
+FOOTER:
+"Powered by Sertec FusionCertify™"
+
+Add visual improvements:
+- Section dividers
+- Consistent spacing
+- Professional layout
+
+---------------------------------------
+📱 6. APP ICON / LOGO USAGE
+---------------------------------------
+
+Ensure consistent use of:
+- Main logo (horizontal)
+- Symbol-only version for icon
+
+---------------------------------------
+🧱 7. COMPONENT STANDARDIZATION
+---------------------------------------
+
+Create reusable components:
+
+- PrimaryButton
+- SecondaryButton
+- AppTextField
+- SectionCard
+- StatusBadge
+
+---------------------------------------
+🧠 8. UX IMPROVEMENTS
+---------------------------------------
+
+- Improve spacing everywhere
+- Avoid clutter
+- Use consistent margins (16 / 24)
+- Improve readability
+
+---------------------------------------
+⚙️ 9. IMPLEMENTATION RULES
+---------------------------------------
+
+- Do NOT break business logic
+- Do NOT remove existing features
+- Only improve UI/UX and structure
+
+- Refactor safely
+- Keep code clean and modular
+
+---------------------------------------
+🎯 FINAL RESULT EXPECTED
+---------------------------------------
+
+The app should feel like:
+
+- A premium industrial SaaS
+- Reliable and professional
+- Ready for enterprise clients
+- Consistent across all screens
+
+---------------------------------------
+
+After implementation:
+- List all files changed
+- Highlight improvements
+- Suggest next UI upgrades (optional)
