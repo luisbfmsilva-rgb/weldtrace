@@ -45,6 +45,10 @@ jobs:
         working-directory: flutter_app
         run: flutter test
 
+      - name: Clean build cache
+        working-directory: flutter_app
+        run: flutter clean
+
       - name: Create local.properties
         working-directory: flutter_app/android
         run: |
@@ -61,9 +65,16 @@ jobs:
           unzip -q /tmp/gradle.zip -d /tmp/gradle-dist
           /tmp/gradle-dist/gradle-8.9/bin/gradle wrapper --gradle-version=8.9 --distribution-type=all
 
+      - name: Show manifest and local.properties (debug)
+        run: |
+          echo "=== AndroidManifest.xml ==="
+          cat flutter_app/android/app/src/main/AndroidManifest.xml
+          echo "=== local.properties ==="
+          cat flutter_app/android/local.properties 2>/dev/null || echo "(not found)"
+
       - name: Build debug APK
         working-directory: flutter_app
-        run: flutter build apk --debug
+        run: flutter build apk --debug --verbose
 
       - name: Upload debug APK
         uses: actions/upload-artifact@v4
