@@ -1,0 +1,37 @@
+[INFO] Generating build script...
+[INFO] Generating build script completed, took 395ms
+[INFO] Precompiling build script......
+Warning:  ../../../../.pub-cache/hosted/pub.dev/mockito-5.4.5/lib/src/builder.dart:845:23: Error: The argument type 'InterfaceElement' can't be assigned to the parameter type 'InterfaceElementImpl'.
+ - 'InterfaceElement' is from 'package:analyzer/dart/element/element.dart' ('../../../../.pub-cache/hosted/pub.dev/analyzer-7.6.0/lib/dart/element/element.dart').
+ - 'InterfaceElementImpl' is from 'package:analyzer/src/dart/element/element.dart' ('../../../../.pub-cache/hosted/pub.dev/analyzer-7.6.0/lib/src/dart/element/element.dart').
+        .getInterface(interfaceElement)
+                      ^
+../../../../.pub-cache/hosted/pub.dev/mockito-5.4.5/lib/src/builder.dart:1173:26: Error: Can't assign spread elements of type 'TypeParameterElement' to collection elements of type 'TypeParameterElementImpl'.
+ - 'TypeParameterElement' is from 'package:analyzer/dart/element/element.dart' ('../../../../.pub-cache/hosted/pub.dev/analyzer-7.6.0/lib/dart/element/element.dart').
+ - 'TypeParameterElementImpl' is from 'package:analyzer/src/dart/element/element.dart' ('../../../../.pub-cache/hosted/pub.dev/analyzer-7.6.0/lib/src/dart/element/element.dart').
+          ...classToMock.typeParameters,
+                         ^
+../../../../.pub-cache/hosted/pub.dev/mockito-5.4.5/lib/src/builder.dart:1174:15: Error: Can't assign spread elements of type 'TypeParameterElement' to collection elements of type 'TypeParameterElementImpl'.
+ - 'TypeParameterElement' is from 'package:analyzer/dart/element/element.dart' ('../../../../.pub-cache/hosted/pub.dev/analyzer-7.6.0/lib/dart/element/element.dart').
+ - 'TypeParameterElementImpl' is from 'package:analyzer/src/dart/element/element.dart' ('../../../../.pub-cache/hosted/pub.dev/analyzer-7.6.0/lib/src/dart/element/element.dart').
+          ...?aliasedElement?.typeParameters,
+              ^
+../../../../.pub-cache/hosted/pub.dev/mockito-5.4.5/lib/src/builder.dart:1180:27: Error: The argument type 'InterfaceElement' can't be assigned to the parameter type 'InterfaceElementImpl'.
+ - 'InterfaceElement' is from 'package:analyzer/dart/element/element.dart' ('../../../../.pub-cache/hosted/pub.dev/analyzer-7.6.0/lib/dart/element/element.dart').
+ - 'InterfaceElementImpl' is from 'package:analyzer/src/dart/element/element.dart' ('../../../../.pub-cache/hosted/pub.dev/analyzer-7.6.0/lib/src/dart/element/element.dart').
+            .getInterface(classToMock)
+                          ^
+../../../../.pub-cache/hosted/pub.dev/mockito-5.4.5/lib/src/builder.dart:1792:65: Error: The argument type 'InterfaceElement' can't be assigned to the parameter type 'InterfaceElementImpl'.
+ - 'InterfaceElement' is from 'package:analyzer/dart/element/element.dart' ('../../../../.pub-cache/hosted/pub.dev/analyzer-7.6.0/lib/dart/element/element.dart').
+ - 'InterfaceElementImpl' is from 'package:analyzer/src/dart/element/element.dart' ('../../../../.pub-cache/hosted/pub.dev/analyzer-7.6.0/lib/src/dart/element/element.dart').
+    final overriddenMethods = inheritanceManager.getOverridden2(class_, name);
+                                                                ^
+../../../../.pub-cache/hosted/pub.dev/mockito-5.4.5/lib/src/builder.dart:1800:46: Error: The argument type 'InterfaceElement' can't be assigned to the parameter type 'InterfaceElementImpl'.
+ - 'InterfaceElement' is from 'package:analyzer/dart/element/element.dart' ('../../../../.pub-cache/hosted/pub.dev/analyzer-7.6.0/lib/dart/element/element.dart').
+ - 'InterfaceElementImpl' is from 'package:analyzer/src/dart/element/element.dart' ('../../../../.pub-cache/hosted/pub.dev/analyzer-7.6.0/lib/src/dart/element/element.dart').
+          overriddenMethod.enclosingElement3 as InterfaceElement, name);
+                                             ^
+[INFO] Precompiling build script... completed, took 6.0s
+[SEVERE] Failed to precompile build script .dart_tool/build/entrypoint/build.dart.
+This is likely caused by a misconfigured builder definition.
+Error: Process completed with exit code 78.
