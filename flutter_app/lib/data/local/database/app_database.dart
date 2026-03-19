@@ -48,7 +48,7 @@ class AppDatabase extends _$AppDatabase {
   AppDatabase([QueryExecutor? executor]) : super(executor ?? _openConnection());
 
   @override
-  int get schemaVersion => 8;
+  int get schemaVersion => 9;
 
   @override
   MigrationStrategy get migration => MigrationStrategy(
@@ -87,6 +87,14 @@ class AppDatabase extends _$AppDatabase {
           if (from < 8) {
             // v7 → v8: pipe dimensional catalog
             await m.createTable(pipesCatalogTable);
+          }
+          if (from < 9) {
+            // v8 → v9: resume support + completion flags
+            await m.addColumn(weldsTable, weldsTable.phasesJson);
+            await m.addColumn(weldsTable, weldsTable.sessionMetaJson);
+            await m.addColumn(weldsTable, weldsTable.coolingIncomplete);
+            await m.addColumn(weldsTable, weldsTable.beadFormationSeconds);
+            await m.addColumn(weldsTable, weldsTable.beadHeightMeasuredMm);
           }
         },
       );

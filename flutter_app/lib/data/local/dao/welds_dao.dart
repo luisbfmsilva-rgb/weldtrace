@@ -79,6 +79,75 @@ class WeldsDao extends DatabaseAccessor<AppDatabase> with _$WeldsDaoMixin {
         syncStatus: const Value('pending'),
       ));
 
+  /// Cancels a weld AND saves the partial trace data + PDF report.
+  Future<void> cancelWithReport({
+    required String id,
+    required String reason,
+    Uint8List? pdfBytes,
+    String? curveJson,
+    Uint8List? traceCurveCompressed,
+    String? traceSignature,
+    String? traceQuality,
+    String? jointId,
+  }) async {
+    await (update(weldsTable)
+          ..where((t) => t.id.equals(id) & t.status.equals('in_progress')))
+        .write(WeldsTableCompanion(
+      status: const Value('cancelled'),
+      isCancelled: const Value(true),
+      cancelReason: Value(reason),
+      cancelTimestamp: Value(DateTime.now()),
+      updatedAt: Value(DateTime.now()),
+      syncStatus: const Value('pending'),
+      tracePdf: Value(pdfBytes),
+      traceCurveJson: Value(curveJson),
+      traceCurveCompressed: Value(traceCurveCompressed),
+      traceSignature: Value(traceSignature),
+      traceQuality: Value(traceQuality),
+      jointId: Value(jointId),
+    ));
+  }
+
+  /// Saves the session metadata for later resume.
+  Future<void> saveSessionMeta({
+    required String id,
+    required String phasesJson,
+    required String sessionMetaJson,
+  }) =>
+      (update(weldsTable)..where((t) => t.id.equals(id))).write(
+        WeldsTableCompanion(
+          phasesJson: Value(phasesJson),
+          sessionMetaJson: Value(sessionMetaJson),
+          updatedAt: Value(DateTime.now().toUtc()),
+        ),
+      );
+
+  /// Marks whether cooling was ended early by the operator.
+  Future<void> saveCoolingFlag({
+    required String id,
+    required bool coolingIncomplete,
+  }) =>
+      (update(weldsTable)..where((t) => t.id.equals(id))).write(
+        WeldsTableCompanion(
+          coolingIncomplete: Value(coolingIncomplete),
+          updatedAt: Value(DateTime.now().toUtc()),
+        ),
+      );
+
+  /// Saves bead-formation metrics (heatingUp phase data).
+  Future<void> saveBeadData({
+    required String id,
+    required int beadFormationSeconds,
+    double? beadHeightMm,
+  }) =>
+      (update(weldsTable)..where((t) => t.id.equals(id))).write(
+        WeldsTableCompanion(
+          beadFormationSeconds: Value(beadFormationSeconds),
+          beadHeightMeasuredMm: Value(beadHeightMm),
+          updatedAt: Value(DateTime.now().toUtc()),
+        ),
+      );
+
   Future<void> markSynced(String id) =>
       (update(weldsTable)..where((t) => t.id.equals(id))).write(
         WeldsTableCompanion(

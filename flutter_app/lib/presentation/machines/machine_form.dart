@@ -46,14 +46,50 @@ class _MachineFormScreenState extends ConsumerState<MachineFormScreen> {
     _calNext = TextEditingController(text: m?.nextCalibrationDate ?? '');
     _type = m?.type ?? 'butt_fusion';
     _isApproved = m?.isApproved ?? false;
+
+    // Auto-fill next calibration date whenever last calibration date changes.
+    _calDate.addListener(_autoFillNextCalDate);
   }
+
+  void _autoFillNextCalDate() {
+    final text = _calDate.text.trim();
+    final date = DateTime.tryParse(text);
+    if (date == null) return;
+    // Only auto-fill when the next date field is empty or was previously auto-filled.
+    final nextYear = DateTime(date.year + 1, date.month, date.day);
+    final formatted = '${nextYear.year.toString().padLeft(4, '0')}-'
+        '${nextYear.month.toString().padLeft(2, '0')}-'
+        '${nextYear.day.toString().padLeft(2, '0')}';
+    if (_calNext.text.isEmpty || _calNext.text == _prevAutoCalNext) {
+      _calNext.text = formatted;
+      _prevAutoCalNext = formatted;
+    }
+  }
+
+  String _prevAutoCalNext = '';
 
   @override
   void dispose() {
+    _calDate.removeListener(_autoFillNextCalDate);
     for (final c in [_manufacturer, _model, _serial, _area, _notes, _calDate, _calNext]) {
       c.dispose();
     }
     super.dispose();
+  }
+
+  Future<void> _pickDate(TextEditingController ctrl) async {
+    final initial = DateTime.tryParse(ctrl.text) ?? DateTime.now();
+    final picked = await showDatePicker(
+      context: context,
+      initialDate: initial,
+      firstDate: DateTime(2000),
+      lastDate: DateTime(2100),
+    );
+    if (picked != null) {
+      ctrl.text = '${picked.year.toString().padLeft(4, '0')}-'
+          '${picked.month.toString().padLeft(2, '0')}-'
+          '${picked.day.toString().padLeft(2, '0')}';
+    }
   }
 
   Future<void> _save() async {
@@ -158,10 +194,15 @@ class _MachineFormScreenState extends ConsumerState<MachineFormScreen> {
             const SizedBox(height: 12),
 
             // ── Calibration ─────────────────────────────────────────────
-            _card('Calibration', [
-              _field('Last Calibration Date (YYYY-MM-DD)', _calDate),
+            _card('Calibração', [
+              const Text(
+                'A data da próxima calibração é preenchida automaticamente (1 ano após a última).',
+                style: TextStyle(fontSize: 12, color: AppColors.neutralGray),
+              ),
+              const SizedBox(height: 12),
+              _datePicker('Última Calibração', _calDate),
               const SizedBox(height: 14),
-              _field('Next Calibration Date (YYYY-MM-DD)', _calNext),
+              _datePicker('Próxima Calibração', _calNext),
             ]),
             const SizedBox(height: 12),
 
@@ -213,6 +254,16 @@ class _MachineFormScreenState extends ConsumerState<MachineFormScreen> {
           const SizedBox(height: 12),
           ...children,
         ]),
+      );
+
+  Widget _datePicker(String label, TextEditingController ctrl) => TextFormField(
+        controller: ctrl,
+        readOnly: true,
+        decoration: InputDecoration(
+          labelText: label,
+          suffixIcon: const Icon(Icons.calendar_today_outlined, size: 18),
+        ),
+        onTap: () => _pickDate(ctrl),
       );
 
   Widget _field(

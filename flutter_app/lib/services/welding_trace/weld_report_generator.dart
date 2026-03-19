@@ -81,6 +81,10 @@ class WeldReportGenerator {
     String machineModel            = '',
     String machineSerialNumber     = '',
     double hydraulicCylinderAreaMm2 = 0.0,
+    // ── V1.1 — status & cancellation ─────────────────────────────────────
+    /// 'completed' | 'cooling_incomplete' | 'cancelled'
+    String completionStatus        = 'completed',
+    String cancelReason            = '',
   }) async {
     final pdf = pw.Document(
       author:  'Sertec FusionCertify',
@@ -130,6 +134,12 @@ class WeldReportGenerator {
         footer: (context) => _buildFooter(context, accentColour),
         build: (context) => [
           pw.SizedBox(height: 12),
+
+          // ── 0. Completion status banner (non-'completed' only) ────────────
+          if (completionStatus != 'completed') ...[
+            _statusBanner(completionStatus, cancelReason),
+            pw.SizedBox(height: 12),
+          ],
 
           // ── 1. Project ────────────────────────────────────────────────────
           _sectionTitle('Project', accentColour),
@@ -309,7 +319,53 @@ class WeldReportGenerator {
   static String computePdfHash(Uint8List pdfBytes) =>
       sha256.convert(pdfBytes).toString();
 
-  // ── Section builders ────────────────────────────────────────────────────
+  // ── Status banner ────────────────────────────────────────────────────────
+
+  static pw.Widget _statusBanner(String status, String reason) {
+    const cancelColour   = PdfColor.fromInt(0xFFB71C1C);   // red-dark
+    const warningColour  = PdfColor.fromInt(0xFFE65100);   // deep-orange
+
+    final isCancel = status == 'cancelled';
+    final colour   = isCancel ? cancelColour : warningColour;
+
+    final title = isCancel
+        ? 'SOLDA CANCELADA'
+        : 'RESFRIAMENTO INCOMPLETO';
+    final body = isCancel
+        ? (reason.isNotEmpty ? 'Motivo: $reason' : 'Sem motivo registado')
+        : 'O operador encerrou a fase de resfriamento antes do tempo nominal. '
+          'A junta deve ser avaliada antes de entrar em serviço.';
+
+    return pw.Container(
+      padding: const pw.EdgeInsets.all(12),
+      decoration: pw.BoxDecoration(
+        color: PdfColor.fromInt(colour.toInt() & 0x22FFFFFF | 0x22000000),
+        border: pw.Border.all(color: colour, width: 2),
+        borderRadius: const pw.BorderRadius.all(pw.Radius.circular(6)),
+      ),
+      child: pw.Column(
+        crossAxisAlignment: pw.CrossAxisAlignment.start,
+        children: [
+          pw.Row(
+            children: [
+              pw.Text(
+                '⚠  $title',
+                style: pw.TextStyle(
+                  color: colour,
+                  fontWeight: pw.FontWeight.bold,
+                  fontSize: 13,
+                ),
+              ),
+            ],
+          ),
+          pw.SizedBox(height: 4),
+          pw.Text(body, style: pw.TextStyle(color: colour, fontSize: 10)),
+        ],
+      ),
+    );
+  }
+
+  // ── Section builders ────────────────────────────────────────────────────────
 
   static pw.Widget _buildHeader(PdfColor headerColour, PdfColor accentColour) {
     return pw.Column(

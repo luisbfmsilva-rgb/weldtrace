@@ -3,17 +3,17 @@
 
 enum WeldingPhase {
   // ── Butt-fusion phases ──────────────────────────────────────────────────
-  heatingUp(order: 1, displayName: 'Heating-up', unit: 's'),
-  heating(order: 2, displayName: 'Heating', unit: 's'),
-  changeover(order: 3, displayName: 'Changeover', unit: 's'),
-  buildup(order: 4, displayName: 'Pressure Build-up', unit: 's'),
-  fusion(order: 5, displayName: 'Fusion Pressure', unit: 's'),
-  cooling(order: 6, displayName: 'Cooling', unit: 's'),
+  heatingUp(order: 1, displayName: 'Formação do Cordão', unit: 's'),
+  heating(order: 2, displayName: 'Aquecimento', unit: 's'),
+  changeover(order: 3, displayName: 'Troca de Ferramenta', unit: 's'),
+  buildup(order: 4, displayName: 'Pressurização', unit: 's'),
+  fusion(order: 5, displayName: 'Fusão', unit: 's'),
+  cooling(order: 6, displayName: 'Resfriamento', unit: 's'),
 
   // ── Electrofusion phases ────────────────────────────────────────────────
-  efClamping(order: 1, displayName: 'Clamping', unit: 's'),
-  efWelding(order: 2, displayName: 'Welding', unit: 's'),
-  efCooling(order: 3, displayName: 'Cooling', unit: 's');
+  efClamping(order: 1, displayName: 'Fixação', unit: 's'),
+  efWelding(order: 2, displayName: 'Soldagem', unit: 's'),
+  efCooling(order: 3, displayName: 'Resfriamento', unit: 's');
 
   const WeldingPhase({
     required this.order,
@@ -24,6 +24,11 @@ enum WeldingPhase {
   final int order;
   final String displayName;
   final String unit;
+
+  String toJson() => name;
+
+  static WeldingPhase fromJson(String s) =>
+      WeldingPhase.values.firstWhere((e) => e.name == s);
 }
 
 /// Describes the parametric requirements for a single welding phase
@@ -40,6 +45,7 @@ class PhaseParameters {
     this.nominalTemperatureCelsius,
     this.minTemperatureCelsius,
     this.maxTemperatureCelsius,
+    this.isManualCompletion = false,
   });
 
   final WeldingPhase phase;
@@ -59,6 +65,10 @@ class PhaseParameters {
   final double? minTemperatureCelsius;
   final double? maxTemperatureCelsius;
 
+  /// When true, the phase only ends on explicit operator confirmation,
+  /// not automatically based on elapsed time (e.g. heatingUp / bead formation).
+  final bool isManualCompletion;
+
   bool isPressureInRange(double bar) =>
       (minPressureBar == null || bar >= minPressureBar!) &&
       (maxPressureBar == null || bar <= maxPressureBar!);
@@ -66,4 +76,38 @@ class PhaseParameters {
   bool isTemperatureInRange(double celsius) =>
       (minTemperatureCelsius == null || celsius >= minTemperatureCelsius!) &&
       (maxTemperatureCelsius == null || celsius <= maxTemperatureCelsius!);
+
+  Map<String, dynamic> toJson() => {
+        'phase': phase.toJson(),
+        'nominalDuration': nominalDuration,
+        'minDuration': minDuration,
+        'maxDuration': maxDuration,
+        if (nominalPressureBar != null) 'nominalPressureBar': nominalPressureBar,
+        if (minPressureBar != null) 'minPressureBar': minPressureBar,
+        if (maxPressureBar != null) 'maxPressureBar': maxPressureBar,
+        if (nominalTemperatureCelsius != null)
+          'nominalTemperatureCelsius': nominalTemperatureCelsius,
+        if (minTemperatureCelsius != null)
+          'minTemperatureCelsius': minTemperatureCelsius,
+        if (maxTemperatureCelsius != null)
+          'maxTemperatureCelsius': maxTemperatureCelsius,
+        'isManualCompletion': isManualCompletion,
+      };
+
+  factory PhaseParameters.fromJson(Map<String, dynamic> j) => PhaseParameters(
+        phase: WeldingPhase.fromJson(j['phase'] as String),
+        nominalDuration: (j['nominalDuration'] as num).toDouble(),
+        minDuration: (j['minDuration'] as num).toDouble(),
+        maxDuration: (j['maxDuration'] as num).toDouble(),
+        nominalPressureBar: (j['nominalPressureBar'] as num?)?.toDouble(),
+        minPressureBar: (j['minPressureBar'] as num?)?.toDouble(),
+        maxPressureBar: (j['maxPressureBar'] as num?)?.toDouble(),
+        nominalTemperatureCelsius:
+            (j['nominalTemperatureCelsius'] as num?)?.toDouble(),
+        minTemperatureCelsius:
+            (j['minTemperatureCelsius'] as num?)?.toDouble(),
+        maxTemperatureCelsius:
+            (j['maxTemperatureCelsius'] as num?)?.toDouble(),
+        isManualCompletion: j['isManualCompletion'] as bool? ?? false,
+      );
 }

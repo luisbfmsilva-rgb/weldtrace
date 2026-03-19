@@ -209,28 +209,96 @@ class WeldWorkflowEngine {
   }
 
   /// Cancel the weld with a reason.
+  ///
+  /// Always generates a partial PDF report for traceability (non-fatal on
+  /// PDF failure — record is still cancelled even without a PDF).
   Future<void> cancel(String reason) async {
     sensorService.stopCapture();
     _sensorSub?.cancel();
 
-    await db.weldsDao.cancelWeld(weldId, reason);
+    final cancelledAt = DateTime.now().toUtc();
+    final curve       = _recorder.export();
+    final jointId     = const Uuid().v7();
+
+    // ── Partial trace data ────────────────────────────────────────────────
+    String? curveJson;
+    Uint8List? curveCompressed;
+    String? signature;
+    try {
+      curveJson = jsonEncode(curve.map((p) => p.toJson()).toList());
+      curveCompressed = CurveCompression.compressCurve(curveJson);
+      signature = WeldTraceSignature.generate(
+        machineId:         machineId,
+        pipeDiameter:      pipeDiameter,
+        material:          pipeMaterial,
+        sdr:               pipeSdr,
+        curve:             curve,
+        timestamp:         cancelledAt,
+        fusionPressureBar: fusionPressureBar,
+        heatingTimeSec:    heatingTimeSec,
+        coolingTimeSec:    coolingTimeSec,
+        beadHeightMm:      beadHeightMm,
+      );
+    } catch (e) {
+      _logger.w('[WeldWorkflow] Cancel — partial trace failed (non-fatal): $e');
+    }
+
+    // ── Cancellation PDF report ───────────────────────────────────────────
+    Uint8List? pdfBytes;
+    try {
+      pdfBytes = await WeldReportGenerator.generate(
+        projectName:             projectName,
+        machineName:             machineName,
+        machineId:               machineId,
+        diameter:                pipeDiameter,
+        material:                pipeMaterial,
+        sdr:                     pipeSdr,
+        curve:                   curve,
+        weldSignature:           signature ?? '',
+        timestamp:               cancelledAt.toLocal(),
+        operatorName:            operatorName,
+        operatorId:              operatorId,
+        jointId:                 jointId,
+        wallThicknessStr:        wallThicknessStr,
+        standardUsed:            standardUsed,
+        fusionPressureBar:       fusionPressureBar,
+        heatingTimeSec:          heatingTimeSec,
+        coolingTimeSec:          coolingTimeSec,
+        beadHeightMm:            beadHeightMm,
+        traceQuality:            curve.length >= 2 ? 'OK' : 'LOW_SAMPLE_COUNT',
+        machineModel:            machineModel,
+        machineSerialNumber:     machineSerialNumber,
+        hydraulicCylinderAreaMm2: hydraulicCylinderAreaMm2,
+        completionStatus:        'cancelled',
+        cancelReason:            reason,
+      );
+      _logger.i('[WeldWorkflow] Cancellation PDF generated (${pdfBytes.length} bytes)');
+    } catch (e) {
+      _logger.w('[WeldWorkflow] Cancellation PDF failed (non-fatal): $e');
+    }
+
+    await db.weldsDao.cancelWithReport(
+      id:                   weldId,
+      reason:               reason,
+      pdfBytes:             pdfBytes,
+      curveJson:            curveJson,
+      traceCurveCompressed: curveCompressed,
+      traceSignature:       signature,
+      traceQuality:         curve.length >= 2 ? 'OK' : 'LOW_SAMPLE_COUNT',
+      jointId:              jointId,
+    );
+
     _emitState(WeldWorkflowState.cancelled);
     _logger.w('[WeldWorkflow] Weld cancelled: $reason');
   }
 
   /// Complete the entire weld session.
   ///
-  /// Steps (in order):
-  ///   1. Export the pressure × time curve from the trace recorder
-  ///   2. Generate SHA-256 joint signature (includes welding process params)
-  ///   3. Serialise curve to JSON
-  ///   3b. Gzip-compress the curve bytes
-  ///   4. Generate professional PDF engineering report (failure is logged,
-  ///      not rethrown)
-  ///   5. Determine trace quality ('OK' / 'LOW_SAMPLE_COUNT')
-  ///   6. Persist trace data to DB (compressed + JSON + PDF)
-  ///   7. Mark the weld row IMMUTABLE
-  Future<void> completeWeld() async {
+  /// Completes the weld, generates the PDF certificate, and marks IMMUTABLE.
+  ///
+  /// [coolingIncomplete] — pass true when the operator ended cooling before
+  /// the nominal cooling time elapsed.  The PDF will include a warning banner.
+  Future<void> completeWeld({bool coolingIncomplete = false}) async {
     sensorService.stopCapture();
     _sensorSub?.cancel();
 
@@ -285,32 +353,45 @@ class WeldWorkflowEngine {
     Uint8List? pdfBytes;
     try {
       pdfBytes = await WeldReportGenerator.generate(
-        projectName:            projectName,
-        machineName:            machineName,
-        machineId:              machineId,
-        diameter:               pipeDiameter,
-        material:               pipeMaterial,
-        sdr:                    pipeSdr,
-        curve:                  curve,
-        weldSignature:          signature,
-        timestamp:              completedAt.toLocal(),
-        operatorName:           operatorName,
-        operatorId:             operatorId,
-        jointId:                jointId,
-        wallThicknessStr:       wallThicknessStr,
-        standardUsed:           standardUsed,
-        fusionPressureBar:      fusionPressureBar,
-        heatingTimeSec:         heatingTimeSec,
-        coolingTimeSec:         coolingTimeSec,
-        beadHeightMm:           beadHeightMm,
-        traceQuality:           traceQuality,
-        machineModel:           machineModel,
-        machineSerialNumber:    machineSerialNumber,
+        projectName:              projectName,
+        machineName:              machineName,
+        machineId:                machineId,
+        diameter:                 pipeDiameter,
+        material:                 pipeMaterial,
+        sdr:                      pipeSdr,
+        curve:                    curve,
+        weldSignature:            signature,
+        timestamp:                completedAt.toLocal(),
+        operatorName:             operatorName,
+        operatorId:               operatorId,
+        jointId:                  jointId,
+        wallThicknessStr:         wallThicknessStr,
+        standardUsed:             standardUsed,
+        fusionPressureBar:        fusionPressureBar,
+        heatingTimeSec:           heatingTimeSec,
+        coolingTimeSec:           coolingTimeSec,
+        beadHeightMm:             beadHeightMm,
+        traceQuality:             traceQuality,
+        machineModel:             machineModel,
+        machineSerialNumber:      machineSerialNumber,
         hydraulicCylinderAreaMm2: hydraulicCylinderAreaMm2,
+        completionStatus: coolingIncomplete ? 'cooling_incomplete' : 'completed',
       );
       _logger.i('[WeldWorkflow] PDF report generated (${pdfBytes.length} bytes)');
     } catch (e) {
       _logger.w('[WeldWorkflow] PDF generation failed (non-fatal): $e');
+    }
+
+    // ── 5b. Persist coolingIncomplete flag ────────────────────────────────
+    if (coolingIncomplete) {
+      try {
+        await db.weldsDao.saveCoolingFlag(
+          id: weldId,
+          coolingIncomplete: true,
+        );
+      } catch (e) {
+        _logger.w('[WeldWorkflow] saveCoolingFlag failed (non-fatal): $e');
+      }
     }
 
     // ── 6. Persist trace data before marking completed ─────────────────────

@@ -215,15 +215,16 @@ class WeldingTableGenerator {
     final buT = (record.buildupTimeS ?? 15).toDouble();
 
     return [
-      // 1. Heating-up
+      // 1. Heating-up (bead formation — MANUAL completion by operator)
       PhaseParameters(
         phase: WeldingPhase.heatingUp,
         nominalDuration: huT,
         minDuration: 0,
-        maxDuration: huT * 1.5,
+        maxDuration: huT * 3.0,   // generous max; operator confirms bead
         nominalPressureBar: huNom,
         minPressureBar: huNom != null ? huNom * (1 - presTol) : null,
         maxPressureBar: huNom != null ? huNom * (1 + presTol) : null,
+        isManualCompletion: true,
       ),
 
       // 2. Heating (soak time — only loose lower bound, no pressure after initial)
@@ -647,7 +648,7 @@ class WeldingTableGenerator {
 
     // ── Build phases ─────────────────────────────────────────────────────────
     final phases = <PhaseParameters>[
-      // 1. Heating-up — operator-paced; maintains P1 until bead height reached
+      // 1. Heating-up — MANUAL: operator confirms bead formation
       PhaseParameters(
         phase:            WeldingPhase.heatingUp,
         nominalDuration:  t1,
@@ -656,6 +657,7 @@ class WeldingTableGenerator {
         nominalPressureBar: hasMachine ? p1 : null,
         minPressureBar:   hasMachine ? p1 * (1 - pTol) : null,
         maxPressureBar:   hasMachine ? p1 * (1 + pTol) : null,
+        isManualCompletion: true,
       ),
 
       // 2. Heating (soak) — reduced pressure P2, timer = t2 (±10 %)

@@ -87,6 +87,29 @@ class WeldsTable extends Table {
   /// certification ledger.  Null for welds completed before schema v7.
   TextColumn get jointId => text().nullable()();
 
+  // ── Resume support — added in schema v9 ──────────────────────────────────
+
+  /// JSON-encoded List<PhaseParameters> that allows resuming an in-progress
+  /// weld session without re-running setup.  Serialised using
+  /// PhaseParameters.toJson() at session start.
+  TextColumn get phasesJson => text().nullable()();
+
+  /// JSON-encoded WeldSessionArgs metadata (machine name, area, operator, etc.)
+  /// so the session can be fully reconstructed when the user resumes.
+  TextColumn get sessionMetaJson => text().nullable()();
+
+  // ── Completion flags — added in schema v9 ────────────────────────────────
+
+  /// True when the operator ended cooling before the nominal time elapsed.
+  BoolColumn get coolingIncomplete =>
+      boolean().nullable().withDefault(const Constant(false))();
+
+  /// Elapsed seconds of the bead-formation (heatingUp) phase.
+  IntColumn get beadFormationSeconds => integer().nullable()();
+
+  /// Actual bead height measured by the operator [mm].  Optional.
+  RealColumn get beadHeightMeasuredMm => real().nullable()();
+
   @override
   Set<Column> get primaryKey => {id};
 }
