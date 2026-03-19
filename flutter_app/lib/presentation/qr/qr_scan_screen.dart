@@ -4,7 +4,6 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:mobile_scanner/mobile_scanner.dart';
-import 'package:qr_flutter/qr_flutter.dart';
 
 import '../../core/theme/app_colors.dart';
 import '../../data/local/database/app_database.dart';
@@ -173,7 +172,6 @@ class _OverlayPainter extends CustomPainter {
     final paint = Paint()..color = Colors.black54;
     final cx = size.width / 2;
     final cy = size.height / 2;
-    final half = boxSize / 2;
     final path = Path()
       ..addRect(Rect.fromLTWH(0, 0, size.width, size.height))
       ..addRRect(RRect.fromRectAndRadius(

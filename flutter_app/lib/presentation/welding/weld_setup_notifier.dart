@@ -6,7 +6,6 @@ import '../../data/local/database/app_database.dart';
 import '../../data/repositories/weld_parameters_repository.dart';
 import '../../services/standards/pipes_catalog_seeder.dart';
 import '../../services/standards/welding_data_seeder.dart';
-import '../../services/welding/pipe_spec.dart';
 import '../../services/welding/welding_table.dart';
 import '../../services/welding/welding_table_generator.dart';
 import '../../workflow/welding_phase.dart';

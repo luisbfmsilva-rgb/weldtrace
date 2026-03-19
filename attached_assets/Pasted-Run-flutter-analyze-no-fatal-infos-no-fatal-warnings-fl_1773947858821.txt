@@ -1,0 +1,100 @@
+Run flutter analyze --no-fatal-infos --no-fatal-warnings
+  flutter analyze --no-fatal-infos --no-fatal-warnings
+  shell: /usr/bin/bash -e {0}
+  env:
+    JAVA_HOME: /opt/hostedtoolcache/Java_Temurin-Hotspot_jdk/17.0.18-8/x64
+    JAVA_HOME_17_X64: /opt/hostedtoolcache/Java_Temurin-Hotspot_jdk/17.0.18-8/x64
+    FLUTTER_ROOT: /opt/hostedtoolcache/flutter/stable-3.27.0-x64
+    PUB_CACHE: /home/runner/.pub-cache
+Analyzing flutter_app...                                        
+
+  error • Arguments of a constant creation must be constant expressions • lib/data/local/dao/pipes_catalog_dao.dart:7:25 • const_with_non_constant_argument
+  error • The values in a const list literal must be constants • lib/data/local/dao/pipes_catalog_dao.dart:7:25 • non_constant_list_element
+  error • Undefined name 'PipesCatalogTable' • lib/data/local/dao/pipes_catalog_dao.dart:7:25 • undefined_identifier
+  error • Undefined name 'pipesCatalogTable' • lib/data/local/dao/pipes_catalog_dao.dart:14:30 • undefined_identifier
+  error • Undefined name 'pipesCatalogTable' • lib/data/local/dao/pipes_catalog_dao.dart:15:21 • undefined_identifier
+  error • Undefined name 'pipesCatalogTable' • lib/data/local/dao/pipes_catalog_dao.dart:16:35 • undefined_identifier
+  error • A value of type 'List<Object>' can't be returned from the method 'getDistinctDiameters' because it has a return type of 'Future<List<double>>' • lib/data/local/dao/pipes_catalog_dao.dart:17:12 • return_of_invalid_type
+  error • Undefined name 'pipesCatalogTable' • lib/data/local/dao/pipes_catalog_dao.dart:18:32 • undefined_identifier
+  error • Undefined name 'pipesCatalogTable' • lib/data/local/dao/pipes_catalog_dao.dart:24:30 • undefined_identifier
+  error • Undefined name 'pipesCatalogTable' • lib/data/local/dao/pipes_catalog_dao.dart:25:21 • undefined_identifier
+  error • Undefined name 'pipesCatalogTable' • lib/data/local/dao/pipes_catalog_dao.dart:26:15 • undefined_identifier
+  error • Undefined name 'pipesCatalogTable' • lib/data/local/dao/pipes_catalog_dao.dart:27:35 • undefined_identifier
+  error • A value of type 'List<Object>' can't be returned from the method 'getSdrsForDiameter' because it has a return type of 'Future<List<double>>' • lib/data/local/dao/pipes_catalog_dao.dart:28:12 • return_of_invalid_type
+  error • Undefined name 'pipesCatalogTable' • lib/data/local/dao/pipes_catalog_dao.dart:29:32 • undefined_identifier
+  error • A value of type 'Future<dynamic>' can't be returned from the method 'getByDiameterAndSdr' because it has a return type of 'Future<PipeCatalogRecord?>' • lib/data/local/dao/pipes_catalog_dao.dart:35:12 • return_of_invalid_type
+  error • Undefined name 'pipesCatalogTable' • lib/data/local/dao/pipes_catalog_dao.dart:35:20 • undefined_identifier
+  error • The getter 'de' isn't defined for the type 'HasResultSet' • lib/data/local/dao/pipes_catalog_dao.dart:37:17 • undefined_getter
+  error • The getter 'sdr' isn't defined for the type 'HasResultSet' • lib/data/local/dao/pipes_catalog_dao.dart:38:17 • undefined_getter
+  error • Undefined name 'pipesCatalogTable' • lib/data/local/dao/pipes_catalog_dao.dart:45:30 • undefined_identifier
+  error • Undefined name 'pipesCatalogTable' • lib/data/local/dao/pipes_catalog_dao.dart:52:32 • undefined_identifier
+warning • Unnecessary cast • lib/data/remote/auth_remote_data_source.dart:40:25 • unnecessary_cast
+   info • 'withOpacity' is deprecated and shouldn't be used. Use .withValues() to avoid precision loss • lib/presentation/auth/login_screen.dart:203:50 • deprecated_member_use
+   info • 'withOpacity' is deprecated and shouldn't be used. Use .withValues() to avoid precision loss • lib/presentation/auth/login_screen.dart:206:54 • deprecated_member_use
+warning • Unused import: 'package:qr_flutter/qr_flutter.dart' • lib/presentation/qr/qr_scan_screen.dart:7:8 • unused_import
+warning • The value of the local variable 'half' isn't used • lib/presentation/qr/qr_scan_screen.dart:176:11 • unused_local_variable
+   info • 'withOpacity' is deprecated and shouldn't be used. Use .withValues() to avoid precision loss • lib/presentation/sensors/sensor_screen.dart:135:54 • deprecated_member_use
+   info • 'withOpacity' is deprecated and shouldn't be used. Use .withValues() to avoid precision loss • lib/presentation/sensors/sensor_screen.dart:163:22 • deprecated_member_use
+   info • 'withOpacity' is deprecated and shouldn't be used. Use .withValues() to avoid precision loss • lib/presentation/sensors/sensor_screen.dart:165:41 • deprecated_member_use
+   info • 'withOpacity' is deprecated and shouldn't be used. Use .withValues() to avoid precision loss • lib/presentation/sensors/sensor_screen.dart:176:47 • deprecated_member_use
+   info • 'withOpacity' is deprecated and shouldn't be used. Use .withValues() to avoid precision loss • lib/presentation/sensors/sensor_screen.dart:207:22 • deprecated_member_use
+   info • 'withOpacity' is deprecated and shouldn't be used. Use .withValues() to avoid precision loss • lib/presentation/sensors/sensor_screen.dart:209:41 • deprecated_member_use
+   info • 'withOpacity' is deprecated and shouldn't be used. Use .withValues() to avoid precision loss • lib/presentation/welding/pressure_time_graph.dart:75:44 • deprecated_member_use
+   info • 'withOpacity' is deprecated and shouldn't be used. Use .withValues() to avoid precision loss • lib/presentation/welding/pressure_time_graph.dart:79:33 • deprecated_member_use
+   info • 'withOpacity' is deprecated and shouldn't be used. Use .withValues() to avoid precision loss • lib/presentation/welding/pressure_time_graph.dart:136:44 • deprecated_member_use
+   info • 'withOpacity' is deprecated and shouldn't be used. Use .withValues() to avoid precision loss • lib/presentation/welding/pressure_time_graph.dart:140:44 • deprecated_member_use
+   info • 'withOpacity' is deprecated and shouldn't be used. Use .withValues() to avoid precision loss • lib/presentation/welding/pressure_time_graph.dart:177:48 • deprecated_member_use
+   info • 'withOpacity' is deprecated and shouldn't be used. Use .withValues() to avoid precision loss • lib/presentation/welding/pressure_time_graph.dart:179:48 • deprecated_member_use
+   info • 'withOpacity' is deprecated and shouldn't be used. Use .withValues() to avoid precision loss • lib/presentation/welding/pressure_time_graph.dart:221:42 • deprecated_member_use
+   info • 'withOpacity' is deprecated and shouldn't be used. Use .withValues() to avoid precision loss • lib/presentation/welding/pressure_time_graph.dart:277:37 • deprecated_member_use
+   info • 'withOpacity' is deprecated and shouldn't be used. Use .withValues() to avoid precision loss • lib/presentation/welding/pressure_time_graph.dart:278:39 • deprecated_member_use
+   info • 'withOpacity' is deprecated and shouldn't be used. Use .withValues() to avoid precision loss • lib/presentation/welding/pressure_time_graph.dart:293:45 • deprecated_member_use
+   info • 'withOpacity' is deprecated and shouldn't be used. Use .withValues() to avoid precision loss • lib/presentation/welding/pressure_time_graph.dart:351:56 • deprecated_member_use
+   info • 'withOpacity' is deprecated and shouldn't be used. Use .withValues() to avoid precision loss • lib/presentation/welding/pressure_time_graph.dart:371:60 • deprecated_member_use
+   info • 'withOpacity' is deprecated and shouldn't be used. Use .withValues() to avoid precision loss • lib/presentation/welding/pressure_time_graph.dart:391:60 • deprecated_member_use
+   info • 'withOpacity' is deprecated and shouldn't be used. Use .withValues() to avoid precision loss • lib/presentation/welding/pressure_time_graph.dart:429:46 • deprecated_member_use
+   info • 'withOpacity' is deprecated and shouldn't be used. Use .withValues() to avoid precision loss • lib/presentation/welding/pressure_time_graph.dart:431:50 • deprecated_member_use
+   info • 'withOpacity' is deprecated and shouldn't be used. Use .withValues() to avoid precision loss • lib/presentation/welding/pressure_time_graph.dart:440:51 • deprecated_member_use
+   info • 'withOpacity' is deprecated and shouldn't be used. Use .withValues() to avoid precision loss • lib/presentation/welding/pressure_time_graph.dart:445:46 • deprecated_member_use
+   info • 'withOpacity' is deprecated and shouldn't be used. Use .withValues() to avoid precision loss • lib/presentation/welding/pressure_time_graph.dart:461:52 • deprecated_member_use
+   info • 'withOpacity' is deprecated and shouldn't be used. Use .withValues() to avoid precision loss • lib/presentation/welding/pressure_time_graph.dart:492:22 • deprecated_member_use
+warning • Unused import: '../../services/welding/pipe_spec.dart' • lib/presentation/welding/weld_setup_notifier.dart:9:8 • unused_import
+   info • 'withOpacity' is deprecated and shouldn't be used. Use .withValues() to avoid precision loss • lib/presentation/welding/weld_setup_screen.dart:501:46 • deprecated_member_use
+   info • 'withOpacity' is deprecated and shouldn't be used. Use .withValues() to avoid precision loss • lib/presentation/welding/weld_setup_screen.dart:524:22 • deprecated_member_use
+   info • 'withOpacity' is deprecated and shouldn't be used. Use .withValues() to avoid precision loss • lib/presentation/welding/weld_setup_screen.dart:572:22 • deprecated_member_use
+   info • 'withOpacity' is deprecated and shouldn't be used. Use .withValues() to avoid precision loss • lib/presentation/welding/weld_setup_screen.dart:587:29 • deprecated_member_use
+   info • 'withOpacity' is deprecated and shouldn't be used. Use .withValues() to avoid precision loss • lib/presentation/welding/weld_setup_screen.dart:694:21 • deprecated_member_use
+   info • 'withOpacity' is deprecated and shouldn't be used. Use .withValues() to avoid precision loss • lib/presentation/welding/weld_setup_screen.dart:696:40 • deprecated_member_use
+   info • 'withOpacity' is deprecated and shouldn't be used. Use .withValues() to avoid precision loss • lib/presentation/welding/weld_setup_screen.dart:705:27 • deprecated_member_use
+   info • 'withOpacity' is deprecated and shouldn't be used. Use .withValues() to avoid precision loss • lib/presentation/welding/weld_setup_screen.dart:806:60 • deprecated_member_use
+   info • 'withOpacity' is deprecated and shouldn't be used. Use .withValues() to avoid precision loss • lib/presentation/welding/weld_setup_screen.dart:826:31 • deprecated_member_use
+   info • 'withOpacity' is deprecated and shouldn't be used. Use .withValues() to avoid precision loss • lib/presentation/welding/weld_setup_screen.dart:828:50 • deprecated_member_use
+   info • 'withOpacity' is deprecated and shouldn't be used. Use .withValues() to avoid precision loss • lib/presentation/welding/weld_setup_screen.dart:883:62 • deprecated_member_use
+   info • 'withOpacity' is deprecated and shouldn't be used. Use .withValues() to avoid precision loss • lib/presentation/welding/weld_setup_screen.dart:884:66 • deprecated_member_use
+   info • 'withOpacity' is deprecated and shouldn't be used. Use .withValues() to avoid precision loss • lib/presentation/welding/welding_session_screen.dart:446:48 • deprecated_member_use
+   info • 'withOpacity' is deprecated and shouldn't be used. Use .withValues() to avoid precision loss • lib/presentation/welding/welding_session_screen.dart:449:52 • deprecated_member_use
+   info • 'withOpacity' is deprecated and shouldn't be used. Use .withValues() to avoid precision loss • lib/presentation/welding/welding_session_screen.dart:589:20 • deprecated_member_use
+   info • 'withOpacity' is deprecated and shouldn't be used. Use .withValues() to avoid precision loss • lib/presentation/welding/welding_session_screen.dart:624:61 • deprecated_member_use
+   info • 'withOpacity' is deprecated and shouldn't be used. Use .withValues() to avoid precision loss • lib/presentation/welding/welding_session_screen.dart:645:49 • deprecated_member_use
+   info • 'withOpacity' is deprecated and shouldn't be used. Use .withValues() to avoid precision loss • lib/presentation/welding/welding_session_screen.dart:718:25 • deprecated_member_use
+   info • 'withOpacity' is deprecated and shouldn't be used. Use .withValues() to avoid precision loss • lib/presentation/welding/welding_session_screen.dart:720:44 • deprecated_member_use
+   info • 'withOpacity' is deprecated and shouldn't be used. Use .withValues() to avoid precision loss • lib/presentation/welding/welding_session_screen.dart:751:41 • deprecated_member_use
+   info • 'withOpacity' is deprecated and shouldn't be used. Use .withValues() to avoid precision loss • lib/presentation/welding/welding_session_screen.dart:760:66 • deprecated_member_use
+   info • 'withOpacity' is deprecated and shouldn't be used. Use .withValues() to avoid precision loss • lib/presentation/welding/welding_session_screen.dart:764:70 • deprecated_member_use
+   info • 'withOpacity' is deprecated and shouldn't be used. Use .withValues() to avoid precision loss • lib/presentation/welding/welding_session_screen.dart:810:29 • deprecated_member_use
+   info • 'withOpacity' is deprecated and shouldn't be used. Use .withValues() to avoid precision loss • lib/presentation/welding/welding_session_screen.dart:813:31 • deprecated_member_use
+   info • 'withOpacity' is deprecated and shouldn't be used. Use .withValues() to avoid precision loss • lib/presentation/widgets/primary_button.dart:28:56 • deprecated_member_use
+   info • 'withOpacity' is deprecated and shouldn't be used. Use .withValues() to avoid precision loss • lib/presentation/widgets/section_card.dart:29:33 • deprecated_member_use
+   info • 'withOpacity' is deprecated and shouldn't be used. Use .withValues() to avoid precision loss • lib/presentation/widgets/status_badge.dart:42:34 • deprecated_member_use
+   info • 'withOpacity' is deprecated and shouldn't be used. Use .withValues() to avoid precision loss • lib/presentation/widgets/status_badge.dart:44:38 • deprecated_member_use
+   info • 'withOpacity' is deprecated and shouldn't be used. Use .withValues() to avoid precision loss • lib/presentation/widgets/status_badge.dart:46:34 • deprecated_member_use
+   info • 'withOpacity' is deprecated and shouldn't be used. Use .withValues() to avoid precision loss • lib/presentation/widgets/status_badge.dart:48:34 • deprecated_member_use
+   info • 'withOpacity' is deprecated and shouldn't be used. Use .withValues() to avoid precision loss • lib/presentation/widgets/status_badge.dart:50:32 • deprecated_member_use
+warning • Unnecessary cast • lib/services/standards/pipes_catalog_seeder.dart:328:31 • unnecessary_cast
+warning • Unnecessary cast • lib/services/standards/pipes_catalog_seeder.dart:329:31 • unnecessary_cast
+warning • Unnecessary cast • lib/services/standards/pipes_catalog_seeder.dart:330:31 • unnecessary_cast
+warning • Unnecessary cast • lib/services/standards/pipes_catalog_seeder.dart:331:31 • unnecessary_cast
+warning • The value of the field '_fusionBar' isn't used • lib/services/standards/welding_data_seeder.dart:34:16 • unused_field
+
+87 issues found. (ran in 18.9s)
+Error: Process completed with exit code 1.

@@ -37,7 +37,7 @@ class AuthRemoteDataSource {
 
       final profileResult = await _fetchProfile(supabaseUser.id);
       if (profileResult is Failure<AppAuthUser>) {
-        return Failure((profileResult as Failure<AppAuthUser>).exception);
+        return Failure(profileResult.exception);
       }
       final user = (profileResult as Success<AppAuthUser>).value;
 

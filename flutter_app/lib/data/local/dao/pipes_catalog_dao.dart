@@ -1,6 +1,7 @@
 import 'package:drift/drift.dart';
 
 import '../database/app_database.dart';
+import '../tables/pipes_catalog_table.dart';
 
 part 'pipes_catalog_dao.g.dart';
 

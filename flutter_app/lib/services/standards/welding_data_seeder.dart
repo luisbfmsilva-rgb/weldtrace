@@ -31,7 +31,6 @@ class WeldingDataSeeder {
   // See Dvs2207 class for reference values.
   static const _heatingUpBar   = 0.15;  // Phase 1 — bead build-up
   static const _heatSoakBar    = 0.02;  // Phase 2 — heat soak
-  static const _fusionBar      = 0.15;  // Phase 5 — joining
   static const _toleranceFrac  = 0.10;  // ±10 % tolerance band
 
   /// Returns true when seeding was performed (DB was empty).

@@ -325,10 +325,10 @@ class PipesCatalogSeeder {
 
     return data
         .map((r) => PipesCatalogTableCompanion.insert(
-              de:            (r[0] as num).toDouble(),
-              sdr:           (r[1] as num).toDouble(),
-              wallThickness: (r[2] as num).toDouble(),
-              pipeArea:      (r[3] as num).toDouble(),
+              de:            r[0].toDouble(),
+              sdr:           r[1].toDouble(),
+              wallThickness: r[2].toDouble(),
+              pipeArea:      r[3].toDouble(),
             ))
         .toList();
   }
