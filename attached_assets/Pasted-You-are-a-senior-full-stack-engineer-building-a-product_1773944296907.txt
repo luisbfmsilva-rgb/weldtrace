@@ -1,0 +1,379 @@
+You are a senior full-stack engineer building a production-ready industrial web app called **WeldTrace**.
+
+The app is a **PEAD butt fusion welding control, calculation and traceability system**, based on **DVS 2207-1**.
+
+This is NOT just a calculator. It must function as a **real-time welding execution system with validation, state machine, and reporting**.
+
+---
+
+# 🧱 TECH STACK
+
+Frontend:
+
+* React (mobile-first, industrial UI)
+* Clean UX for field technicians
+
+Backend:
+
+* Node.js (Express)
+* Modular architecture
+
+Database:
+
+* Supabase (PostgreSQL)
+
+---
+
+# 🧠 CORE CONCEPT
+
+The system has TWO ENGINES:
+
+### 1) Calculation Engine (DVS-based)
+
+* Computes welding parameters dynamically
+
+### 2) Welding Execution Engine
+
+* Guides the operator through the welding process
+* Validates each step in real time
+* Generates a full technical report
+
+---
+
+# 🗄️ DATABASE STRUCTURE
+
+## Table: machines
+
+* id (uuid)
+* name (text)
+* cylinder_area (numeric)
+* unit ("mm2" or "cm2")
+* created_at
+
+---
+
+## Table: pipes
+
+* id (uuid)
+* de (numeric)
+* sdr (numeric)
+* wall_thickness (numeric)
+* pipe_area (numeric)
+
+---
+
+## Table: welding_sessions
+
+* id (uuid)
+* machine_id
+* pipe_id
+* operator_name
+* standard ("DVS")
+* status ("in_progress", "approved", "rejected")
+* created_at
+
+---
+
+## Table: welding_logs
+
+* id
+* session_id
+* timestamp
+* pressure
+* temperature
+* stage
+* event
+
+---
+
+## Table: welding_results
+
+* id
+* session_id
+* p1
+* p2
+* p6
+* t2
+* t3
+* t4
+* t5
+* drag_pressure
+* result_status
+* error_message
+
+---
+
+# ⚙️ CALCULATION ENGINE (DVS 2207-1)
+
+## Pipe Calculation
+
+IF pipe exists:
+→ use stored values
+
+ELSE:
+
+wall_thickness = de / sdr
+
+pipe_area = (PI * (de^2 - (de - wall_thickness)^2)) / 4
+
+---
+
+## Unit Conversion
+
+IF machine.unit == "cm2":
+→ cylinder_area_mm2 = cylinder_area * 100
+
+ELSE:
+→ cylinder_area_mm2 = cylinder_area
+
+---
+
+## Ratio
+
+RA = pipe_area / cylinder_area_mm2
+
+---
+
+## PRESSURES (DVS MODEL)
+
+P1 = RA * 1.5
+P2 = RA * 0.2
+P6 = P1
+
+---
+
+## TIMES (DVS MODEL)
+
+t2 = 10 * wall_thickness
+t3 = 0.01 * de + 3
+t4 = 0.03 * de + 3
+t5 = wall_thickness + 3
+
+---
+
+## FINAL PRESSURES (INCLUDING DRAG)
+
+pressure_preheat = P1 + drag_pressure
+pressure_max_heat = P2 + drag_pressure
+pressure_cooling = P6 + drag_pressure
+
+---
+
+# 🧠 WELDING EXECUTION ENGINE (STATE MACHINE)
+
+The welding process MUST be implemented as a strict state machine.
+
+States:
+
+1. PREPARATION
+2. PREHEATING
+3. HEATING
+4. PLATE_REMOVAL
+5. PRESSURE_BUILDUP
+6. COOLING
+7. FINISHED
+
+Transitions must be controlled and validated.
+
+---
+
+# 🔩 STAGE LOGIC
+
+## 1) PREPARATION
+
+Inputs:
+
+* drag_pressure
+
+Rules:
+
+* Facing pressure max = drag_pressure + 25 bar
+* If exceeded → FAIL
+
+User must input:
+
+* misalignment
+* gap approval (checkbox)
+
+App must display:
+
+* allowed limits
+
+---
+
+## 2) PREHEATING
+
+Display:
+
+* target pressure = P1 + drag
+* live timer (count up)
+* expected bead height (optional field)
+
+No automatic failure (monitoring only)
+
+---
+
+## 3) HEATING
+
+Auto timer = t2
+
+Rules:
+
+* pressure must NOT exceed (P2 + drag)
+* if exceeded → FAIL
+* if time < min OR > tolerance → FAIL
+
+---
+
+## 4) PLATE REMOVAL
+
+Auto timer = t3
+
+Rule:
+
+* if exceeded → FAIL
+
+---
+
+## 5) PRESSURE BUILDUP
+
+Trigger:
+
+* when pressure starts rising
+
+System must:
+
+Compute linear ramp:
+
+pressure_target(t) = P2 + (P6 - P2) * (t / t4)
+
+Display in real time:
+
+* target pressure
+* actual pressure
+
+---
+
+## 6) COOLING
+
+Timer = t5
+
+Display:
+
+* target pressure
+* actual pressure
+
+Rules:
+
+* if pressure drops → alert sound
+* if pressure outside tolerance for too long → FAIL
+
+---
+
+## 7) FINALIZATION
+
+IF all stages OK:
+→ APPROVED
+
+ELSE:
+→ REJECTED + error message
+
+---
+
+# 📊 REPORT GENERATION
+
+Each welding session must generate a full report:
+
+Include:
+
+* machine data
+* pipe data
+* drag pressure
+* calculated parameters (P1, P2, times)
+* all recorded logs
+* pressure vs time curve
+* events/errors
+* final result
+
+---
+
+# 📡 SENSOR INTEGRATION (READY)
+
+System must support:
+
+* real-time pressure input (from ESP32)
+* fallback to manual input
+
+---
+
+# 🎯 API ENDPOINTS
+
+POST /machines
+GET /machines
+
+POST /pipes
+GET /pipes
+
+POST /calculate
+→ returns full parameter set
+
+POST /start-weld
+POST /log
+POST /finish-weld
+
+GET /report/:id
+
+---
+
+# 🎨 UI REQUIREMENTS
+
+* Mobile-first (field usage)
+* Large buttons
+* High contrast
+* Real-time feedback
+* Pressure vs time graph (live)
+
+---
+
+# ⚠️ VALIDATION RULES
+
+* No negative values
+* SDR > 0
+* Diameter > 0
+* Pressure always validated
+
+---
+
+# 🧩 ARCHITECTURE RULES
+
+* Calculation must be backend-only
+* State machine must be centralized
+* Logs must be persisted in real time
+* Code must be modular:
+
+  * calculation service
+  * welding engine
+  * validation service
+
+---
+
+# 🚀 FUTURE EXTENSIBILITY
+
+Prepare system to support:
+
+* ISO standards
+* ASTM standards
+* Manufacturer tables override
+
+---
+
+# 🎯 GOAL
+
+Deliver a clean, production-ready industrial system that:
+
+* Calculates welding parameters (DVS compliant)
+* Guides the operator step-by-step
+* Validates welding quality in real time
+* Generates traceable engineering reports
+
+This is NOT a demo. Build it as a real product.
