@@ -48,8 +48,11 @@ jobs:
       - name: Create local.properties
         working-directory: flutter_app/android
         run: |
-          echo "flutter.sdk=$FLUTTER_ROOT" > local.properties
-          echo "sdk.dir=$ANDROID_HOME" >> local.properties
+          # Preserve any values already written by 'flutter pub get' (versionCode, versionName, etc.)
+          # and ensure flutter.sdk and sdk.dir are present.
+          touch local.properties
+          grep -q "^flutter\.sdk=" local.properties || echo "flutter.sdk=$FLUTTER_ROOT" >> local.properties
+          grep -q "^sdk\.dir=" local.properties    || echo "sdk.dir=$ANDROID_HOME"    >> local.properties
 
       - name: Install Gradle and generate wrapper JAR
         working-directory: flutter_app/android
