@@ -38,9 +38,8 @@ final apiClientProvider = Provider<ApiClient>((ref) {
 
 final authRepositoryProvider = Provider<AuthRepository>((ref) {
   final db = ref.watch(databaseProvider);
-  final api = ref.watch(apiClientProvider);
   return AuthRepository(
-    remoteDataSource: AuthRemoteDataSource(api),
+    remoteDataSource: const AuthRemoteDataSource(),
     db: db,
   );
 });
