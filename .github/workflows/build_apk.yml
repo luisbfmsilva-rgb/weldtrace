@@ -52,8 +52,6 @@ jobs:
       - name: Create local.properties
         working-directory: flutter_app/android
         run: |
-          # Preserve any values already written by 'flutter pub get' (versionCode, versionName, etc.)
-          # and ensure flutter.sdk and sdk.dir are present.
           touch local.properties
           grep -q "^flutter\.sdk=" local.properties || echo "flutter.sdk=$FLUTTER_ROOT" >> local.properties
           grep -q "^sdk\.dir=" local.properties    || echo "sdk.dir=$ANDROID_HOME"    >> local.properties
@@ -65,16 +63,9 @@ jobs:
           unzip -q /tmp/gradle.zip -d /tmp/gradle-dist
           /tmp/gradle-dist/gradle-8.9/bin/gradle wrapper --gradle-version=8.9 --distribution-type=all
 
-      - name: Show manifest and local.properties (debug)
-        run: |
-          echo "=== AndroidManifest.xml ==="
-          cat flutter_app/android/app/src/main/AndroidManifest.xml
-          echo "=== local.properties ==="
-          cat flutter_app/android/local.properties 2>/dev/null || echo "(not found)"
-
       - name: Build debug APK
         working-directory: flutter_app
-        run: flutter build apk --debug --verbose
+        run: flutter build apk --debug
 
       - name: Upload debug APK
         uses: actions/upload-artifact@v4
