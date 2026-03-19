@@ -67,8 +67,8 @@ dev_dependencies:
   drift_dev: ^2.18.0
   build_runner: ^2.4.11
   riverpod_generator: ^2.4.3
-  custom_lint: ^0.6.4
-  riverpod_lint: ^2.3.10
+  custom_lint: ^0.7.0
+  riverpod_lint: ^2.4.0
   mockito: ^5.4.4
   flutter_lints: ^3.0.2
 
