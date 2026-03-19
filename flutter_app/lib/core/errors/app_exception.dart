@@ -16,7 +16,8 @@ class NetworkException extends AppException {
 
 /// API returned a non-2xx response.
 class ApiException extends AppException {
-  const ApiException(super.message, {this.statusCode, super.cause});
+  const ApiException(String message, {this.statusCode, Object? cause})
+      : super(message, cause);
 
   final int? statusCode;
 }

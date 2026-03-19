@@ -1,4 +1,5 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:flutter_secure_storage/flutter_secure_storage.dart';
 
 import '../data/local/database/app_database.dart';
 import '../data/remote/auth_remote_data_source.dart';
@@ -19,13 +20,17 @@ final databaseProvider = Provider<AppDatabase>((ref) {
   return db;
 });
 
+// ── Secure storage (shared instance) ──────────────────────────────────────────
+
+const _secureStorage = FlutterSecureStorage();
+
 // ── API client ─────────────────────────────────────────────────────────────────
 
 final apiClientProvider = Provider<ApiClient>((ref) {
-  // Note: forward reference is safe because authRepositoryProvider only
-  // reads apiClientProvider lazily; Riverpod handles circular deps via lazy eval.
+  // Reads the access token directly from secure storage to avoid a circular
+  // dependency with authRepositoryProvider.
   return ApiClient(
-    tokenProvider: () => ref.read(authRepositoryProvider).getAccessToken(),
+    tokenProvider: () => _secureStorage.read(key: 'wt_access_token'),
   );
 });
 

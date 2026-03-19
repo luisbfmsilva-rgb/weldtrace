@@ -5,7 +5,6 @@ import 'package:http/http.dart' as http;
 import '../constants/app_constants.dart';
 import '../errors/app_exception.dart';
 import '../utils/result.dart';
-import '../../data/local/database/app_database.dart';
 
 /// HTTP client wrapper that:
 /// - Injects Bearer token from the local auth store
