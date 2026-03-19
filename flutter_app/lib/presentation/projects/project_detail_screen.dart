@@ -99,7 +99,10 @@ class _ProjectDetailScreenState extends ConsumerState<ProjectDetailScreen> {
                   icon: const Icon(Icons.add, size: 16),
                   label: const Text('New Weld'),
                   style: TextButton.styleFrom(foregroundColor: AppColors.sertecRed),
-                  onPressed: () => context.push('/projects/${p.id}/weld/setup'),
+                  onPressed: () => context.push(
+                    '/weld/setup',
+                    extra: {'preselectedProjectId': p.id},
+                  ),
                 ),
             ]),
           ),
@@ -112,7 +115,10 @@ class _ProjectDetailScreenState extends ConsumerState<ProjectDetailScreen> {
                 if (welds.isEmpty) {
                   return _EmptyWelds(
                     isActive: isActive,
-                    onNew: () => context.push('/projects/${p.id}/weld/setup'),
+                    onNew: () => context.push(
+                      '/weld/setup',
+                      extra: {'preselectedProjectId': p.id},
+                    ),
                   );
                 }
                 return ListView.builder(
@@ -134,7 +140,10 @@ class _ProjectDetailScreenState extends ConsumerState<ProjectDetailScreen> {
               foregroundColor: Colors.white,
               icon: const Icon(Icons.local_fire_department),
               label: const Text('New Weld'),
-              onPressed: () => context.push('/projects/${p.id}/weld/setup'),
+              onPressed: () => context.push(
+                '/weld/setup',
+                extra: {'preselectedProjectId': p.id},
+              ),
             )
           : null,
     );

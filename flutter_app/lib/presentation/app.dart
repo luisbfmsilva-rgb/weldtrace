@@ -20,6 +20,7 @@ import 'splash/splash_screen.dart';
 import 'welds/welds_screen.dart';
 import 'welds/weld_detail_screen.dart';
 import 'welding/weld_setup_screen.dart';
+import 'welding/weld_type_selector_screen.dart';
 import 'welding/welding_session_screen.dart';
 
 class FusionCertifyApp extends ConsumerWidget {
@@ -79,14 +80,6 @@ class FusionCertifyApp extends ConsumerWidget {
                     builder: (_, state) => ProjectDetailScreen(
                       projectId: state.pathParameters['projectId']!,
                     ),
-                    routes: [
-                      GoRoute(
-                        path: 'weld/setup',
-                        builder: (_, state) => WeldSetupScreen(
-                          preselectedProjectId: state.pathParameters['projectId'],
-                        ),
-                      ),
-                    ],
                   ),
                 ],
               ),
@@ -139,7 +132,21 @@ class FusionCertifyApp extends ConsumerWidget {
         // ── Weld flow (full-screen, outside shell) ─────────────────────
         GoRoute(
           path: '/weld/setup',
-          builder: (_, __) => const WeldSetupScreen(),
+          builder: (_, state) {
+            final extra = state.extra as Map<String, dynamic>?;
+            final projectId = extra?['preselectedProjectId'] as String?;
+            return WeldTypeSelectorScreen(preselectedProjectId: projectId);
+          },
+          routes: [
+            GoRoute(
+              path: 'butt',
+              builder: (_, state) {
+                final extra = state.extra as Map<String, dynamic>?;
+                final projectId = extra?['preselectedProjectId'] as String?;
+                return WeldSetupScreen(preselectedProjectId: projectId);
+              },
+            ),
+          ],
         ),
         GoRoute(
           path: '/weld/session',

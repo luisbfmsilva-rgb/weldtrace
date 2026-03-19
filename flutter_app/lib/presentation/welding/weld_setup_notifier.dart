@@ -4,6 +4,7 @@ import 'package:uuid/uuid.dart';
 
 import '../../data/local/database/app_database.dart';
 import '../../data/repositories/weld_parameters_repository.dart';
+import '../../services/standards/welding_data_seeder.dart';
 import '../../services/welding/pipe_spec.dart';
 import '../../services/welding/welding_table.dart';
 import '../../services/welding/welding_table_generator.dart';
@@ -242,6 +243,9 @@ class WeldSetupNotifier extends StateNotifier<WeldSetupState> {
   // ── Initialisation ────────────────────────────────────────────────────────
 
   Future<void> _loadStandards() async {
+    // Seed local DB with factory parameters on first launch (or if DB is empty)
+    await WeldingDataSeeder.seedIfNeeded(db);
+
     final result = await paramsRepo.getStandards();
     result.when(
       success: (standards) => state = state.copyWith(standards: standards),
