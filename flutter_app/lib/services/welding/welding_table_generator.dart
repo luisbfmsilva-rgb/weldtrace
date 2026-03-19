@@ -525,6 +525,203 @@ class WeldingTableGenerator {
     };
   }
 
+  // ── DVS 2207-1 direct formula generator ──────────────────────────────────────
+
+  /// Generates a [WeldingTable] directly from pipe catalog data using the
+  /// exact DVS 2207-1 (/ ISO 21307) formulas, without requiring a DB record.
+  ///
+  /// ### Pressure conversion (DVS 2207-1)
+  ///
+  ///   RA  = pipe_area / cylinder_area_mm2     (dimensionless ratio)
+  ///
+  ///   P1  = RA × 1.5  [bar net]   ← 0.15 N/mm² interfacial (joining + cooling)
+  ///   P2  = RA × 0.2  [bar net]   ← 0.02 N/mm² interfacial (heating soak)
+  ///
+  ///   Machine gauge = P_net + drag_pressure
+  ///
+  /// ### Time formulas (DVS 2207-1 Table 3 / clause 5.4)
+  ///
+  ///   t2  = 10 × e           [s]   heating soak time
+  ///   t3  = 0.01 × de + 3   [s]   changeover max time
+  ///   t4  = 0.03 × de + 3   [s]   pressure build-up time
+  ///   t5  = (e + 3) × 60    [s]   cooling time  (e+3 minutes → seconds)
+  ///
+  /// [de]               — nominal outer diameter [mm]
+  /// [wallThickness]    — wall thickness [mm] from the pipe catalog
+  /// [pipeArea]         — annular cross-section [mm²] from the pipe catalog
+  /// [cylinderAreaMm2]  — hydraulic cylinder area [mm²]; null = no machine data
+  /// [dragPressureBar]  — drag pressure measured before welding [bar]
+  /// [pipeMaterial]     — 'PE80' | 'PE100' | 'PP' (used for temp guidance)
+  /// [sdrRating]        — SDR ratio as string (informational)
+  static WeldingTable generateFromPipeCatalog({
+    required double de,
+    required double wallThickness,
+    required double pipeArea,
+    required double? cylinderAreaMm2,
+    required double dragPressureBar,
+    required String pipeMaterial,
+    required String sdrRating,
+  }) {
+    final hasMachine = cylinderAreaMm2 != null && cylinderAreaMm2 > 0;
+    final cyl = cylinderAreaMm2 ?? 1.0;
+
+    // ── Ratio ────────────────────────────────────────────────────────────────
+    final ra = hasMachine ? pipeArea / cyl : 0.0;
+
+    // ── Net pressures (machine gauge without drag) ──────────────────────────
+    //   P1 = RA × 1.5  (0.15 N/mm² interfacial — joining/cooling)
+    //   P2 = RA × 0.2  (0.02 N/mm² interfacial — heating soak)
+    final p1Net = ra * 1.5;
+    final p2Net = ra * 0.2;
+
+    // ── Full machine gauge pressures (net + drag) ───────────────────────────
+    final p1 = p1Net + dragPressureBar; // heating-up + joining + cooling
+    final p2 = p2Net + dragPressureBar; // heating soak (reduced)
+
+    // ── Phase tolerances (±10 %) ─────────────────────────────────────────────
+    const pTol = 0.10;
+    const tTol = 0.10;
+
+    // ── Timings (DVS 2207-1 formulas) ───────────────────────────────────────
+    //   t2: heating soak [s]        = 10 × e
+    //   t3: changeover max [s]      = 0.01 × de + 3
+    //   t4: pressure build-up [s]   = 0.03 × de + 3
+    //   t5: cooling [s]             = (e + 3) × 60  (DVS gives minutes)
+    final e   = wallThickness;
+    final t2  = (10.0 * e).roundToDouble();
+    final t3  = (0.01 * de + 3.0).roundToDouble();
+    final t4  = (0.03 * de + 3.0).roundToDouble();
+    final t5  = ((e + 3.0) * 60.0).roundToDouble();
+
+    // Heating-up (t1): user-paced phase until bead rises to minimum height.
+    // DVS 2207 gives no fixed formula; we use an engineering estimate for the
+    // progress indicator: max(30, e × 5) seconds.
+    final t1 = math.max(30.0, e * 5.0);
+
+    // Short confirmation hold at full joining pressure before cooling begins.
+    const t_fusion = 30.0;
+
+    // ── Heating temperature guidance ─────────────────────────────────────────
+    //   PE80 / PE100: 200–220 °C (DVS 2207 clause 5.3)
+    //   PP:           200–220 °C (comparable range)
+    const tempNom = 210.0;
+    const tempMin = 200.0;
+    const tempMax = 220.0;
+
+    // ── Pipe spec for WeldingTable ───────────────────────────────────────────
+    final pipeSpec = PipeSpec(
+      outerDiameterMm: de,
+      sdrRatio:        double.tryParse(sdrRating) ?? (de / e),
+      material:        pipeMaterial,
+    );
+
+    final machineSpec = MachineSpec(
+      hydraulicCylinderAreaMm2: cylinderAreaMm2,
+      dragPressureBar:          dragPressureBar,
+    );
+
+    // ── Build WeldingTableRow ────────────────────────────────────────────────
+    final row = WeldingTableRow(
+      wallThicknessMm:       e,
+      pipeAnnulusAreaMm2:    pipeArea,
+      minBeadHeightMm:       pipeSpec.minBeadHeightMm,
+
+      heatingUpPressureBar:  hasMachine ? p1 : null,
+      heatingPressureBar:    hasMachine ? p2 : null,
+      fusionPressureBar:     hasMachine ? p1 : null,
+      fusionPressureMinBar:  hasMachine ? p1 * (1 - pTol) : null,
+      fusionPressureMaxBar:  hasMachine ? p1 * (1 + pTol) : null,
+      coolingPressureBar:    hasMachine ? p1 : null,
+
+      heatingUpTimeS:        t1.toInt(),
+      heatingTimeS:          t2.toInt(),
+      changeoverTimeMaxS:    t3.toInt(),
+      buildupTimeS:          t4.toInt(),
+      fusionTimeS:           t_fusion.toInt(),
+      coolingTimeS:          t5.toInt(),
+
+      isMachinePressure:        hasMachine,
+      hydraulicCylinderAreaMm2: cylinderAreaMm2,
+      dragPressureBar:          dragPressureBar,
+    );
+
+    // ── Build phases ─────────────────────────────────────────────────────────
+    final phases = <PhaseParameters>[
+      // 1. Heating-up — operator-paced; maintains P1 until bead height reached
+      PhaseParameters(
+        phase:            WeldingPhase.heatingUp,
+        nominalDuration:  t1,
+        minDuration:      0,
+        maxDuration:      t1 * 3.0,
+        nominalPressureBar: hasMachine ? p1 : null,
+        minPressureBar:   hasMachine ? p1 * (1 - pTol) : null,
+        maxPressureBar:   hasMachine ? p1 * (1 + pTol) : null,
+      ),
+
+      // 2. Heating (soak) — reduced pressure P2, timer = t2 (±10 %)
+      PhaseParameters(
+        phase:            WeldingPhase.heating,
+        nominalDuration:  t2,
+        minDuration:      t2 * (1 - tTol),
+        maxDuration:      t2 * (1 + tTol),
+        nominalPressureBar: hasMachine ? p2 : null,
+        minPressureBar:   hasMachine ? p2 * (1 - pTol) : null,
+        maxPressureBar:   hasMachine ? p2 * (1 + pTol) : null,
+        nominalTemperatureCelsius: tempNom,
+        minTemperatureCelsius:     tempMin,
+        maxTemperatureCelsius:     tempMax,
+      ),
+
+      // 3. Changeover — heater plate removal; max t3
+      PhaseParameters(
+        phase:           WeldingPhase.changeover,
+        nominalDuration: 0,
+        minDuration:     0,
+        maxDuration:     t3,
+      ),
+
+      // 4. Pressure build-up — ramp from P2 to P1, target t4
+      PhaseParameters(
+        phase:            WeldingPhase.buildup,
+        nominalDuration:  t4,
+        minDuration:      0,
+        maxDuration:      t4 * 2.0,
+        nominalPressureBar: hasMachine ? p1 : null,
+        minPressureBar:   null,           // ramping — upper only
+        maxPressureBar:   hasMachine ? p1 * (1 + pTol) : null,
+      ),
+
+      // 5. Fusion hold — short confirmation at full P1
+      PhaseParameters(
+        phase:            WeldingPhase.fusion,
+        nominalDuration:  t_fusion,
+        minDuration:      0,
+        maxDuration:      t_fusion * 2.0,
+        nominalPressureBar: hasMachine ? p1 : null,
+        minPressureBar:   hasMachine ? p1 * (1 - pTol) : null,
+        maxPressureBar:   hasMachine ? p1 * (1 + pTol) : null,
+      ),
+
+      // 6. Cooling — hold at P1 for t5; no pipe movement
+      PhaseParameters(
+        phase:            WeldingPhase.cooling,
+        nominalDuration:  t5,
+        minDuration:      t5 * (1 - tTol * 0.5),
+        maxDuration:      t5 * (1 + tTol * 2.0),
+        nominalPressureBar: hasMachine ? p1 : null,
+        minPressureBar:   hasMachine ? p1 * (1 - pTol) : null,
+        maxPressureBar:   hasMachine ? p1 * (1 + pTol) : null,
+      ),
+    ];
+
+    return WeldingTable(
+      pipeSpec:    pipeSpec,
+      machineSpec: machineSpec,
+      row:         row,
+      phases:      phases,
+    );
+  }
+
   // ── Changeover time lookup ────────────────────────────────────────────────────
   // DVS 2207-1 Table 3 — maximum changeover time as a function of wall thickness.
 

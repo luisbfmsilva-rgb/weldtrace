@@ -9,11 +9,13 @@ import '../tables/sensor_logs_table.dart';
 import '../tables/sensor_calibrations_table.dart';
 import '../tables/welding_standards_table.dart';
 import '../tables/welding_parameters_table.dart';
+import '../tables/pipes_catalog_table.dart';
 import '../dao/projects_dao.dart';
 import '../dao/machines_dao.dart';
 import '../dao/welds_dao.dart';
 import '../dao/sensor_logs_dao.dart';
 import '../dao/welding_parameters_dao.dart';
+import '../dao/pipes_catalog_dao.dart';
 
 part 'app_database.g.dart';
 
@@ -31,6 +33,7 @@ part 'app_database.g.dart';
     SensorCalibrationsTable,
     WeldingStandardsTable,
     WeldingParametersTable,
+    PipesCatalogTable,
   ],
   daos: [
     ProjectsDao,
@@ -38,13 +41,14 @@ part 'app_database.g.dart';
     WeldsDao,
     SensorLogsDao,
     WeldingParametersDao,
+    PipesCatalogDao,
   ],
 )
 class AppDatabase extends _$AppDatabase {
   AppDatabase([QueryExecutor? executor]) : super(executor ?? _openConnection());
 
   @override
-  int get schemaVersion => 7;
+  int get schemaVersion => 8;
 
   @override
   MigrationStrategy get migration => MigrationStrategy(
@@ -79,6 +83,10 @@ class AppDatabase extends _$AppDatabase {
           if (from < 7) {
             // v6 → v7: globally-unique joint ID for certification ledger
             await m.addColumn(weldsTable, weldsTable.jointId);
+          }
+          if (from < 8) {
+            // v7 → v8: pipe dimensional catalog
+            await m.createTable(pipesCatalogTable);
           }
         },
       );

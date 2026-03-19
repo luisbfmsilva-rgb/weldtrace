@@ -67,12 +67,18 @@ class _WeldSetupScreenState extends ConsumerState<WeldSetupScreen> {
     // Navigate when weld is created
     ref.listen<WeldSetupState>(weldSetupProvider, (_, next) {
       if (next.createdWeldId != null && next.createdPhases != null) {
-        final p          = next.matchedParameters;
-        final sdrRatio   = double.tryParse(next.sdrRating ?? '');
-        final wt         = (sdrRatio != null && sdrRatio > 1 && next.pipeDiameterMm != null)
-            ? next.pipeDiameterMm! / sdrRatio
-            : (p?.wallThicknessMm ?? 0.0);
-        final wallStr    = wt > 0 ? '${wt.toStringAsFixed(2)} mm' : '';
+        // Prefer data from the DVS-computed welding table
+        final table = next.weldingTable;
+        final row   = table?.row;
+        final wt    = next.catalogWallThickness ?? row?.wallThicknessMm ?? 0.0;
+        final wallStr = wt > 0 ? '${wt.toStringAsFixed(2)} mm' : '';
+
+        // Fusion pressure = joining/cooling phase nominal pressure
+        final fusionBar = row?.fusionPressureBar ?? 0.0;
+        final heatingS  = (row?.heatingTimeS ?? 0).toDouble();
+        final coolingS  = (row?.coolingTimeS ?? 0).toDouble();
+        final beadMm    = row?.minBeadHeightMm ?? 0.0;
+
         context.go(
           '/weld/session',
           extra: WeldSessionArgs(
@@ -91,10 +97,10 @@ class _WeldSetupScreenState extends ConsumerState<WeldSetupScreen> {
             pipeSdr:                 next.sdrRating ?? '',
             wallThicknessStr:        wallStr,
             standardUsed:            next.standardUsed,
-            fusionPressureBar:       p?.fusionPressureBar ?? 0.0,
-            heatingTimeSec:          (p?.heatingTimeS ?? 0).toDouble(),
-            coolingTimeSec:          (p?.coolingTimeS ?? 0).toDouble(),
-            beadHeightMm:            0.0,
+            fusionPressureBar:       fusionBar,
+            heatingTimeSec:          heatingS,
+            coolingTimeSec:          coolingS,
+            beadHeightMm:            beadMm,
           ),
         );
         // Reset notifier so back-navigation does not re-navigate
@@ -217,22 +223,24 @@ class _WeldSetupScreenState extends ConsumerState<WeldSetupScreen> {
             ),
             const SizedBox(height: 24),
 
-            // ── Section: Welding standard ────────────────────────────────
-            _SectionHeader(title: 'Welding Standard'),
+            // ── Section: Welding standard (optional — for reference) ─────
+            _SectionHeader(title: 'Welding Standard (Optional)'),
 
             _SectionLabel(label: 'Welding Standard'),
             setup.standards.isEmpty
                 ? _NoDataWarning(
                     message:
-                        'No welding standards available. Using fallback calculation.',
+                        'No welding standards configured. '
+                        'DVS 2207-1 formulas applied by default.',
                   )
                 : _DropdownField<String>(
-                    hint: 'Select welding standard',
+                    hint: 'Select standard (optional)',
                     value: setup.selectedStandardId,
                     items: setup.standards
                         .map((s) => DropdownMenuItem(
                               value: s.id,
-                              child: Text('${s.name} (${s.weldType.replaceAll('_', ' ')})'),
+                              child: Text(
+                                  '${s.name} (${s.weldType.replaceAll('_', ' ')})'),
                             ))
                         .toList(),
                     onChanged: (v) {
@@ -242,17 +250,15 @@ class _WeldSetupScreenState extends ConsumerState<WeldSetupScreen> {
                             .selectStandard(v);
                       }
                     },
-                    validator: (v) =>
-                        v == null ? 'Select a welding standard' : null,
                   ),
             const SizedBox(height: 14),
 
-            // Pipe diameter (cascades after standard + material selected)
-            _SectionLabel(label: 'Pipe Diameter (mm)'),
+            // Pipe diameter (from catalog — no prerequisites)
+            _SectionLabel(label: 'Pipe Diameter (DN)'),
             _buildDiameterSelector(setup, ref),
             const SizedBox(height: 14),
 
-            // SDR rating (cascades after diameter selected)
+            // SDR rating (from catalog for selected diameter)
             _SectionLabel(label: 'SDR Rating'),
             _buildSdrSelector(setup, ref),
             const SizedBox(height: 24),
@@ -418,12 +424,8 @@ class _WeldSetupScreenState extends ConsumerState<WeldSetupScreen> {
   // ── Diameter selector ─────────────────────────────────────────────────────
 
   Widget _buildDiameterSelector(WeldSetupState setup, WidgetRef ref) {
-    final canShow = setup.selectedStandardId != null && setup.pipeMaterial != null;
-    if (!canShow) {
-      return _DisabledDropdownHint(hint: 'Select standard and material first');
-    }
     if (setup.availableDiameters.isEmpty) {
-      return _DisabledDropdownHint(hint: 'No diameters found — sync data first');
+      return _DisabledDropdownHint(hint: 'Loading pipe catalog…');
     }
     return _DropdownField<double>(
       hint: 'Select diameter',
@@ -431,7 +433,7 @@ class _WeldSetupScreenState extends ConsumerState<WeldSetupScreen> {
       items: setup.availableDiameters
           .map((d) => DropdownMenuItem(
                 value: d,
-                child: Text('${d.toStringAsFixed(0)} mm'),
+                child: Text('DN ${d.toStringAsFixed(0)} mm'),
               ))
           .toList(),
       onChanged: (v) {
@@ -732,11 +734,16 @@ class _WeldingTableCard extends StatelessWidget {
                 _ParamRow('Min bead height', fmtMm(row.minBeadHeightMm)),
                 const SizedBox(height: 12),
 
-                // ── Machine inputs ────────────────────────────────────────
+                // ── DVS 2207 ratio ────────────────────────────────────────
                 if (hasMachine) ...[
-                  _TableSection(label: 'Machine inputs'),
-                  _ParamRow('Cylinder area',
+                  _TableSection(label: 'DVS 2207 calculation'),
+                  _ParamRow('Cylinder area  A_cyl',
                       fmtMm2(machine.hydraulicCylinderAreaMm2!)),
+                  _ParamRow('Pipe area  A_pipe',
+                      fmtMm2(row.pipeAnnulusAreaMm2)),
+                  _ParamRow('Ratio  RA = A_pipe / A_cyl',
+                      (row.pipeAnnulusAreaMm2 / machine.hydraulicCylinderAreaMm2!)
+                          .toStringAsFixed(4)),
                   _ParamRow('Drag pressure',
                       fmtBar(machine.dragPressureBar)),
                   const SizedBox(height: 12),
