@@ -76,7 +76,8 @@ void main() {
       recorder.start();
       recorder.record(pressureBar: 0.15, phase: 'Fusion Pressure');
       final exported = recorder.export();
-      expect(() => (exported as dynamic).add(null), throwsUnsupportedError);
+      const dummy = WeldTracePoint(timeSeconds: 0, pressureBar: 0, phase: '');
+      expect(() => (exported as dynamic).add(dummy), throwsUnsupportedError);
     });
 
     test('export() reflects only accepted samples', () {

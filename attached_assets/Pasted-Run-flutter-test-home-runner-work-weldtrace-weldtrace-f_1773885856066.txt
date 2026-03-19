@@ -1,0 +1,233 @@
+Run flutter test
+
+✅ /home/runner/work/weldtrace/weldtrace/flutter_app/test/unit/weld_certificate_test.dart: certificate_roundtrip toJson / fromJson preserves all required fields
+✅ /home/runner/work/weldtrace/weldtrace/flutter_app/test/unit/weld_registry_test.dart: WeldRegistryEntry — serialisation toJson round-trip preserves all fields
+✅ /home/runner/work/weldtrace/weldtrace/flutter_app/test/unit/weld_certificate_test.dart: certificate_roundtrip toJson / fromJson preserves optional fields
+✅ /home/runner/work/weldtrace/weldtrace/flutter_app/test/unit/weld_registry_test.dart: WeldRegistryEntry — serialisation timestamp is serialised as UTC ISO-8601
+✅ /home/runner/work/weldtrace/weldtrace/flutter_app/test/unit/weld_certificate_test.dart: certificate_roundtrip null optional fields round-trip as null
+✅ /home/runner/work/weldtrace/weldtrace/flutter_app/test/unit/weld_certificate_test.dart: certificate_roundtrip timestamp is serialised as UTC ISO-8601 ending in Z
+✅ /home/runner/work/weldtrace/weldtrace/flutter_app/test/unit/weld_certificate_test.dart: certificate_roundtrip toJson emits keys in canonical order
+✅ /home/runner/work/weldtrace/weldtrace/flutter_app/test/unit/weld_certificate_test.dart: certificate_roundtrip serialised JSON is valid and parseable
+✅ /home/runner/work/weldtrace/weldtrace/flutter_app/test/unit/weld_registry_test.dart: registry_append creates file on first append
+✅ /home/runner/work/weldtrace/weldtrace/flutter_app/test/unit/weld_certificate_test.dart: certificate_roundtrip generateCertificate factory produces identical result to constructor
+✅ /home/runner/work/weldtrace/weldtrace/flutter_app/test/unit/weld_certificate_test.dart: certificate_roundtrip round-trip is deterministic (two calls produce same JSON)
+✅ /home/runner/work/weldtrace/weldtrace/flutter_app/test/unit/weld_registry_test.dart: registry_append file contains valid JSON array after append
+✅ /home/runner/work/weldtrace/weldtrace/flutter_app/test/unit/weld_registry_test.dart: registry_append second append grows the list to 2
+✅ /home/runner/work/weldtrace/weldtrace/flutter_app/test/unit/weld_registry_test.dart: registry_append existing entries are NOT mutated on append
+✅ /home/runner/work/weldtrace/weldtrace/flutter_app/test/unit/weld_registry_test.dart: registry_append sdr field is persisted correctly
+✅ /home/runner/work/weldtrace/weldtrace/flutter_app/test/unit/weld_certificate_test.dart: certificate_roundtrip exportCertificate writes {jointId}.certificate.json
+✅ /home/runner/work/weldtrace/weldtrace/flutter_app/test/unit/weld_certificate_test.dart: certificate_roundtrip exportCertificate file contains valid JSON
+✅ /home/runner/work/weldtrace/weldtrace/flutter_app/test/unit/weld_certificate_test.dart: certificate_roundtrip exportCertificate throws StateError for unknown jointId
+✅ /home/runner/work/weldtrace/weldtrace/flutter_app/test/unit/weld_certificate_test.dart: certificate_hash_validation computePdfHash returns 64-character lowercase hex string
+✅ /home/runner/work/weldtrace/weldtrace/flutter_app/test/unit/weld_certificate_test.dart: certificate_hash_validation computePdfHash is deterministic for same input
+✅ /home/runner/work/weldtrace/weldtrace/flutter_app/test/unit/weld_certificate_test.dart: certificate_hash_validation computePdfHash differs for different input
+✅ /home/runner/work/weldtrace/weldtrace/flutter_app/test/unit/weld_certificate_test.dart: certificate_hash_validation computePdfHash of empty bytes returns valid 64-char hex
+✅ /home/runner/work/weldtrace/weldtrace/flutter_app/test/unit/weld_certificate_test.dart: certificate_hash_validation certificate with known PDF hash round-trips correctly
+✅ /home/runner/work/weldtrace/weldtrace/flutter_app/test/unit/weld_certificate_test.dart: certificate_hash_validation pdfHash embedded in toJson is exactly 64 chars
+✅ /home/runner/work/weldtrace/weldtrace/flutter_app/test/unit/weld_certificate_test.dart: certificate_registry_validation certificate with matching registry entry passes round-trip
+✅ /home/runner/work/weldtrace/weldtrace/flutter_app/test/unit/weld_certificate_test.dart: certificate_registry_validation certificate toJson includes all required fields for registry check
+✅ /home/runner/work/weldtrace/weldtrace/flutter_app/test/unit/weld_certificate_test.dart: certificate_registry_validation multiple certificates for different joints are independent
+✅ /home/runner/work/weldtrace/weldtrace/flutter_app/test/unit/weld_certificate_test.dart: certificate_registry_validation LOW_SAMPLE_COUNT quality is preserved through round-trip
+✅ /home/runner/work/weldtrace/weldtrace/flutter_app/test/unit/weld_certificate_test.dart: certificate_registry_validation certificate with pdfHash and all process params round-trips
+✅ /home/runner/work/weldtrace/weldtrace/flutter_app/test/unit/weld_certificate_test.dart: certificate_schema_validation toJson includes schema object as first key
+✅ /home/runner/work/weldtrace/weldtrace/flutter_app/test/unit/weld_certificate_test.dart: certificate_schema_validation schema.type is "WeldTraceCertificate"
+✅ /home/runner/work/weldtrace/weldtrace/flutter_app/test/unit/weld_certificate_test.dart: certificate_schema_validation schema.version is "1.0"
+✅ /home/runner/work/weldtrace/weldtrace/flutter_app/test/unit/weld_certificate_test.dart: certificate_schema_validation schemaType field on WeldCertificate has default value
+✅ /home/runner/work/weldtrace/weldtrace/flutter_app/test/unit/weld_certificate_test.dart: certificate_schema_validation schemaVersion field on WeldCertificate has default value
+✅ /home/runner/work/weldtrace/weldtrace/flutter_app/test/unit/weld_certificate_test.dart: certificate_schema_validation fromJson reads schema type and version correctly
+✅ /home/runner/work/weldtrace/weldtrace/flutter_app/test/unit/weld_certificate_test.dart: certificate_schema_validation fromJson is backwards-compatible when schema key is absent
+✅ /home/runner/work/weldtrace/weldtrace/flutter_app/test/unit/weld_certificate_test.dart: certificate_schema_validation verifyCertificate rejects wrong schemaType
+✅ /home/runner/work/weldtrace/weldtrace/flutter_app/test/unit/weld_certificate_test.dart: certificate_schema_validation verifyCertificate rejects wrong schemaVersion
+❌ /home/runner/work/weldtrace/weldtrace/flutter_app/test/unit/weld_certificate_test.dart: certificate_schema_validation verifyCertificate accepts valid v1 certificate (failed)
+✅ /home/runner/work/weldtrace/weldtrace/flutter_app/test/unit/weld_certificate_test.dart: certificate_version_validation version defaults to "WeldTrace-CERT-1"
+✅ /home/runner/work/weldtrace/weldtrace/flutter_app/test/unit/weld_certificate_test.dart: certificate_version_validation version appears in toJson
+✅ /home/runner/work/weldtrace/weldtrace/flutter_app/test/unit/weld_certificate_test.dart: certificate_version_validation version round-trips through fromJson
+✅ /home/runner/work/weldtrace/weldtrace/flutter_app/test/unit/weld_certificate_test.dart: certificate_version_validation fromJson is backwards-compatible when version key is absent
+✅ /home/runner/work/weldtrace/weldtrace/flutter_app/test/unit/weld_certificate_test.dart: certificate_version_validation generateCertificate sets version to default
+✅ /home/runner/work/weldtrace/weldtrace/flutter_app/test/unit/weld_certificate_test.dart: certificate_version_validation software and softwareVersion default to null
+✅ /home/runner/work/weldtrace/weldtrace/flutter_app/test/unit/weld_certificate_test.dart: certificate_version_validation software and softwareVersion round-trip correctly
+✅ /home/runner/work/weldtrace/weldtrace/flutter_app/test/unit/weld_registry_test.dart: registry_append 50 sequential appends — file has 50 entries
+✅ /home/runner/work/weldtrace/weldtrace/flutter_app/test/unit/weld_certificate_test.dart: certificate_version_validation softwareVersion null in toJson when not set
+✅ /home/runner/work/weldtrace/weldtrace/flutter_app/test/unit/weld_registry_test.dart: registry_export exportRegistry returns empty list when file does not exist
+✅ /home/runner/work/weldtrace/weldtrace/flutter_app/test/unit/weld_certificate_test.dart: certificate_version_validation version appears before jointId in JSON key order
+✅ /home/runner/work/weldtrace/weldtrace/flutter_app/test/unit/weld_registry_test.dart: registry_export exportRegistry returns all appended entries
+✅ /home/runner/work/weldtrace/weldtrace/flutter_app/test/unit/weld_registry_test.dart: registry_export exportRegistry preserves insertion order
+✅ /home/runner/work/weldtrace/weldtrace/flutter_app/test/unit/weld_registry_test.dart: registry_export exportRegistry round-trips diameter, material, and sdr
+✅ /home/runner/work/weldtrace/weldtrace/flutter_app/test/unit/weld_registry_test.dart: registry_export exportRegistry returns typed WeldRegistryEntry objects
+✅ /home/runner/work/weldtrace/weldtrace/flutter_app/test/unit/weld_registry_test.dart: registry_verify verifyFromRegistry returns true for exact match
+✅ /home/runner/work/weldtrace/weldtrace/flutter_app/test/unit/weld_registry_test.dart: registry_verify verifyFromRegistry returns false for wrong signature
+✅ /home/runner/work/weldtrace/weldtrace/flutter_app/test/unit/weld_registry_test.dart: registry_verify verifyFromRegistry returns false for wrong jointId
+✅ /home/runner/work/weldtrace/weldtrace/flutter_app/test/unit/weld_registry_test.dart: registry_verify verifyFromRegistry returns false when registry is empty
+✅ /home/runner/work/weldtrace/weldtrace/flutter_app/test/unit/weld_registry_test.dart: registry_verify verifyFromRegistry finds correct entry among many
+✅ /home/runner/work/weldtrace/weldtrace/flutter_app/test/unit/weld_registry_test.dart: registry_verify verifyFromRegistry both jointId AND signature must match
+✅ /home/runner/work/weldtrace/weldtrace/flutter_app/test/unit/weld_registry_test.dart: findByJointId returns entry when found
+✅ /home/runner/work/weldtrace/weldtrace/flutter_app/test/unit/weld_registry_test.dart: findByJointId returns null when not found
+✅ /home/runner/work/weldtrace/weldtrace/flutter_app/test/unit/weld_registry_test.dart: findByJointId returns null for empty registry
+✅ /home/runner/work/weldtrace/weldtrace/flutter_app/test/unit/weld_registry_test.dart: findByJointId returns sdr field correctly
+✅ /home/runner/work/weldtrace/weldtrace/flutter_app/test/unit/curve_compression_test.dart: CurveCompression compression → decompression round-trip preserves original JSON
+✅ /home/runner/work/weldtrace/weldtrace/flutter_app/test/unit/curve_compression_test.dart: CurveCompression round-trip preserves all WeldTracePoint fields
+✅ /home/runner/work/weldtrace/weldtrace/flutter_app/test/unit/curve_compression_test.dart: CurveCompression compression reduces size for a typical 100-sample curve
+✅ /home/runner/work/weldtrace/weldtrace/flutter_app/test/unit/curve_compression_test.dart: CurveCompression compression reduces size for a typical 1 000-sample curve
+✅ /home/runner/work/weldtrace/weldtrace/flutter_app/test/unit/curve_compression_test.dart: CurveCompression compression ratio is > 5 : 1 for a 1 000-sample curve
+✅ /home/runner/work/weldtrace/weldtrace/flutter_app/test/unit/curve_compression_test.dart: CurveCompression round-trip for maximum-size curve (5 000 samples)
+✅ /home/runner/work/weldtrace/weldtrace/flutter_app/test/unit/curve_compression_test.dart: CurveCompression large curve compresses to under 10 % of original JSON length
+✅ /home/runner/work/weldtrace/weldtrace/flutter_app/test/unit/curve_compression_test.dart: CurveCompression empty curve compresses and decompresses cleanly
+✅ /home/runner/work/weldtrace/weldtrace/flutter_app/test/unit/curve_compression_test.dart: CurveCompression single-sample curve survives round-trip
+✅ /home/runner/work/weldtrace/weldtrace/flutter_app/test/unit/curve_compression_test.dart: CurveCompression compressCurve returns Uint8List
+✅ /home/runner/work/weldtrace/weldtrace/flutter_app/test/unit/curve_compression_test.dart: CurveCompression identical inputs produce identical compressed bytes
+✅ /home/runner/work/weldtrace/weldtrace/flutter_app/test/unit/weld_ledger_test.dart: WeldLedger append creates ledger file on first call
+✅ /home/runner/work/weldtrace/weldtrace/flutter_app/test/unit/weld_ledger_test.dart: WeldLedger append stores the entry correctly
+✅ /home/runner/work/weldtrace/weldtrace/flutter_app/test/unit/weld_ledger_test.dart: WeldLedger append preserves existing entries (append-only)
+✅ /home/runner/work/weldtrace/weldtrace/flutter_app/test/unit/weld_ledger_test.dart: WeldLedger append does not modify earlier entries
+✅ /home/runner/work/weldtrace/weldtrace/flutter_app/test/unit/weld_ledger_test.dart: WeldLedger loadAll returns empty list when file does not exist
+✅ /home/runner/work/weldtrace/weldtrace/flutter_app/test/unit/weld_ledger_test.dart: WeldLedger loadAll correctly deserialises all fields
+✅ /home/runner/work/weldtrace/weldtrace/flutter_app/test/unit/weld_ledger_test.dart: WeldLedger entries survive write-read roundtrip via file
+✅ /home/runner/work/weldtrace/weldtrace/flutter_app/test/unit/weld_ledger_test.dart: WeldLedger verifyLedgerEntry returns true for existing signature
+✅ /home/runner/work/weldtrace/weldtrace/flutter_app/test/unit/weld_ledger_test.dart: WeldLedger verifyLedgerEntry returns false for unknown signature
+✅ /home/runner/work/weldtrace/weldtrace/flutter_app/test/unit/weld_ledger_test.dart: WeldLedger verifyLedgerEntry returns false on empty ledger
+✅ /home/runner/work/weldtrace/weldtrace/flutter_app/test/unit/weld_ledger_test.dart: WeldLedger verifyLedgerEntry finds signature among many entries
+✅ /home/runner/work/weldtrace/weldtrace/flutter_app/test/unit/weld_ledger_test.dart: WeldLedger findByJointId returns correct entry
+✅ /home/runner/work/weldtrace/weldtrace/flutter_app/test/unit/weld_ledger_test.dart: WeldLedger findByJointId returns null when not found
+✅ /home/runner/work/weldtrace/weldtrace/flutter_app/test/unit/weld_ledger_test.dart: WeldLedger joint IDs are unique across independent ledger entries
+✅ /home/runner/work/weldtrace/weldtrace/flutter_app/test/unit/weld_ledger_test.dart: WeldLedger same signature cannot be distinguished from two joints
+✅ /home/runner/work/weldtrace/weldtrace/flutter_app/test/unit/weld_trace_test.dart: WeldTraceRecorder starts with empty curve and isStarted == false
+✅ /home/runner/work/weldtrace/weldtrace/flutter_app/test/unit/weld_trace_test.dart: WeldTraceRecorder record() is a no-op before start()
+✅ /home/runner/work/weldtrace/weldtrace/flutter_app/test/unit/weld_trace_test.dart: WeldTraceRecorder isStarted becomes true after start()
+✅ /home/runner/work/weldtrace/weldtrace/flutter_app/test/unit/weld_trace_test.dart: WeldTraceRecorder points accumulate after start()
+✅ /home/runner/work/weldtrace/weldtrace/flutter_app/test/unit/weld_trace_test.dart: WeldTraceRecorder timeSeconds is monotonically non-decreasing
+✅ /home/runner/work/weldtrace/weldtrace/flutter_app/test/unit/weld_trace_test.dart: WeldTraceRecorder negative pressures are clamped to zero
+❌ /home/runner/work/weldtrace/weldtrace/flutter_app/test/unit/weld_trace_test.dart: WeldTraceRecorder export() returns an unmodifiable copy (failed)
+✅ /home/runner/work/weldtrace/weldtrace/flutter_app/test/unit/weld_trace_test.dart: WeldTraceRecorder export() reflects only accepted samples
+✅ /home/runner/work/weldtrace/weldtrace/flutter_app/test/unit/weld_trace_test.dart: WeldTraceRecorder export() on unstarted recorder returns empty list
+✅ /home/runner/work/weldtrace/weldtrace/flutter_app/test/unit/weld_trace_test.dart: WeldTraceRecorder start() clears previous recording and resets sample timer
+✅ /home/runner/work/weldtrace/weldtrace/flutter_app/test/unit/weld_trace_test.dart: WeldTraceRecorder sampling guard: only first of two rapid calls is stored
+✅ /home/runner/work/weldtrace/weldtrace/flutter_app/test/unit/weld_trace_test.dart: WeldTraceRecorder sampling guard: bypass with minSampleIntervalMs == 0 accepts all samples
+✅ /home/runner/work/weldtrace/weldtrace/flutter_app/test/unit/weld_trace_test.dart: WeldTraceRecorder max curve size: stops at 5000 samples
+✅ /home/runner/work/weldtrace/weldtrace/flutter_app/test/unit/weld_trace_test.dart: WeldTraceRecorder large curve export: 5000 points survive export()
+✅ /home/runner/work/weldtrace/weldtrace/flutter_app/test/unit/weld_trace_test.dart: WeldTraceRecorder maxPressureBar returns correct maximum
+✅ /home/runner/work/weldtrace/weldtrace/flutter_app/test/unit/weld_trace_test.dart: WeldTraceRecorder averagePressureBar returns correct mean
+✅ /home/runner/work/weldtrace/weldtrace/flutter_app/test/unit/weld_trace_test.dart: WeldTraceRecorder maxPressureBar returns 0 on empty curve
+✅ /home/runner/work/weldtrace/weldtrace/flutter_app/test/unit/weld_trace_test.dart: WeldTraceRecorder averagePressureBar returns 0 on empty curve
+✅ /home/runner/work/weldtrace/weldtrace/flutter_app/test/unit/weld_trace_test.dart: WeldTraceRecorder recordedDurationSeconds returns 0 for < 2 samples
+✅ /home/runner/work/weldtrace/weldtrace/flutter_app/test/unit/weld_trace_test.dart: WeldTraceRecorder WeldTracePoint toJson / fromJson round-trip
+✅ /home/runner/work/weldtrace/weldtrace/flutter_app/test/unit/weld_trace_test.dart: WeldTraceSignature returns a 64-character lowercase hex string (SHA-256)
+✅ /home/runner/work/weldtrace/weldtrace/flutter_app/test/unit/weld_trace_test.dart: WeldTraceSignature is deterministic — same inputs produce the same hash
+✅ /home/runner/work/weldtrace/weldtrace/flutter_app/test/unit/weld_trace_test.dart: WeldTraceSignature deterministic regardless of curve insertion order
+✅ /home/runner/work/weldtrace/weldtrace/flutter_app/test/unit/weld_trace_test.dart: WeldTraceSignature different machine ID → different hash
+✅ /home/runner/work/weldtrace/weldtrace/flutter_app/test/unit/weld_trace_test.dart: WeldTraceSignature different curve content → different hash
+✅ /home/runner/work/weldtrace/weldtrace/flutter_app/test/unit/weld_trace_test.dart: WeldTraceSignature different timestamp → different hash
+✅ /home/runner/work/weldtrace/weldtrace/flutter_app/test/unit/weld_trace_test.dart: WeldTraceSignature different fusionPressureBar → different hash
+✅ /home/runner/work/weldtrace/weldtrace/flutter_app/test/unit/weld_trace_test.dart: WeldTraceSignature different heatingTimeSec → different hash
+✅ /home/runner/work/weldtrace/weldtrace/flutter_app/test/unit/weld_trace_test.dart: WeldTraceSignature different coolingTimeSec → different hash
+✅ /home/runner/work/weldtrace/weldtrace/flutter_app/test/unit/weld_trace_test.dart: WeldTraceSignature different beadHeightMm → different hash
+✅ /home/runner/work/weldtrace/weldtrace/flutter_app/test/unit/weld_trace_test.dart: WeldTraceSignature empty curve produces a valid, deterministic hash
+✅ /home/runner/work/weldtrace/weldtrace/flutter_app/test/unit/weld_trace_test.dart: WeldTraceSignature verify() returns true for matching inputs
+✅ /home/runner/work/weldtrace/weldtrace/flutter_app/test/unit/weld_trace_test.dart: WeldTraceSignature verify() returns false when signature is tampered
+✅ /home/runner/work/weldtrace/weldtrace/flutter_app/test/unit/weld_trace_test.dart: WeldTraceSignature verify() with out-of-order curve still matches ordered hash
+✅ /home/runner/work/weldtrace/weldtrace/flutter_app/test/unit/weld_public_verifier_test.dart: qr_decode_valid decodes a correctly built WeldTrace payload
+✅ /home/runner/work/weldtrace/weldtrace/flutter_app/test/unit/weld_public_verifier_test.dart: qr_decode_valid returns QrPayloadResult type
+✅ /home/runner/work/weldtrace/weldtrace/flutter_app/test/unit/weld_public_verifier_test.dart: qr_decode_valid payload with extra fields is accepted
+✅ /home/runner/work/weldtrace/weldtrace/flutter_app/test/unit/weld_public_verifier_test.dart: qr_decode_valid decodes round-trip through buildVerificationPayload
+✅ /home/runner/work/weldtrace/weldtrace/flutter_app/test/unit/weld_public_verifier_test.dart: qr_decode_invalid throws WeldPublicVerifierException for non-JSON string
+✅ /home/runner/work/weldtrace/weldtrace/flutter_app/test/unit/weld_public_verifier_test.dart: qr_decode_invalid throws for JSON array (not object)
+✅ /home/runner/work/weldtrace/weldtrace/flutter_app/test/unit/weld_public_verifier_test.dart: qr_decode_invalid throws for wrong app identifier
+✅ /home/runner/work/weldtrace/weldtrace/flutter_app/test/unit/weld_public_verifier_test.dart: qr_decode_invalid throws for unsupported version
+✅ /home/runner/work/weldtrace/weldtrace/flutter_app/test/unit/weld_public_verifier_test.dart: qr_decode_invalid throws for missing "joint" field
+✅ /home/runner/work/weldtrace/weldtrace/flutter_app/test/unit/weld_public_verifier_test.dart: qr_decode_invalid throws for missing "sig" field
+✅ /home/runner/work/weldtrace/weldtrace/flutter_app/test/unit/weld_public_verifier_test.dart: qr_decode_invalid throws for empty "joint" field
+✅ /home/runner/work/weldtrace/weldtrace/flutter_app/test/unit/weld_public_verifier_test.dart: qr_decode_invalid throws for empty "sig" field
+✅ /home/runner/work/weldtrace/weldtrace/flutter_app/test/unit/weld_public_verifier_test.dart: qr_decode_invalid throws for empty string input
+✅ /home/runner/work/weldtrace/weldtrace/flutter_app/test/unit/weld_public_verifier_test.dart: qr_decode_invalid exception message is descriptive
+✅ /home/runner/work/weldtrace/weldtrace/flutter_app/test/unit/weld_trace_test.dart: WeldReportGenerator generate() returns non-empty bytes
+✅ /home/runner/work/weldtrace/weldtrace/flutter_app/test/unit/weld_public_verifier_test.dart: registry_lookup_success findRegistryEntry returns entry when jointId exists
+✅ /home/runner/work/weldtrace/weldtrace/flutter_app/test/unit/weld_public_verifier_test.dart: registry_lookup_success findRegistryEntry returns correct entry among several
+✅ /home/runner/work/weldtrace/weldtrace/flutter_app/test/unit/weld_public_verifier_test.dart: registry_lookup_success findRegistryEntry preserves all fields
+✅ /home/runner/work/weldtrace/weldtrace/flutter_app/test/unit/weld_public_verifier_test.dart: registry_lookup_missing findRegistryEntry returns null when jointId not in registry
+✅ /home/runner/work/weldtrace/weldtrace/flutter_app/test/unit/weld_public_verifier_test.dart: registry_lookup_missing findRegistryEntry returns null for empty registry
+✅ /home/runner/work/weldtrace/weldtrace/flutter_app/test/unit/weld_trace_test.dart: WeldReportGenerator output starts with PDF magic bytes (%PDF)
+✅ /home/runner/work/weldtrace/weldtrace/flutter_app/test/unit/weld_public_verifier_test.dart: public_verification_success verifyJoint returns true for exact match in registry
+✅ /home/runner/work/weldtrace/weldtrace/flutter_app/test/unit/weld_public_verifier_test.dart: public_verification_success verifyJoint returns true for first entry
+✅ /home/runner/work/weldtrace/weldtrace/flutter_app/test/unit/weld_public_verifier_test.dart: public_verification_success verifyJoint returns true for last entry among 100
+✅ /home/runner/work/weldtrace/weldtrace/flutter_app/test/unit/weld_public_verifier_test.dart: public_verification_success end-to-end: QR decode → verifyJoint succeeds
+✅ /home/runner/work/weldtrace/weldtrace/flutter_app/test/unit/weld_public_verifier_test.dart: public_verification_failure verifyJoint returns false for wrong signature
+✅ /home/runner/work/weldtrace/weldtrace/flutter_app/test/unit/weld_public_verifier_test.dart: public_verification_failure verifyJoint returns false for wrong jointId
+✅ /home/runner/work/weldtrace/weldtrace/flutter_app/test/unit/weld_public_verifier_test.dart: public_verification_failure verifyJoint returns false for empty registry
+✅ /home/runner/work/weldtrace/weldtrace/flutter_app/test/unit/weld_public_verifier_test.dart: public_verification_failure verifyJoint rejects cross-matched joint+signature pair
+✅ /home/runner/work/weldtrace/weldtrace/flutter_app/test/unit/weld_public_verifier_test.dart: public_verification_failure verifyJoint is case-sensitive for jointId
+✅ /home/runner/work/weldtrace/weldtrace/flutter_app/test/unit/weld_public_verifier_test.dart: public_verification_failure verifyJoint is case-sensitive for signature
+✅ /home/runner/work/weldtrace/weldtrace/flutter_app/test/unit/weld_trace_test.dart: WeldReportGenerator handles empty curve gracefully (no throw)
+✅ /home/runner/work/weldtrace/weldtrace/flutter_app/test/unit/weld_trace_test.dart: WeldReportGenerator handles single-sample curve without throw
+✅ /home/runner/work/weldtrace/weldtrace/flutter_app/test/unit/weld_trace_test.dart: WeldReportGenerator QR code section does not prevent PDF generation
+✅ /home/runner/work/weldtrace/weldtrace/flutter_app/test/unit/weld_trace_test.dart: WeldReportGenerator generates valid PDF for maximum-size curve (5 000 samples)
+✅ /home/runner/work/weldtrace/weldtrace/flutter_app/test/unit/weld_trace_test.dart: WeldReportGenerator both short and long curves produce valid PDFs
+✅ /home/runner/work/weldtrace/weldtrace/flutter_app/test/unit/weld_trace_test.dart: WeldReportGenerator generates valid PDF with all extended metadata fields
+✅ /home/runner/work/weldtrace/weldtrace/flutter_app/test/unit/weld_trace_test.dart: WeldReportGenerator generates valid PDF with compressed curve (round-trip)
+✅ /home/runner/work/weldtrace/weldtrace/flutter_app/test/unit/weld_trace_test.dart: WeldVerifier verifySignature returns true for correct inputs
+✅ /home/runner/work/weldtrace/weldtrace/flutter_app/test/unit/weld_trace_test.dart: WeldVerifier verifySignature returns false when signature is tampered
+✅ /home/runner/work/weldtrace/weldtrace/flutter_app/test/unit/weld_trace_test.dart: WeldVerifier verifySignature returns false when curve is altered
+✅ /home/runner/work/weldtrace/weldtrace/flutter_app/test/unit/weld_trace_test.dart: WeldVerifier verifySignature returns false when machineId changes
+✅ /home/runner/work/weldtrace/weldtrace/flutter_app/test/unit/weld_trace_test.dart: WeldVerifier buildVerificationPayload produces valid JSON
+✅ /home/runner/work/weldtrace/weldtrace/flutter_app/test/unit/weld_trace_test.dart: WeldVerifier buildVerificationPayload contains required keys
+✅ /home/runner/work/weldtrace/weldtrace/flutter_app/test/unit/weld_trace_test.dart: WeldVerifier buildVerificationPayload stays under 200 characters
+✅ /home/runner/work/weldtrace/weldtrace/flutter_app/test/unit/weld_trace_test.dart: WeldVerifier buildVerificationPayload is deterministic for same inputs
+✅ /home/runner/work/weldtrace/weldtrace/flutter_app/test/unit/weld_trace_test.dart: WeldVerifier parsePayload returns valid map for correct WeldTrace payload
+✅ /home/runner/work/weldtrace/weldtrace/flutter_app/test/unit/weld_trace_test.dart: WeldVerifier parsePayload returns null for invalid JSON
+✅ /home/runner/work/weldtrace/weldtrace/flutter_app/test/unit/weld_trace_test.dart: WeldVerifier parsePayload returns null for non-WeldTrace payload
+✅ /home/runner/work/weldtrace/weldtrace/flutter_app/test/unit/weld_trace_test.dart: WeldVerifier parsePayload returns null for wrong version
+❌ /home/runner/work/weldtrace/weldtrace/flutter_app/test/unit/welding_table_generator_test.dart: DVS 2207-1 fallback companion has required pressure fields (failed)
+❌ /home/runner/work/weldtrace/weldtrace/flutter_app/test/unit/welding_table_generator_test.dart: DVS 2207-1 fallback PE100 fusion pressure > PE80 baseline (material correction) (failed)
+❌ /home/runner/work/weldtrace/weldtrace/flutter_app/test/unit/welding_table_generator_test.dart: DVS 2207-1 fallback PP fusion pressure < PE80 baseline (material correction) (failed)
+❌ /home/runner/work/weldtrace/weldtrace/flutter_app/test/unit/welding_table_generator_test.dart: DVS 2207-1 fallback heat soak time scales with diameter (failed)
+❌ /home/runner/work/weldtrace/weldtrace/flutter_app/test/unit/welding_table_generator_test.dart: DVS 2207-1 fallback cooling time scales with wall thickness (failed)
+❌ /home/runner/work/weldtrace/weldtrace/flutter_app/test/unit/welding_table_generator_test.dart: DVS 2207-1 fallback full pipeline — phases exist and machine pressure ≥ 0 (failed)
+❌ /home/runner/work/weldtrace/weldtrace/flutter_app/test/unit/welding_table_generator_test.dart: ISO 21307 fallback low-pressure companion has fusion pressure present (failed)
+❌ /home/runner/work/weldtrace/weldtrace/flutter_app/test/unit/welding_table_generator_test.dart: ISO 21307 fallback high-pressure fusion > low-pressure fusion (failed)
+❌ /home/runner/work/weldtrace/weldtrace/flutter_app/test/unit/welding_table_generator_test.dart: ISO 21307 fallback full pipeline (high-pressure) — phases exist and pressures ≥ 0 (failed)
+❌ /home/runner/work/weldtrace/weldtrace/flutter_app/test/unit/welding_table_generator_test.dart: ASTM F2620 fallback companion has higher base pressure than DVS 2207 for same pipe (failed)
+❌ /home/runner/work/weldtrace/weldtrace/flutter_app/test/unit/welding_table_generator_test.dart: ASTM F2620 fallback full pipeline — phases exist and pressures ≥ 0 (failed)
+❌ /home/runner/work/weldtrace/weldtrace/flutter_app/test/unit/welding_table_generator_test.dart: generateFallbackForStandard dispatcher routes DVS_2207 to Dvs2207 engine (failed)
+❌ /home/runner/work/weldtrace/weldtrace/flutter_app/test/unit/welding_table_generator_test.dart: generateFallbackForStandard dispatcher routes ASTM_F2620 to AstmF2620 engine (failed)
+❌ /home/runner/work/weldtrace/weldtrace/flutter_app/test/unit/welding_table_generator_test.dart: generateFallbackForStandard dispatcher routes unknown ID to DVS 2207 (conservative fallback) (failed)
+❌ /home/runner/work/weldtrace/weldtrace/flutter_app/test/unit/welding_table_generator_test.dart: gauge pressure edge cases gauge pressure is never negative even with large drag (failed)
+✅ /home/runner/work/weldtrace/weldtrace/flutter_app/test/unit/welding_table_generator_test.dart: contact area model contact area uses beadContactFactor 0.65
+✅ /home/runner/work/weldtrace/weldtrace/flutter_app/test/unit/welding_table_generator_test.dart: contact area model contact area is smaller than full-circumference assumption
+✅ /home/runner/work/weldtrace/weldtrace/flutter_app/test/unit/welding_table_generator_test.dart: contact area model contact area scales with pipe diameter for large pipes
+✅ /home/runner/work/weldtrace/weldtrace/flutter_app/test/unit/welding_table_generator_test.dart: contact area model contact area is clamped to minimum 100 mm² for micro pipes
+✅ /home/runner/work/weldtrace/weldtrace/flutter_app/test/unit/welding_table_generator_test.dart: machine pressure scaling machine pressure increases when cylinder area decreases
+✅ /home/runner/work/weldtrace/weldtrace/flutter_app/test/unit/welding_table_generator_test.dart: machine pressure scaling machine pressure is proportional to interfacial pressure
+✅ /home/runner/work/weldtrace/weldtrace/flutter_app/test/unit/welding_table_generator_test.dart: drag pressure compensation gauge pressure = machine pressure minus drag
+✅ /home/runner/work/weldtrace/weldtrace/flutter_app/test/unit/welding_table_generator_test.dart: drag pressure compensation gauge pressure is clamped to zero when drag exceeds machine pressure
+❌ /home/runner/work/weldtrace/weldtrace/flutter_app/test/unit/welding_table_generator_test.dart: large diameter pipes (315+ mm) DVS companion generates correct wall thickness for OD=315 SDR=11 (failed)
+✅ /home/runner/work/weldtrace/weldtrace/flutter_app/test/unit/welding_table_generator_test.dart: large diameter pipes (315+ mm) large pipe produces higher fusion force than small pipe
+❌ /home/runner/work/weldtrace/weldtrace/flutter_app/test/unit/welding_table_generator_test.dart: large diameter pipes (315+ mm) OD=630 SDR=17.6 (thick-wall transmission) — all companion fields present (failed)
+✅ /home/runner/work/weldtrace/weldtrace/flutter_app/test/unit/welding_table_generator_test.dart: large diameter pipes (315+ mm) debugCalculation for OD=630 returns all five keys
+✅ /home/runner/work/weldtrace/weldtrace/flutter_app/test/unit/weld_sync_test.dart: sync_offline_mode uploadCertificate returns SyncResult with offline=true
+✅ /home/runner/work/weldtrace/weldtrace/flutter_app/test/unit/weld_sync_test.dart: sync_offline_mode uploadCertificate returns SyncResult with success=false
+✅ /home/runner/work/weldtrace/weldtrace/flutter_app/test/unit/weld_sync_test.dart: sync_offline_mode uploadRegistryEntry returns SyncResult with offline=true
+✅ /home/runner/work/weldtrace/weldtrace/flutter_app/test/unit/weld_sync_test.dart: sync_offline_mode uploadRegistryEntry returns SyncResult with success=false
+✅ /home/runner/work/weldtrace/weldtrace/flutter_app/test/unit/weld_sync_test.dart: sync_offline_mode offline result has a non-null message
+✅ /home/runner/work/weldtrace/weldtrace/flutter_app/test/unit/weld_sync_test.dart: sync_offline_mode multiple uploadCertificate calls are all offline
+✅ /home/runner/work/weldtrace/weldtrace/flutter_app/test/unit/weld_sync_test.dart: sync_offline_mode multiple uploadRegistryEntry calls are all offline
+✅ /home/runner/work/weldtrace/weldtrace/flutter_app/test/unit/weld_sync_test.dart: sync_result_objects SyncResult.offline() sets offline=true
+✅ /home/runner/work/weldtrace/weldtrace/flutter_app/test/unit/weld_sync_test.dart: sync_result_objects SyncResult.offline() sets success=false
+✅ /home/runner/work/weldtrace/weldtrace/flutter_app/test/unit/weld_sync_test.dart: sync_result_objects SyncResult.offline() has a non-null message
+✅ /home/runner/work/weldtrace/weldtrace/flutter_app/test/unit/weld_sync_test.dart: sync_result_objects SyncResult.success() sets success=true
+✅ /home/runner/work/weldtrace/weldtrace/flutter_app/test/unit/weld_sync_test.dart: sync_result_objects SyncResult.success() sets offline=false
+✅ /home/runner/work/weldtrace/weldtrace/flutter_app/test/unit/weld_sync_test.dart: sync_result_objects SyncResult.success() accepts optional message
+✅ /home/runner/work/weldtrace/weldtrace/flutter_app/test/unit/weld_sync_test.dart: sync_result_objects SyncResult.success() message is null when not provided
+✅ /home/runner/work/weldtrace/weldtrace/flutter_app/test/unit/weld_sync_test.dart: sync_result_objects SyncResult.failure() sets success=false
+✅ /home/runner/work/weldtrace/weldtrace/flutter_app/test/unit/weld_sync_test.dart: sync_result_objects SyncResult.failure() sets offline=false
+✅ /home/runner/work/weldtrace/weldtrace/flutter_app/test/unit/weld_sync_test.dart: sync_result_objects SyncResult.failure() stores message
+✅ /home/runner/work/weldtrace/weldtrace/flutter_app/test/unit/weld_sync_test.dart: sync_result_objects offline and failure are distinguishable
+✅ /home/runner/work/weldtrace/weldtrace/flutter_app/test/unit/weld_sync_test.dart: sync_result_objects success and offline are distinguishable
+✅ /home/runner/work/weldtrace/weldtrace/flutter_app/test/unit/weld_sync_test.dart: sync_result_objects toString contains all three fields
+✅ /home/runner/work/weldtrace/weldtrace/flutter_app/test/unit/weld_sync_test.dart: cert_sync_status CertSyncStatus.pending is "pending"
+✅ /home/runner/work/weldtrace/weldtrace/flutter_app/test/unit/weld_sync_test.dart: cert_sync_status CertSyncStatus.synced is "synced"
+✅ /home/runner/work/weldtrace/weldtrace/flutter_app/test/unit/weld_sync_test.dart: cert_sync_status CertSyncStatus.offline is "offline"
+✅ /home/runner/work/weldtrace/weldtrace/flutter_app/test/unit/weld_sync_test.dart: cert_sync_status WeldCertificate.syncStatus defaults to null
+✅ /home/runner/work/weldtrace/weldtrace/flutter_app/test/unit/weld_sync_test.dart: cert_sync_status WeldCertificate.syncStatus can be set to pending
+✅ /home/runner/work/weldtrace/weldtrace/flutter_app/test/unit/weld_sync_test.dart: cert_sync_status WeldCertificate.syncStatus can be set to synced
+✅ /home/runner/work/weldtrace/weldtrace/flutter_app/test/unit/weld_sync_test.dart: cert_sync_status syncStatus is not included in toJson
+
+Error: 209 tests passed, 19 failed.
+Error: Process completed with exit code 1.

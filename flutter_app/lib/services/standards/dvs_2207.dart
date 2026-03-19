@@ -183,22 +183,22 @@ class Dvs2207 {
       wallThicknessMm: Value(e),
 
       // Phase 1 — Bead build-up (heating-up): full pressure to seat heater
-      heatingUpTimeS:       const Value(_heatingUpTimeS),
-      heatingUpPressureBar: const Value(_heatingUpInterfacialBar),
+      heatingUpTimeS:       const Value<int?>(_heatingUpTimeS),
+      heatingUpPressureBar: const Value<double?>(_heatingUpInterfacialBar),
 
       // Phase 2 — Heat soak: reduced load; time scales with pipe diameter
       // approximate DVS heating rule
       heatingTimeS:    Value(heatSoakTimeS),
-      heatingPressureBar: const Value(_heatSoakInterfacialBar),
+      heatingPressureBar: const Value<double?>(_heatSoakInterfacialBar),
 
       // Phase 3 — Changeover: heater removal; max time from wall thickness
       changeoverTimeMaxS: Value(changeoverMaxS),
 
       // Phase 4 — Pressure build-up: ramp from drag to fusion pressure
-      buildupTimeS: const Value(_buildupTimeS),
+      buildupTimeS: const Value<int?>(_buildupTimeS),
 
       // Phase 5 — Fusion: hold at corrected interfacial pressure
-      fusionTimeS:         const Value(_fusionTimeS),
+      fusionTimeS:         const Value<int?>(_fusionTimeS),
       fusionPressureBar:    Value(fusionBar),
       fusionPressureMinBar: Value(fusionMinBar),
       fusionPressureMaxBar: Value(fusionMaxBar),

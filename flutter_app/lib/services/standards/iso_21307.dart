@@ -199,22 +199,22 @@ class Iso21307 {
       wallThicknessMm: Value(e),
 
       // Phase 1 — Bead build-up
-      heatingUpTimeS:       const Value(_heatingUpTimeS),
-      heatingUpPressureBar: const Value(_heatingUpInterfacialBar),
+      heatingUpTimeS:       const Value<int?>(_heatingUpTimeS),
+      heatingUpPressureBar: const Value<double?>(_heatingUpInterfacialBar),
 
       // Phase 2 — Heat soak: time scales with pipe diameter
       // approximate DVS heating rule
       heatingTimeS:    Value(heatSoakTimeS),
-      heatingPressureBar: const Value(_heatSoakInterfacialBar),
+      heatingPressureBar: const Value<double?>(_heatSoakInterfacialBar),
 
       // Phase 3 — Changeover
       changeoverTimeMaxS: Value(changeoverMaxS),
 
       // Phase 4 — Pressure build-up
-      buildupTimeS: const Value(_buildupTimeS),
+      buildupTimeS: const Value<int?>(_buildupTimeS),
 
       // Phase 5 — Fusion: corrected + clamped interfacial pressure
-      fusionTimeS:         const Value(_fusionTimeS),
+      fusionTimeS:         const Value<int?>(_fusionTimeS),
       fusionPressureBar:    Value(fusionBar),
       fusionPressureMinBar: Value(fusionMinBar),
       fusionPressureMaxBar: Value(fusionMaxBar),

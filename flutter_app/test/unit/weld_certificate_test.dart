@@ -478,7 +478,7 @@ void main() {
       final dir = Directory.systemTemp.createTempSync('cert_schema_ok_test_');
       final reg = p.join(dir.path, 'registry_export.json');
 
-      final sig = _fakeSig('o');
+      final sig = _fakeSig('a');
       await WeldRegistry.append(
         WeldRegistryEntry(
           jointId:   'ok-schema',
