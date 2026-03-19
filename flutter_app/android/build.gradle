@@ -5,10 +5,10 @@ allprojects {
     }
 }
 
-rootProject.buildDir = layout.buildDirectory
+rootProject.buildDir = '../build'
 
 subprojects {
-    project.buildDir = layout.buildDirectory.dir("../../build/${project.name}")
+    project.buildDir = "${rootProject.buildDir}/${project.name}"
 }
 
 subprojects {
