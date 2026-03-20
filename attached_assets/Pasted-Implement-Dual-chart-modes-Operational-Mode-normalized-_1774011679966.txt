@@ -1,0 +1,216 @@
+Implement:
+
+Dual chart modes:
+
+Operational Mode (normalized, DVS-style)
+
+Technical Mode (real-time, dynamic scrolling)
+
+Reporting upgrade:
+
+Always include normalized curve
+
+Include theoretical normalized curve (ideal welding curve)
+
+🧠 CONCEPT
+
+The current issue:
+
+Cooling time is much longer than heating
+
+Linear time scale makes the graph unreadable
+
+Industrial standards (DVS) use normalized stage-based visualization
+
+📊 FEATURE 1 — DUAL MODE CHART
+Modes:
+1) Operational Mode (default)
+
+X axis = normalized time (0 → 1 or 0 → 100%)
+
+Each welding stage has a fixed visual proportion
+
+Graph resembles DVS standard diagram
+
+Used by operators
+
+2) Technical Mode
+
+X axis = real time (seconds)
+
+Graph must scroll dynamically as time progresses
+
+Only show a sliding window (e.g. last 5 minutes)
+
+Used for analysis
+
+⚙️ IMPLEMENTATION DETAILS
+Create utility:
+
+normalizeTimeSeries(data, stages)
+
+Converts real timestamps into normalized time
+
+Each stage has a weight (visual proportion)
+
+Stage configuration
+
+Each stage must have:
+
+name
+
+real start time
+
+real end time
+
+visual weight (%)
+
+Example weights:
+
+Preparation: 10%
+
+Heating: 20%
+
+Changeover: 10%
+
+Pressure Build: 20%
+
+Cooling: 40%
+
+Chart behavior
+Operational Mode:
+
+Use normalizedTime as X axis
+
+Show stage divisions (ReferenceArea or vertical lines)
+
+Display % instead of seconds
+
+Technical Mode:
+
+Use real time (seconds)
+
+Implement dynamic domain:
+
+latestTime = last data point time
+
+windowSize = 300 seconds
+
+xMin = latestTime - windowSize
+xMax = latestTime
+
+Chart must "move" with time (sliding window)
+
+Prevent full compression of early stages
+
+📈 FEATURE 2 — THEORETICAL CURVE
+
+You must generate a second dataset:
+
+idealCurve
+
+This represents the ideal welding pressure curve, based on calculated parameters:
+
+P1 (preheat pressure)
+
+P2 (heating pressure)
+
+P6 (cooling pressure)
+
+t2, t3, t4, t5 (times)
+
+Ideal curve must include:
+
+Flat segment at P1 (preheating)
+
+Drop to P2 (heating)
+
+Linear ramp P2 → P6 (pressure buildup)
+
+Flat at P6 (cooling)
+
+IMPORTANT:
+
+Theoretical curve must ALSO be normalized in Operational Mode.
+
+📊 FEATURE 3 — REPORTING (CRITICAL)
+
+Update report generation system:
+
+Each report MUST include:
+
+1) Normalized real curve
+
+Based on actual collected data
+
+Always normalized (Operational Mode)
+
+2) Normalized theoretical curve
+
+Based on calculated parameters
+
+Same normalized axis
+
+3) Pressure vs time data (raw)
+
+For technical validation
+
+Report must NOT depend on technical mode visualization.
+
+Reports always use normalized representation.
+
+📊 CHART REQUIREMENTS
+
+Display:
+
+Real pressure (solid line)
+
+Ideal pressure (dashed line)
+
+Tolerance band (optional shaded area)
+
+Stage labels
+
+🎨 UX REQUIREMENTS
+
+Add toggle button:
+
+[ Operational ] [ Technical ]
+
+Default = Operational
+
+Maintain mobile usability
+
+Keep chart readable in field conditions
+
+🧩 ARCHITECTURE
+
+Refactor chart logic into:
+
+utils/normalizeTime.js
+
+utils/generateIdealCurve.js
+
+components/WeldChart.jsx
+
+⚠️ VALIDATION
+
+Ensure no NaN or invalid values
+
+Ensure normalization always returns 0–1
+
+Ensure smooth transitions between stages
+
+🚀 FINAL GOAL
+
+Deliver a production-ready chart system that:
+
+Matches industrial DVS-style visualization
+
+Works in real-time during welding
+
+Produces professional engineering reports
+
+Clearly compares real vs ideal welding behavior
+
+This is a critical feature for industrial usability — implement with clean, modular code.

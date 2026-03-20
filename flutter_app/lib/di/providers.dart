@@ -29,14 +29,19 @@ const _secureStorage = FlutterSecureStorage();
 // ── API client ─────────────────────────────────────────────────────────────────
 
 final apiClientProvider = Provider<ApiClient>((ref) {
-  // Always reads the current session token from the Supabase SDK so the
-  // ApiClient never sends an expired JWT.  The SDK automatically refreshes
-  // the token in the background; calling currentSession here guarantees we
-  // use the latest version without any circular dependency.
+  // Use getSession() (async) so the Supabase SDK can silently refresh an
+  // expired token before we read the accessToken.  This prevents the 401
+  // that occurs when currentSession is read synchronously during a brief
+  // window where the old token has expired but the new one is not yet cached.
   return ApiClient(
     tokenProvider: () async {
-      final session = Supabase.instance.client.auth.currentSession;
-      return session?.accessToken;
+      try {
+        final response = await Supabase.instance.client.auth.getSession();
+        return response.data.session?.accessToken;
+      } catch (_) {
+        // Fallback: return null (request will proceed without auth header)
+        return null;
+      }
     },
   );
 });

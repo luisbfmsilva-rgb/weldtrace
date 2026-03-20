@@ -38,14 +38,25 @@ class _WeldSetupScreenState extends ConsumerState<WeldSetupScreen> {
   @override
   void initState() {
     super.initState();
-    // Pre-select project if navigated from ProjectsScreen
-    if (widget.preselectedProjectId != null) {
-      WidgetsBinding.instance.addPostFrameCallback((_) {
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      // Pre-select project if navigated from ProjectsScreen
+      if (widget.preselectedProjectId != null) {
         ref
             .read(weldSetupProvider.notifier)
             .selectProject(widget.preselectedProjectId!);
-      });
-    }
+      }
+      // Auto-fill operator fields when the logged-in user is a welder
+      final user = ref.read(authProvider).user;
+      if (user != null && user.role == 'welder') {
+        _operatorNameController.text = user.displayName;
+        _operatorIdController.text   =
+            user.welderCertificationNumber ?? user.id.substring(0, 8);
+        ref.read(weldSetupProvider.notifier).setOperatorName(user.displayName);
+        ref
+            .read(weldSetupProvider.notifier)
+            .setOperatorId(_operatorIdController.text);
+      }
+    });
   }
 
   @override

@@ -147,6 +147,10 @@ class _WeldingSessionScreenState extends ConsumerState<WeldingSessionScreen> {
   int _currentPhaseIndex = 0;
   Timer? _phaseTimer;
   int _phaseElapsedSeconds = 0;
+  /// Wall-clock instant when the current phase timer started.
+  /// Used to compute [_phaseElapsedSeconds] precisely even when
+  /// [Timer.periodic] fires late (screen-off / background throttling).
+  DateTime? _phaseStartTime;
 
   // ── Chart ──────────────────────────────────────────────────────────────────
   final List<SensorReading> _sensorReadings = [];
@@ -164,6 +168,7 @@ class _WeldingSessionScreenState extends ConsumerState<WeldingSessionScreen> {
   bool _changeoverT4Started = false;    // true once pressure starts rising
   double? _changeoverMinPressure;       // lowest pressure seen during t3
   int _t4ElapsedSeconds = 0;
+  DateTime? _t4StartTime;              // wall-clock fix for t4 timer
   Timer? _t4Timer;
 
   // ── Guards against re-entrancy during auto-advance ────────────────────────
@@ -330,6 +335,7 @@ class _WeldingSessionScreenState extends ConsumerState<WeldingSessionScreen> {
     final now = DateTime.now();
     setState(() {
       _phaseElapsedSeconds = 0;
+      _phaseStartTime      = null;   // reset; _startPhaseTimer will set it
       _violations.clear();
       _weldStartedAt ??= now;
       // reset phase-specific state
@@ -451,9 +457,15 @@ class _WeldingSessionScreenState extends ConsumerState<WeldingSessionScreen> {
 
   void _startPhaseTimer() {
     _phaseTimer?.cancel();
+    _phaseStartTime = DateTime.now();
     _phaseTimer = Timer.periodic(const Duration(seconds: 1), (_) {
       if (!mounted) return;
-      setState(() => _phaseElapsedSeconds++);
+      // Compute elapsed from wall-clock diff so the count is accurate even
+      // when Timer.periodic is throttled by the OS (screen off / background).
+      final elapsed = _phaseStartTime == null
+          ? _phaseElapsedSeconds + 1
+          : DateTime.now().difference(_phaseStartTime!).inSeconds;
+      setState(() => _phaseElapsedSeconds = elapsed);
 
       final currentPhase = _currentPhaseIndex < widget.phases.length
           ? widget.phases[_currentPhaseIndex]
@@ -598,9 +610,13 @@ class _WeldingSessionScreenState extends ConsumerState<WeldingSessionScreen> {
       });
       _t4Timer?.cancel();
       _t4ElapsedSeconds = 0;
+      _t4StartTime      = DateTime.now();
       _t4Timer = Timer.periodic(const Duration(seconds: 1), (t) {
         if (!mounted) { t.cancel(); return; }
-        setState(() => _t4ElapsedSeconds++);
+        final elapsed = _t4StartTime == null
+            ? _t4ElapsedSeconds + 1
+            : DateTime.now().difference(_t4StartTime!).inSeconds;
+        setState(() => _t4ElapsedSeconds = elapsed);
       });
       // Auto-complete changeover → buildup
       _isAutoAdvancing = false;
