@@ -37,10 +37,14 @@ class WeldSetupState {
     this.machineModel          = '',
     this.machineSerialNumber   = '',
     this.machineName           = '',
+    this.machineBrand          = '',
+    this.machineLastCalibration = '',
+    this.machineNextCalibration = '',
     this.dragPressureBar       = 0.0,
 
-    // Project name (loaded when project is selected)
-    this.projectName = '',
+    // Project name + location (loaded when project is selected)
+    this.projectName     = '',
+    this.projectLocation = '',
 
     // Pipe catalog data (loaded when de + sdr selected)
     this.catalogWallThickness,
@@ -62,6 +66,7 @@ class WeldSetupState {
     this.submitError,
     this.createdWeldId,
     this.createdPhases,
+    this.createdWeldNumber = 0,
   });
 
   final List<WeldingStandardRecord> standards;
@@ -84,7 +89,11 @@ class WeldSetupState {
   final String machineModel;
   final String machineSerialNumber;
   final String machineName;
+  final String machineBrand;
+  final String machineLastCalibration;
+  final String machineNextCalibration;
   final String projectName;
+  final String projectLocation;
   final String standardUsed;
   final double dragPressureBar;
 
@@ -106,6 +115,7 @@ class WeldSetupState {
   final String? submitError;
   final String? createdWeldId;
   final List<PhaseParameters>? createdPhases;
+  final int createdWeldNumber;
 
   bool get machineHasCylinderArea =>
       machineHydraulicAreaMm2 != null && machineHydraulicAreaMm2! > 0;
@@ -141,7 +151,11 @@ class WeldSetupState {
     String? machineModel,
     String? machineSerialNumber,
     String? machineName,
+    String? machineBrand,
+    String? machineLastCalibration,
+    String? machineNextCalibration,
     String? projectName,
+    String? projectLocation,
     String? standardUsed,
     double? dragPressureBar,
     double? catalogWallThickness,
@@ -154,6 +168,7 @@ class WeldSetupState {
     String? submitError,
     String? createdWeldId,
     List<PhaseParameters>? createdPhases,
+    int? createdWeldNumber,
     bool clearDiameter = false,
     bool clearSdr = false,
     bool clearPipe = false,
@@ -189,11 +204,15 @@ class WeldSetupState {
         machineHydraulicAreaMm2: clearMachineHydraulics
             ? null
             : (machineHydraulicAreaMm2 ?? this.machineHydraulicAreaMm2),
-        machineModel:        machineModel        ?? this.machineModel,
-        machineSerialNumber: machineSerialNumber ?? this.machineSerialNumber,
-        machineName:         machineName         ?? this.machineName,
-        projectName:         projectName         ?? this.projectName,
-        standardUsed:        standardUsed        ?? this.standardUsed,
+        machineModel:           machineModel           ?? this.machineModel,
+        machineSerialNumber:    machineSerialNumber    ?? this.machineSerialNumber,
+        machineName:            machineName            ?? this.machineName,
+        machineBrand:           machineBrand           ?? this.machineBrand,
+        machineLastCalibration: machineLastCalibration ?? this.machineLastCalibration,
+        machineNextCalibration: machineNextCalibration ?? this.machineNextCalibration,
+        projectName:            projectName            ?? this.projectName,
+        projectLocation:        projectLocation        ?? this.projectLocation,
+        standardUsed:           standardUsed           ?? this.standardUsed,
         dragPressureBar: dragPressureBar ?? this.dragPressureBar,
         catalogWallThickness: (clearDiameter || clearSdr || clearPipe)
             ? null
@@ -219,6 +238,8 @@ class WeldSetupState {
             clearCreatedWeld ? null : (createdWeldId ?? this.createdWeldId),
         createdPhases:
             clearCreatedWeld ? null : (createdPhases ?? this.createdPhases),
+        createdWeldNumber:
+            clearCreatedWeld ? 0 : (createdWeldNumber ?? this.createdWeldNumber),
       );
 }
 
@@ -267,7 +288,10 @@ class WeldSetupNotifier extends StateNotifier<WeldSetupState> {
     state = state.copyWith(selectedProjectId: projectId);
     final project = await db.projectsDao.getById(projectId);
     if (project != null) {
-      state = state.copyWith(projectName: project.name);
+      state = state.copyWith(
+        projectName:     project.name,
+        projectLocation: project.location ?? '',
+      );
     }
   }
 
@@ -285,6 +309,9 @@ class WeldSetupNotifier extends StateNotifier<WeldSetupState> {
         machineModel:            machine.model,
         machineSerialNumber:     machine.serialNumber,
         machineName:             displayName,
+        machineBrand:            machine.manufacturer,
+        machineLastCalibration:  machine.lastCalibrationDate ?? '',
+        machineNextCalibration:  machine.nextCalibrationDate ?? '',
       );
     }
     _recomputeDvsTable();
@@ -471,11 +498,17 @@ class WeldSetupNotifier extends StateNotifier<WeldSetupState> {
       final table  = state.weldingTable!;
       final phases = table.phases;
 
+      // 7. Compute sequential weld number for this project (1-based)
+      final projectWelds =
+          await db.weldsDao.getByProject(state.selectedProjectId!);
+      final weldNumber = projectWelds.length; // includes the just-inserted row
+
       state = state.copyWith(
-        isSubmitting:  false,
-        createdWeldId: weldId,
-        createdPhases: phases,
-        standardUsed:  resolvedStandardUsed,
+        isSubmitting:      false,
+        createdWeldId:     weldId,
+        createdPhases:     phases,
+        standardUsed:      resolvedStandardUsed,
+        createdWeldNumber: weldNumber,
       );
     } catch (e) {
       state = state.copyWith(

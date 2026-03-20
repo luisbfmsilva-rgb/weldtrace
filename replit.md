@@ -222,7 +222,7 @@ Source: `flutter_app/lib/`
 | `weld_registry.dart` | Append-only local JSON registry (`registry_export.json`) |
 | `weld_ledger.dart` | Local JSON certification ledger |
 | `weld_public_verifier.dart` | Public verification (registry, schema, signature, PDF hash) |
-| `weld_report_generator.dart` | 13-section PDF engineering report (V1.3: accepts `sertecLogoBytes`/`companyLogoBytes`; header renders Sertec logo top-left + company logo top-right, graceful text fallback) |
+| `weld_report_generator.dart` | 17-section PDF engineering report (V1.4: `projectLocation`, `machineBrand`, calibration dates, `weldNumber`, 3 photo sections (alignment/weld/welder); 48pt left margin; 60×60 logo; cooling in minutes; header shows "Solda n°") |
 | `weld_sync_service.dart` | `SyncResult` model + `WeldSyncService` (offline-first default) |
 | `curve_compression.dart` | Gzip compression for pressure/time curves |
 

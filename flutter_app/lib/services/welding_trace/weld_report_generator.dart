@@ -93,6 +93,16 @@ class WeldReportGenerator {
     Uint8List? sertecLogoBytes,
     /// Raw PNG/JPEG bytes of the manager's company logo (top-right).
     Uint8List? companyLogoBytes,
+    // ── V1.4 — Extended project / machine metadata ────────────────────────
+    String projectLocation        = '',
+    String machineBrand           = '',
+    String machineLastCalibration = '',
+    String machineNextCalibration = '',
+    int    weldNumber             = 0,
+    // ── V1.4 — Post-weld photos ───────────────────────────────────────────
+    Uint8List? weldPhotoBytes,
+    Uint8List? welderPhotoBytes,
+    Uint8List? alignmentPhotoBytes,
   }) async {
     final pdf = pw.Document(
       author:  'Sertec FusionCertify',
@@ -129,7 +139,7 @@ class WeldReportGenerator {
       pw.MultiPage(
         pageTheme: pw.PageTheme(
           pageFormat: PdfPageFormat.a4,
-          margin:     const pw.EdgeInsets.all(36),
+          margin: const pw.EdgeInsets.fromLTRB(48, 36, 36, 36),
           buildBackground: (context) => pw.Container(
             decoration: const pw.BoxDecoration(
               border: pw.Border(
@@ -141,8 +151,9 @@ class WeldReportGenerator {
         header: (context) => _buildHeader(
           headerColour,
           accentColour,
-          sertecLogoBytes: sertecLogoBytes,
+          sertecLogoBytes:  sertecLogoBytes,
           companyLogoBytes: companyLogoBytes,
+          weldNumber:       weldNumber,
         ),
         footer: (context) => _buildFooter(context, accentColour),
         build: (context) => [
@@ -159,7 +170,9 @@ class WeldReportGenerator {
           pw.SizedBox(height: 6),
           _infoTable(
             rows: [
+              if (weldNumber > 0) ['Solda n°', '$weldNumber'],
               ['Project Name', projectName.isEmpty ? 'N/A' : projectName],
+              if (projectLocation.isNotEmpty) ['Localização', projectLocation],
               ['Date',         dateStr],
               if (operatorName.isNotEmpty) ['Operator', operatorName],
               if (operatorId.isNotEmpty)   ['Operator ID', operatorId],
@@ -187,7 +200,8 @@ class WeldReportGenerator {
           pw.SizedBox(height: 6),
           _infoTable(
             rows: [
-              ['Model', () {
+              if (machineBrand.isNotEmpty) ['Marca', machineBrand],
+              ['Modelo', () {
                 if (machineModel.isNotEmpty) return machineModel;
                 if (machineName.isNotEmpty)  return machineName;
                 return 'N/A';
@@ -200,6 +214,10 @@ class WeldReportGenerator {
                 hydraulicCylinderAreaMm2 > 0
                     ? '${hydraulicCylinderAreaMm2.toStringAsFixed(1)} mm²'
                     : 'N/A'],
+              if (machineLastCalibration.isNotEmpty)
+                ['Última Calibração', machineLastCalibration],
+              if (machineNextCalibration.isNotEmpty)
+                ['Próxima Calibração', machineNextCalibration],
             ],
             altColour: rowAltColour,
           ),
@@ -245,7 +263,7 @@ class WeldReportGenerator {
                     : 'N/A'],
               ['Cooling Time',
                 coolingTimeSec > 0
-                    ? '${coolingTimeSec.toStringAsFixed(0)} s'
+                    ? '${(coolingTimeSec / 60).toStringAsFixed(1)} min'
                     : 'N/A'],
               ['Bead Height',
                 beadHeightMm > 0
@@ -318,6 +336,57 @@ class WeldReportGenerator {
           pw.SizedBox(height: 6),
           _assessmentBlock(completionStatus, cancelReason),
           pw.SizedBox(height: 8),
+
+          // ── 15. Alignment photo (optional, from preparation step 4) ────────
+          if (alignmentPhotoBytes != null) ...[
+            _sectionTitle('Foto — Tubagens Alinhadas', accentColour),
+            pw.SizedBox(height: 6),
+            pw.ClipRRect(
+              horizontalRadius: 4,
+              verticalRadius: 4,
+              child: pw.Image(
+                pw.MemoryImage(alignmentPhotoBytes),
+                width:  PdfPageFormat.a4.availableWidth,
+                height: 200,
+                fit:    pw.BoxFit.contain,
+              ),
+            ),
+            pw.SizedBox(height: 16),
+          ],
+
+          // ── 16. Weld bead photo (optional) ─────────────────────────────────
+          if (weldPhotoBytes != null) ...[
+            _sectionTitle('Foto — Cordão de Solda', accentColour),
+            pw.SizedBox(height: 6),
+            pw.ClipRRect(
+              horizontalRadius: 4,
+              verticalRadius: 4,
+              child: pw.Image(
+                pw.MemoryImage(weldPhotoBytes),
+                width:  PdfPageFormat.a4.availableWidth,
+                height: 200,
+                fit:    pw.BoxFit.contain,
+              ),
+            ),
+            pw.SizedBox(height: 16),
+          ],
+
+          // ── 17. Welder photo (optional) ────────────────────────────────────
+          if (welderPhotoBytes != null) ...[
+            _sectionTitle('Foto — Soldador', accentColour),
+            pw.SizedBox(height: 6),
+            pw.ClipRRect(
+              horizontalRadius: 4,
+              verticalRadius: 4,
+              child: pw.Image(
+                pw.MemoryImage(welderPhotoBytes),
+                width:  200,
+                height: 200,
+                fit:    pw.BoxFit.contain,
+              ),
+            ),
+            pw.SizedBox(height: 8),
+          ],
         ],
       ),
     );
@@ -449,7 +518,12 @@ class WeldReportGenerator {
     PdfColor accentColour, {
     Uint8List? sertecLogoBytes,
     Uint8List? companyLogoBytes,
+    int weldNumber = 0,
   }) {
+    final subtitle = weldNumber > 0
+        ? 'Certified Welding Report — Solda n° $weldNumber'
+        : 'Certified Welding Report';
+
     // Left side: logo image (if provided) + fallback text brand
     final leftContent = sertecLogoBytes != null
         ? pw.Row(
@@ -457,8 +531,8 @@ class WeldReportGenerator {
             children: [
               pw.Image(
                 pw.MemoryImage(sertecLogoBytes),
-                width:  44,
-                height: 44,
+                width:  60,
+                height: 60,
                 fit: pw.BoxFit.contain,
               ),
               pw.SizedBox(width: 8),
@@ -475,7 +549,7 @@ class WeldReportGenerator {
                     ),
                   ),
                   pw.Text(
-                    'Certified Welding Report',
+                    subtitle,
                     style: pw.TextStyle(fontSize: 9, color: accentColour),
                   ),
                 ],
@@ -494,7 +568,7 @@ class WeldReportGenerator {
                 ),
               ),
               pw.Text(
-                'Certified Welding Report',
+                subtitle,
                 style: pw.TextStyle(fontSize: 11, color: accentColour),
               ),
             ],
@@ -505,7 +579,7 @@ class WeldReportGenerator {
         ? pw.Image(
             pw.MemoryImage(companyLogoBytes),
             width:  72,
-            height: 44,
+            height: 60,
             fit: pw.BoxFit.contain,
           )
         : pw.Text(

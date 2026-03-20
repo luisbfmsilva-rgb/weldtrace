@@ -95,6 +95,13 @@ class WeldWorkflowEngine {
     this.heatingTimeSec          = 0.0,
     this.coolingTimeSec          = 0.0,
     this.beadHeightMm            = 0.0,
+    // ── V1.4 — extended PDF metadata ─────────────────────────────────────
+    this.projectLocation         = '',
+    this.machineBrand            = '',
+    this.machineLastCalibration  = '',
+    this.machineNextCalibration  = '',
+    this.weldNumber              = 0,
+    this.alignmentPhotoBytes,
     WeldTraceRecorder? traceRecorder,
     WeldSyncService?   syncService,
   })  : _logger      = logger ?? Logger(),
@@ -128,6 +135,14 @@ class WeldWorkflowEngine {
   final double heatingTimeSec;
   final double coolingTimeSec;
   final double beadHeightMm;
+
+  // ── V1.4 — extended PDF metadata ──────────────────────────────────────────
+  final String     projectLocation;
+  final String     machineBrand;
+  final String     machineLastCalibration;
+  final String     machineNextCalibration;
+  final int        weldNumber;
+  final Uint8List? alignmentPhotoBytes;
 
   final WeldTraceRecorder _recorder;
   final WeldSyncService   _syncService;
@@ -278,6 +293,12 @@ class WeldWorkflowEngine {
         cancelReason:            reason,
         sertecLogoBytes:         sertecLogoBytes,
         companyLogoBytes:        companyLogoBytes,
+        projectLocation:         projectLocation,
+        machineBrand:            machineBrand,
+        machineLastCalibration:  machineLastCalibration,
+        machineNextCalibration:  machineNextCalibration,
+        weldNumber:              weldNumber,
+        alignmentPhotoBytes:     alignmentPhotoBytes,
       );
       _logger.i('[WeldWorkflow] Cancellation PDF generated (${pdfBytes.length} bytes)');
     } catch (e) {
@@ -311,6 +332,8 @@ class WeldWorkflowEngine {
     double? gpsLng,
     Uint8List? sertecLogoBytes,
     Uint8List? companyLogoBytes,
+    Uint8List? weldPhotoBytes,
+    Uint8List? welderPhotoBytes,
   }) async {
     sensorService.stopCapture();
     _sensorSub?.cancel();
@@ -393,6 +416,14 @@ class WeldWorkflowEngine {
         gpsLng:           gpsLng,
         sertecLogoBytes:  sertecLogoBytes,
         companyLogoBytes: companyLogoBytes,
+        projectLocation:          projectLocation,
+        machineBrand:             machineBrand,
+        machineLastCalibration:   machineLastCalibration,
+        machineNextCalibration:   machineNextCalibration,
+        weldNumber:               weldNumber,
+        weldPhotoBytes:           weldPhotoBytes,
+        welderPhotoBytes:         welderPhotoBytes,
+        alignmentPhotoBytes:      alignmentPhotoBytes,
       );
       _logger.i('[WeldWorkflow] PDF report generated (${pdfBytes.length} bytes)');
     } catch (e) {

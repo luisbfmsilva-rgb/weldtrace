@@ -7,6 +7,7 @@ import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:geolocator/geolocator.dart';
 import 'package:go_router/go_router.dart';
+import 'package:image_picker/image_picker.dart';
 import 'package:wakelock_plus/wakelock_plus.dart';
 
 import '../../core/providers/company_logo_provider.dart';
@@ -46,6 +47,14 @@ class WeldSessionArgs {
     this.dragPressureBar          = 0.0,
     this.wallThicknessMm          = 0.0,
     this.outerDiameterMm          = 0.0,
+    // ── Extended PDF metadata ─────────────────────────────────────────────
+    this.projectLocation          = '',
+    this.machineBrand             = '',
+    this.machineLastCalibration   = '',
+    this.machineNextCalibration   = '',
+    this.weldNumber               = 0,
+    // ── Preparation photo (step 4) ────────────────────────────────────────
+    this.alignmentPhotoBytes,
   });
 
   final String weldId;
@@ -79,8 +88,28 @@ class WeldSessionArgs {
   /// Pipe outer diameter in mm (numeric; used for gap-width table in preparation).
   final double outerDiameterMm;
 
+  /// Project physical location (from ProjectRecord.location).
+  final String projectLocation;
+
+  /// Machine manufacturer/brand (from MachineRecord.manufacturer).
+  final String machineBrand;
+
+  /// Date of last machine calibration (from MachineRecord.lastCalibrationDate).
+  final String machineLastCalibration;
+
+  /// Date of next machine calibration (from MachineRecord.nextCalibrationDate).
+  final String machineNextCalibration;
+
+  /// Sequential weld number within the project (1-based, computed at creation).
+  final int weldNumber;
+
+  /// JPEG/PNG bytes of the aligned pipe ends (captured in step 4 of preparation).
+  /// Null if the operator skipped the photo.
+  final Uint8List? alignmentPhotoBytes;
+
   WeldSessionArgs copyWith({
-    double? dragPressureBar,
+    double?    dragPressureBar,
+    Uint8List? alignmentPhotoBytes,
   }) =>
       WeldSessionArgs(
         weldId:                  weldId,
@@ -103,9 +132,15 @@ class WeldSessionArgs {
         coolingTimeSec:          coolingTimeSec,
         beadHeightMm:            beadHeightMm,
         jointId:                 jointId,
-        dragPressureBar:         dragPressureBar ?? this.dragPressureBar,
+        dragPressureBar:         dragPressureBar      ?? this.dragPressureBar,
         wallThicknessMm:         wallThicknessMm,
         outerDiameterMm:         outerDiameterMm,
+        projectLocation:         projectLocation,
+        machineBrand:            machineBrand,
+        machineLastCalibration:  machineLastCalibration,
+        machineNextCalibration:  machineNextCalibration,
+        weldNumber:              weldNumber,
+        alignmentPhotoBytes:     alignmentPhotoBytes ?? this.alignmentPhotoBytes,
       );
 }
 
@@ -225,6 +260,12 @@ class _WeldingSessionScreenState extends ConsumerState<WeldingSessionScreen> {
       coolingTimeSec:          a.coolingTimeSec,
       beadHeightMm:            a.beadHeightMm,
       jointId:                 a.jointId,
+      projectLocation:         a.projectLocation,
+      machineBrand:            a.machineBrand,
+      machineLastCalibration:  a.machineLastCalibration,
+      machineNextCalibration:  a.machineNextCalibration,
+      weldNumber:              a.weldNumber,
+      alignmentPhotoBytes:     a.alignmentPhotoBytes,
     );
 
     _subs.add(_engine!.stateStream.listen((s) {
@@ -415,6 +456,12 @@ class _WeldingSessionScreenState extends ConsumerState<WeldingSessionScreen> {
     _t4Timer?.cancel();
     await _captureGps();
     _disableWakelock();
+
+    // ── Capture post-weld photos ──────────────────────────────────────────
+    final Uint8List? weldPhoto   = await _captureWeldPhoto();
+    final Uint8List? welderPhoto =
+        weldPhoto != null ? await _captureWelderPhoto() : null;
+
     final logos = await _loadLogos();
     await _engine?.completeWeld(
       coolingIncomplete: _coolingIncomplete,
@@ -422,7 +469,91 @@ class _WeldingSessionScreenState extends ConsumerState<WeldingSessionScreen> {
       gpsLng:            _gpsLng,
       sertecLogoBytes:   logos.sertec,
       companyLogoBytes:  logos.company,
+      weldPhotoBytes:    weldPhoto,
+      welderPhotoBytes:  welderPhoto,
     );
+  }
+
+  /// Asks the operator to photograph the finished weld bead.
+  /// Returns raw image bytes, or null if skipped / camera unavailable.
+  Future<Uint8List?> _captureWeldPhoto() async {
+    if (!mounted) return null;
+    final confirmed = await showDialog<bool>(
+      context: context,
+      barrierDismissible: false,
+      builder: (ctx) => AlertDialog(
+        title: const Text('Photo — Weld Bead'),
+        content: const Text(
+          'Take a photo of the finished weld bead for the certificate.\n'
+          'Tap "Take Photo" to open the camera, or "Skip" to continue without a photo.',
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.of(ctx).pop(false),
+            child: const Text('Skip'),
+          ),
+          FilledButton.icon(
+            icon: const Icon(Icons.camera_alt),
+            label: const Text('Take Photo'),
+            onPressed: () => Navigator.of(ctx).pop(true),
+          ),
+        ],
+      ),
+    );
+    if (confirmed != true || !mounted) return null;
+    try {
+      final picker = ImagePicker();
+      final xFile = await picker.pickImage(
+        source:        ImageSource.camera,
+        imageQuality:  80,
+        maxWidth:      1920,
+        maxHeight:     1080,
+      );
+      return xFile == null ? null : await xFile.readAsBytes();
+    } catch (_) {
+      return null;
+    }
+  }
+
+  /// Asks the operator to photograph the welder for the certificate.
+  /// Returns raw image bytes, or null if skipped / camera unavailable.
+  Future<Uint8List?> _captureWelderPhoto() async {
+    if (!mounted) return null;
+    final confirmed = await showDialog<bool>(
+      context: context,
+      barrierDismissible: false,
+      builder: (ctx) => AlertDialog(
+        title: const Text('Photo — Welder'),
+        content: const Text(
+          'Take a photo of the welder for the certificate.\n'
+          'Tap "Take Photo" to open the camera, or "Skip" to continue.',
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.of(ctx).pop(false),
+            child: const Text('Skip'),
+          ),
+          FilledButton.icon(
+            icon: const Icon(Icons.person),
+            label: const Text('Take Photo'),
+            onPressed: () => Navigator.of(ctx).pop(true),
+          ),
+        ],
+      ),
+    );
+    if (confirmed != true || !mounted) return null;
+    try {
+      final picker = ImagePicker();
+      final xFile = await picker.pickImage(
+        source:       ImageSource.camera,
+        imageQuality: 80,
+        maxWidth:     1024,
+        maxHeight:    1024,
+      );
+      return xFile == null ? null : await xFile.readAsBytes();
+    } catch (_) {
+      return null;
+    }
   }
 
   Future<void> _cancelWeld(String reason) async {

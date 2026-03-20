@@ -115,6 +115,11 @@ class _WeldSetupScreenState extends ConsumerState<WeldSetupScreen> {
             dragPressureBar:         next.dragPressureBar,
             wallThicknessMm:         wt,
             outerDiameterMm:         next.pipeDiameterMm ?? 0.0,
+            projectLocation:         next.projectLocation,
+            machineBrand:            next.machineBrand,
+            machineLastCalibration:  next.machineLastCalibration,
+            machineNextCalibration:  next.machineNextCalibration,
+            weldNumber:              next.createdWeldNumber,
           ),
         );
         // Reset notifier so back-navigation does not re-navigate

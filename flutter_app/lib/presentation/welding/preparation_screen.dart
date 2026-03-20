@@ -1,19 +1,22 @@
 import 'dart:async';
+import 'dart:typed_data';
 
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
+import 'package:image_picker/image_picker.dart';
 
 import '../../di/providers.dart';
 import '../../services/sensor/sensor_service.dart';
 import 'welding_session_screen.dart';
 
-/// Three-step preparation flow before welding begins:
+/// Four-step preparation flow before welding begins:
 ///
 ///   Step 1 – Define drag pressure  (live BLE sensor + button)
 ///   Step 2 – Facing the pipes      (max facing pressure display + "Facing done!")
 ///   Step 3 – Check misalignment    (inputs, validation, Done / Face again)
+///   Step 4 – Photo of aligned pipes (optional, for certificate)
 class PreparationScreen extends ConsumerStatefulWidget {
   const PreparationScreen({super.key, required this.args});
 
@@ -33,6 +36,10 @@ class _PreparationScreenState extends ConsumerState<PreparationScreen> {
   final TextEditingController _misalignmentController =
       TextEditingController();
   bool _gapWidthChecked = false;
+
+  /// Photo captured in step 4 (aligned pipes).  Null if skipped.
+  Uint8List? _alignmentPhotoBytes;
+  bool _photoStepLoading = false;
 
   final List<StreamSubscription> _subs = [];
 
@@ -98,8 +105,39 @@ class _PreparationScreenState extends ConsumerState<PreparationScreen> {
   }
 
   void _done() {
+    // Misalignment step complete → go to photo step
+    HapticFeedback.mediumImpact();
+    setState(() => _step = 3);
+  }
+
+  Future<void> _takeAlignmentPhoto() async {
+    setState(() => _photoStepLoading = true);
+    try {
+      final picker = ImagePicker();
+      final xFile  = await picker.pickImage(
+        source:       ImageSource.camera,
+        imageQuality: 80,
+        maxWidth:     1920,
+        maxHeight:    1080,
+      );
+      if (xFile != null && mounted) {
+        final bytes = await xFile.readAsBytes();
+        setState(() {
+          _alignmentPhotoBytes = bytes;
+          _photoStepLoading    = false;
+        });
+      } else {
+        if (mounted) setState(() => _photoStepLoading = false);
+      }
+    } catch (_) {
+      if (mounted) setState(() => _photoStepLoading = false);
+    }
+  }
+
+  void _goToSession() {
     final updatedArgs = widget.args.copyWith(
-      dragPressureBar: _measuredDragPressure ?? 0.0,
+      dragPressureBar:     _measuredDragPressure ?? 0.0,
+      alignmentPhotoBytes: _alignmentPhotoBytes,
     );
     context.go('/weld/session', extra: updatedArgs);
   }
@@ -115,7 +153,7 @@ class _PreparationScreenState extends ConsumerState<PreparationScreen> {
       },
       child: Scaffold(
         appBar: AppBar(
-          title: Text('Preparation — Step ${_step + 1} of 3'),
+          title: Text('Preparation — Step ${_step + 1} of 4'),
           leading: IconButton(
             icon: const Icon(Icons.close),
             onPressed: _showAbortDialog,
@@ -155,6 +193,14 @@ class _PreparationScreenState extends ConsumerState<PreparationScreen> {
           onChanged: () => setState(() {}),
           onDone: _done,
           onFaceAgain: _faceAgain,
+        );
+      case 3:
+        return _StepPhotoAlignment(
+          photoBytes:  _alignmentPhotoBytes,
+          isLoading:   _photoStepLoading,
+          onTakePhoto: _takeAlignmentPhoto,
+          onSkip:      _goToSession,
+          onContinue:  _goToSession,
         );
       default:
         return const SizedBox.shrink();
@@ -663,6 +709,135 @@ class _InfoBanner extends StatelessWidget {
             child: Text(message,
                 style: TextStyle(fontSize: 13, color: color)),
           ),
+        ],
+      ),
+    );
+  }
+}
+
+// ════════════════════════════════════════════════════════════════════════════
+// Step 4 — Photo of aligned pipes
+// ════════════════════════════════════════════════════════════════════════════
+
+class _StepPhotoAlignment extends StatelessWidget {
+  const _StepPhotoAlignment({
+    required this.photoBytes,
+    required this.isLoading,
+    required this.onTakePhoto,
+    required this.onSkip,
+    required this.onContinue,
+  });
+
+  final Uint8List? photoBytes;
+  final bool isLoading;
+  final VoidCallback onTakePhoto;
+  final VoidCallback onSkip;
+  final VoidCallback onContinue;
+
+  @override
+  Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    return SingleChildScrollView(
+      padding: const EdgeInsets.all(20),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        children: [
+          const _StepHeader(
+            stepNumber: 4,
+            title: 'Photo — Aligned Pipes',
+            subtitle:
+                'Take a photo of the aligned pipe ends for the certificate.\n'
+                'This step is optional — tap "Skip" to proceed without a photo.',
+          ),
+          const SizedBox(height: 24),
+
+          // ── Preview or placeholder ────────────────────────────────────────
+          if (photoBytes != null) ...[
+            ClipRRect(
+              borderRadius: BorderRadius.circular(10),
+              child: Image.memory(
+                photoBytes!,
+                height: 220,
+                fit: BoxFit.cover,
+              ),
+            ),
+            const SizedBox(height: 12),
+            OutlinedButton.icon(
+              icon: const Icon(Icons.replay),
+              label: const Text('Retake Photo'),
+              style: OutlinedButton.styleFrom(
+                minimumSize: const Size(double.infinity, 48),
+              ),
+              onPressed: isLoading ? null : onTakePhoto,
+            ),
+          ] else ...[
+            Container(
+              height: 180,
+              decoration: BoxDecoration(
+                color: theme.colorScheme.surfaceContainerHighest,
+                borderRadius: BorderRadius.circular(10),
+                border: Border.all(
+                  color: theme.colorScheme.outlineVariant,
+                ),
+              ),
+              child: Column(
+                mainAxisAlignment: MainAxisAlignment.center,
+                children: [
+                  Icon(
+                    Icons.photo_camera_outlined,
+                    size: 48,
+                    color: theme.colorScheme.onSurfaceVariant,
+                  ),
+                  const SizedBox(height: 8),
+                  Text(
+                    'No photo taken yet',
+                    style: theme.textTheme.bodyMedium?.copyWith(
+                      color: theme.colorScheme.onSurfaceVariant,
+                    ),
+                  ),
+                ],
+              ),
+            ),
+            const SizedBox(height: 12),
+            FilledButton.icon(
+              icon: isLoading
+                  ? const SizedBox(
+                      width: 16,
+                      height: 16,
+                      child: CircularProgressIndicator(strokeWidth: 2),
+                    )
+                  : const Icon(Icons.camera_alt),
+              label: const Text('Take Photo'),
+              style: FilledButton.styleFrom(
+                minimumSize: const Size(double.infinity, 52),
+              ),
+              onPressed: isLoading ? null : onTakePhoto,
+            ),
+          ],
+
+          const SizedBox(height: 24),
+
+          // ── Action buttons ────────────────────────────────────────────────
+          FilledButton(
+            style: FilledButton.styleFrom(
+              minimumSize: const Size(double.infinity, 52),
+              backgroundColor: const Color(0xFF2E7D32),
+            ),
+            onPressed: onContinue,
+            child: Text(
+              photoBytes != null
+                  ? 'Continue to Weld Session'
+                  : 'Continue without Photo',
+            ),
+          ),
+
+          if (photoBytes == null) ...[
+            const SizedBox(height: 10),
+            TextButton(
+              onPressed: onSkip,
+              child: const Text('Skip'),
+            ),
+          ],
         ],
       ),
     );
