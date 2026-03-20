@@ -90,10 +90,7 @@ class _PreparationScreenState extends ConsumerState<PreparationScreen> {
 
   void _facingDone() {
     HapticFeedback.mediumImpact();
-    setState(() {
-      _facingDoneAtLeastOnce = true;
-      _step = 2;
-    });
+    setState(() => _step = 2);
   }
 
   void _faceAgain() {
