@@ -222,7 +222,7 @@ Source: `flutter_app/lib/`
 | `weld_registry.dart` | Append-only local JSON registry (`registry_export.json`) |
 | `weld_ledger.dart` | Local JSON certification ledger |
 | `weld_public_verifier.dart` | Public verification (registry, schema, signature, PDF hash) |
-| `weld_report_generator.dart` | 13-section PDF engineering report (V1.0: PROJECT, JOINT ID, MACHINE, PIPE, STANDARD, WELD PARAMS, TRACE QUALITY, CURVE STATS, CHART, SIGNATURE, CERT, PUBLIC VERIFY, QR) |
+| `weld_report_generator.dart` | 13-section PDF engineering report (V1.3: accepts `sertecLogoBytes`/`companyLogoBytes`; header renders Sertec logo top-left + company logo top-right, graceful text fallback) |
 | `weld_sync_service.dart` | `SyncResult` model + `WeldSyncService` (offline-first default) |
 | `curve_compression.dart` | Gzip compression for pressure/time curves |
 
@@ -246,7 +246,25 @@ Steps executed on `completeWeld()`:
 6d. Attempt SaaS certificate upload via `WeldSyncService` (non-blocking, non-fatal)
 7. Mark weld IMMUTABLE
 
-New constructor fields (V1.0): `operatorId`, `machineModel`, `machineSerialNumber`, `hydraulicCylinderAreaMm2`.
+New constructor fields (V1.0): `operatorId`, `machineModel`, `machineSerialNumber`, `hydraulicCylinderAreaMm2`.  
+V1.3: `completeWeld()` and `cancel()` now accept optional `sertecLogoBytes` and `companyLogoBytes`; session screen loads these before calling the engine.
+
+### Internationalisation (`core/l10n/`)
+
+| File | Purpose |
+|------|---------|
+| `app_localizations.dart` | 317+ EN/PT-BR translation pairs; `AppLocalizations.of(context).t(key)` API; Flutter `LocalizationsDelegate` |
+| `locale_notifier.dart` | Riverpod `StateNotifierProvider<LocaleNotifier, Locale>`; persists language choice to SharedPreferences (`app_locale` key) |
+
+`MaterialApp.router` in `presentation/app.dart` watches `localeProvider` and passes it to the `locale:` field, so the whole app rebuilds on language change.  
+Supported locales: `en` (English) and `pt` (Português do Brasil).
+
+### Company Logo (`core/providers/company_logo_provider.dart`)
+
+`CompanyLogoNotifier` — `StateNotifierProvider<CompanyLogoNotifier, AsyncValue<Uint8List?>>`.  
+Stores PNG to `getApplicationDocumentsDirectory()/company_logo.png`, path in SharedPreferences `company_logo_path`.  
+Managers can pick/change/remove via Settings → Company Logo tile.  
+Logo bytes are loaded in `_loadLogos()` in the session screen and passed to `WeldReportGenerator.generate()`.
 
 ### SaaS Sync Layer (Optional)
 

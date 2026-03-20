@@ -88,6 +88,11 @@ class WeldReportGenerator {
     // ── V1.2 — GPS location ──────────────────────────────────────────────
     double? gpsLat,
     double? gpsLng,
+    // ── V1.3 — Branding logos ─────────────────────────────────────────────
+    /// Raw PNG/JPEG bytes of the Sertec FusionCertify logo (top-left).
+    Uint8List? sertecLogoBytes,
+    /// Raw PNG/JPEG bytes of the manager's company logo (top-right).
+    Uint8List? companyLogoBytes,
   }) async {
     final pdf = pw.Document(
       author:  'Sertec FusionCertify',
@@ -133,7 +138,12 @@ class WeldReportGenerator {
             ),
           ),
         ),
-        header: (context) => _buildHeader(headerColour, accentColour),
+        header: (context) => _buildHeader(
+          headerColour,
+          accentColour,
+          sertecLogoBytes: sertecLogoBytes,
+          companyLogoBytes: companyLogoBytes,
+        ),
         footer: (context) => _buildFooter(context, accentColour),
         build: (context) => [
           pw.SizedBox(height: 12),
@@ -434,42 +444,86 @@ class WeldReportGenerator {
 
   // ── Section builders ────────────────────────────────────────────────────────
 
-  static pw.Widget _buildHeader(PdfColor headerColour, PdfColor accentColour) {
+  static pw.Widget _buildHeader(
+    PdfColor headerColour,
+    PdfColor accentColour, {
+    Uint8List? sertecLogoBytes,
+    Uint8List? companyLogoBytes,
+  }) {
+    // Left side: logo image (if provided) + fallback text brand
+    final leftContent = sertecLogoBytes != null
+        ? pw.Row(
+            crossAxisAlignment: pw.CrossAxisAlignment.center,
+            children: [
+              pw.Image(
+                pw.MemoryImage(sertecLogoBytes),
+                width:  44,
+                height: 44,
+                fit: pw.BoxFit.contain,
+              ),
+              pw.SizedBox(width: 8),
+              pw.Column(
+                crossAxisAlignment: pw.CrossAxisAlignment.start,
+                mainAxisAlignment: pw.MainAxisAlignment.center,
+                children: [
+                  pw.Text(
+                    'Sertec FusionCertify™',
+                    style: pw.TextStyle(
+                      fontSize:   16,
+                      fontWeight: pw.FontWeight.bold,
+                      color:      headerColour,
+                    ),
+                  ),
+                  pw.Text(
+                    'Certified Welding Report',
+                    style: pw.TextStyle(fontSize: 9, color: accentColour),
+                  ),
+                ],
+              ),
+            ],
+          )
+        : pw.Column(
+            crossAxisAlignment: pw.CrossAxisAlignment.start,
+            children: [
+              pw.Text(
+                'Sertec FusionCertify™',
+                style: pw.TextStyle(
+                  fontSize:   20,
+                  fontWeight: pw.FontWeight.bold,
+                  color:      headerColour,
+                ),
+              ),
+              pw.Text(
+                'Certified Welding Report',
+                style: pw.TextStyle(fontSize: 11, color: accentColour),
+              ),
+            ],
+          );
+
+    // Right side: company logo (if provided) or domain text
+    final rightContent = companyLogoBytes != null
+        ? pw.Image(
+            pw.MemoryImage(companyLogoBytes),
+            width:  72,
+            height: 44,
+            fit: pw.BoxFit.contain,
+          )
+        : pw.Text(
+            'sertec.pt',
+            style: pw.TextStyle(
+              fontSize:  9,
+              color:     PdfColors.grey500,
+              fontStyle: pw.FontStyle.italic,
+            ),
+          );
+
     return pw.Column(
       crossAxisAlignment: pw.CrossAxisAlignment.start,
       children: [
         pw.Row(
           mainAxisAlignment: pw.MainAxisAlignment.spaceBetween,
-          children: [
-            pw.Column(
-              crossAxisAlignment: pw.CrossAxisAlignment.start,
-              children: [
-                pw.Text(
-                  'Sertec FusionCertify™',
-                  style: pw.TextStyle(
-                    fontSize:   20,
-                    fontWeight: pw.FontWeight.bold,
-                    color:      headerColour,
-                  ),
-                ),
-                pw.Text(
-                  'Certified Welding Report',
-                  style: pw.TextStyle(
-                    fontSize:   11,
-                    color:      accentColour,
-                  ),
-                ),
-              ],
-            ),
-            pw.Text(
-              'sertec.pt',
-              style: pw.TextStyle(
-                fontSize:  9,
-                color:     PdfColors.grey500,
-                fontStyle: pw.FontStyle.italic,
-              ),
-            ),
-          ],
+          crossAxisAlignment: pw.CrossAxisAlignment.center,
+          children: [leftContent, rightContent],
         ),
         pw.Divider(color: accentColour, thickness: 1.5),
       ],

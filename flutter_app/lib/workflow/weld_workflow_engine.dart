@@ -1,5 +1,6 @@
 import 'dart:async';
 import 'dart:convert';
+import 'dart:typed_data';
 
 import 'package:logger/logger.dart';
 import 'package:uuid/uuid.dart';
@@ -212,7 +213,11 @@ class WeldWorkflowEngine {
   ///
   /// Always generates a partial PDF report for traceability (non-fatal on
   /// PDF failure — record is still cancelled even without a PDF).
-  Future<void> cancel(String reason) async {
+  Future<void> cancel(
+    String reason, {
+    Uint8List? sertecLogoBytes,
+    Uint8List? companyLogoBytes,
+  }) async {
     sensorService.stopCapture();
     _sensorSub?.cancel();
 
@@ -271,6 +276,8 @@ class WeldWorkflowEngine {
         hydraulicCylinderAreaMm2: hydraulicCylinderAreaMm2,
         completionStatus:        'cancelled',
         cancelReason:            reason,
+        sertecLogoBytes:         sertecLogoBytes,
+        companyLogoBytes:        companyLogoBytes,
       );
       _logger.i('[WeldWorkflow] Cancellation PDF generated (${pdfBytes.length} bytes)');
     } catch (e) {
@@ -302,6 +309,8 @@ class WeldWorkflowEngine {
     bool coolingIncomplete = false,
     double? gpsLat,
     double? gpsLng,
+    Uint8List? sertecLogoBytes,
+    Uint8List? companyLogoBytes,
   }) async {
     sensorService.stopCapture();
     _sensorSub?.cancel();
@@ -380,8 +389,10 @@ class WeldWorkflowEngine {
         machineSerialNumber:      machineSerialNumber,
         hydraulicCylinderAreaMm2: hydraulicCylinderAreaMm2,
         completionStatus: coolingIncomplete ? 'cooling_incomplete' : 'completed',
-        gpsLat: gpsLat,
-        gpsLng: gpsLng,
+        gpsLat:           gpsLat,
+        gpsLng:           gpsLng,
+        sertecLogoBytes:  sertecLogoBytes,
+        companyLogoBytes: companyLogoBytes,
       );
       _logger.i('[WeldWorkflow] PDF report generated (${pdfBytes.length} bytes)');
     } catch (e) {

@@ -38,15 +38,32 @@ class _QRScanScreenState extends ConsumerState<QRScanScreen> {
     await _scanner.stop();
 
     try {
+      // Support both the legacy format {jointId, signature} and the current
+      // WeldTrace format {app, joint, sig, v, verify}.
       final payload = jsonDecode(raw) as Map<String, dynamic>;
-      final jointId = payload['jointId'] as String?;
-      final signature = payload['signature'] as String?;
+
+      // Current format uses 'joint' + 'sig'; legacy used 'jointId' + 'signature'
+      final jointId  = (payload['joint']   ?? payload['jointId'])   as String?;
+      final signature = (payload['sig']    ?? payload['signature'])  as String?;
+
+      // Validate WeldTrace app identifier when present
+      final app = payload['app'] as String?;
+      if (app != null && app != 'WeldTrace') {
+        setState(() {
+          _result = _ScanResult.invalid(
+            raw: raw,
+            reason: 'Not a WeldTrace QR code (app: $app).',
+          );
+          _loading = false;
+        });
+        return;
+      }
 
       if (jointId == null || signature == null) {
         setState(() {
           _result = _ScanResult.invalid(
             raw: raw,
-            reason: 'Invalid QR payload — missing jointId or signature.',
+            reason: 'Invalid QR payload — missing joint ID or signature.',
           );
           _loading = false;
         });

@@ -1,5 +1,7 @@
 import 'dart:async';
 import 'dart:convert';
+import 'dart:typed_data';
+
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -7,6 +9,7 @@ import 'package:geolocator/geolocator.dart';
 import 'package:go_router/go_router.dart';
 import 'package:wakelock_plus/wakelock_plus.dart';
 
+import '../../core/providers/company_logo_provider.dart';
 import '../../di/providers.dart';
 import '../../services/sensor/sensor_service.dart';
 import '../../services/sensor/sensor_reading.dart';
@@ -387,15 +390,32 @@ class _WeldingSessionScreenState extends ConsumerState<WeldingSessionScreen> {
     }
   }
 
+  /// Load sertec logo (asset) + company logo (device storage) for PDF embedding.
+  Future<({Uint8List? sertec, Uint8List? company})> _loadLogos() async {
+    Uint8List? sertecBytes;
+    Uint8List? companyBytes;
+    try {
+      final data = await rootBundle.load('assets/logo_primary.png');
+      sertecBytes = data.buffer.asUint8List();
+    } catch (_) {}
+    try {
+      companyBytes = ref.read(companyLogoProvider).valueOrNull;
+    } catch (_) {}
+    return (sertec: sertecBytes, company: companyBytes);
+  }
+
   Future<void> _finishWeld() async {
     _phaseTimer?.cancel();
     _t4Timer?.cancel();
     await _captureGps();
     _disableWakelock();
+    final logos = await _loadLogos();
     await _engine?.completeWeld(
       coolingIncomplete: _coolingIncomplete,
-      gpsLat: _gpsLat,
-      gpsLng: _gpsLng,
+      gpsLat:            _gpsLat,
+      gpsLng:            _gpsLng,
+      sertecLogoBytes:   logos.sertec,
+      companyLogoBytes:  logos.company,
     );
   }
 
@@ -407,7 +427,12 @@ class _WeldingSessionScreenState extends ConsumerState<WeldingSessionScreen> {
     final phaseName = _currentPhaseIndex < widget.phases.length
         ? widget.phases[_currentPhaseIndex].phase.displayName
         : 'unknown';
-    await _engine?.cancel('Error in phase $phaseNum ($phaseName): $reason');
+    final logos = await _loadLogos();
+    await _engine?.cancel(
+      'Error in phase $phaseNum ($phaseName): $reason',
+      sertecLogoBytes:  logos.sertec,
+      companyLogoBytes: logos.company,
+    );
   }
 
   /// [TEST ONLY] — skip changeover → buildup → cooling in one tap.

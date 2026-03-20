@@ -1,7 +1,10 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_localizations/flutter_localizations.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
+import '../core/l10n/app_localizations.dart';
+import '../core/l10n/locale_notifier.dart';
 import '../core/theme/app_colors.dart';
 import '../di/providers.dart';
 import 'auth/login_screen.dart';
@@ -185,11 +188,21 @@ class FusionCertifyApp extends ConsumerWidget {
       ],
     );
 
+    final locale = ref.watch(localeProvider);
+
     return MaterialApp.router(
       title: 'Sertec FusionCertify',
       debugShowCheckedModeBanner: false,
       theme: _buildTheme(),
       routerConfig: router,
+      locale: locale,
+      supportedLocales: const [Locale('en'), Locale('pt')],
+      localizationsDelegates: const [
+        AppLocalizations.delegate,
+        GlobalMaterialLocalizations.delegate,
+        GlobalWidgetsLocalizations.delegate,
+        GlobalCupertinoLocalizations.delegate,
+      ],
     );
   }
 
