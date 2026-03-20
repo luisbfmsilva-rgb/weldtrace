@@ -23,6 +23,9 @@ class MachinesDao extends DatabaseAccessor<AppDatabase> with _$MachinesDaoMixin 
   Future<MachineRecord?> getById(String id) =>
       (select(machinesTable)..where((t) => t.id.equals(id))).getSingleOrNull();
 
+  Future<List<MachineRecord>> getPendingSync() =>
+      (select(machinesTable)..where((t) => t.syncStatus.equals('pending'))).get();
+
   Future<void> upsert(MachinesTableCompanion row) =>
       into(machinesTable).insertOnConflictUpdate(row);
 

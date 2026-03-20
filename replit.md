@@ -224,6 +224,17 @@ Source: `flutter_app/lib/`
 | `weld_public_verifier.dart` | Public verification (registry, schema, signature, PDF hash) |
 | `weld_report_generator.dart` | 17-section PDF engineering report (V1.4: `projectLocation`, `machineBrand`, calibration dates, `weldNumber`, 3 photo sections (alignment/weld/welder); 48pt left margin; 60×60 logo; cooling in minutes; header shows "Solda n°") |
 | `weld_sync_service.dart` | `SyncResult` model + `WeldSyncService` (offline-first default) |
+
+### Cloud Sync (upload scope — V1.5)
+
+All local entity types are now uploaded to Supabase in the sync upload cycle:
+- **Machines** + **Projects** added to `SyncUploadPayload`, `SyncUploadBody` (Zod), and `sync.controller.ts` upload handler (upsert 0a/0b, before welds)
+- `company_id` and `created_by` are set server-side from the authenticated user — never trusted from the client
+- `MachinesDao.getPendingSync()` added (mirrors `ProjectsDao.getPendingSync()`)
+- `SyncRepository.markAllLocalAsPending()` resets all local machines/projects to `pending` for force-upload
+- `SyncService.forceSyncAll()` calls `markAllLocalAsPending()` + `syncNow()` — exposed via "Enviar tudo para a nuvem" button in Settings
+- `getUpdates` download now includes `company_id`, `hydraulic_cylinder_area_mm2`, `notes` for machines; `client_name`, `contract_number` for projects
+
 | `curve_compression.dart` | Gzip compression for pressure/time curves |
 
 ### Configuration (`config/`)

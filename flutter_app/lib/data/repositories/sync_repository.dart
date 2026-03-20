@@ -22,9 +22,17 @@ class SyncRepository {
   /// Returns the upload result or a [SyncException].
   Future<Result<SyncUploadResult>> syncUpload() async {
     try {
-      // 1. Gather pending records from each DAO
-      final pendingWelds = await db.weldsDao.getPendingSync();
-      final pendingSteps = await db.weldsDao.getPendingSteps();
+      // 1. Gather pending records from every DAO in parallel
+      final results = await Future.wait([
+        db.machinesDao.getPendingSync(),
+        db.projectsDao.getPendingSync(),
+        db.weldsDao.getPendingSync(),
+        db.weldsDao.getPendingSteps(),
+      ]);
+      final pendingMachines = results[0] as List;
+      final pendingProjects = results[1] as List;
+      final pendingWelds    = results[2] as List;
+      final pendingSteps    = results[3] as List;
 
       // 2. Build sensor log batches (max 200 records per weld per batch)
       final sensorBatches = <SensorLogBatchPayload>[];
@@ -44,7 +52,45 @@ class SyncRepository {
         }
       }
 
-      // 3. Build weld payloads
+      // 3a. Build machine payloads
+      final machinePayloads = pendingMachines.map((m) => {
+            'id':                    m.id,
+            'serialNumber':          m.serialNumber,
+            'model':                 m.model,
+            'manufacturer':          m.manufacturer,
+            'type':                  m.type,
+            if (m.manufactureYear != null) 'manufactureYear': m.manufactureYear,
+            if (m.hydraulicCylinderAreaMm2 != null)
+              'hydraulicCylinderAreaMm2': m.hydraulicCylinderAreaMm2,
+            'isApproved':            m.isApproved,
+            'isActive':              m.isActive,
+            if (m.lastCalibrationDate != null)
+              'lastCalibrationDate': m.lastCalibrationDate,
+            if (m.nextCalibrationDate != null)
+              'nextCalibrationDate': m.nextCalibrationDate,
+            if (m.notes != null) 'notes': m.notes,
+            if (m.updatedAt != null)
+              'updatedAt': m.updatedAt!.toUtc().toIso8601String(),
+          }).toList();
+
+      // 3b. Build project payloads
+      final projectPayloads = pendingProjects.map((p) => {
+            'id':          p.id,
+            'name':        p.name,
+            'status':      p.status,
+            if (p.description != null) 'description': p.description,
+            if (p.location != null)    'location':    p.location,
+            if (p.gpsLat != null)      'gpsLat':      p.gpsLat,
+            if (p.gpsLng != null)      'gpsLng':      p.gpsLng,
+            if (p.startDate != null)   'startDate':   p.startDate,
+            if (p.endDate != null)     'endDate':     p.endDate,
+            if (p.clientName != null)  'clientName':  p.clientName,
+            if (p.contractNumber != null) 'contractNumber': p.contractNumber,
+            if (p.updatedAt != null)
+              'updatedAt': p.updatedAt!.toUtc().toIso8601String(),
+          }).toList();
+
+      // 3c. Build weld payloads
       final weldPayloads = pendingWelds.map((w) => {
             'id': w.id,
             'projectId': w.projectId,
@@ -86,21 +132,31 @@ class SyncRepository {
             if (s.notes != null) 'notes': s.notes,
           }).toList();
 
-      if (weldPayloads.isEmpty && stepPayloads.isEmpty && sensorBatches.isEmpty) {
+      final nothingToUpload = machinePayloads.isEmpty &&
+          projectPayloads.isEmpty &&
+          weldPayloads.isEmpty &&
+          stepPayloads.isEmpty &&
+          sensorBatches.isEmpty;
+
+      if (nothingToUpload) {
         return Success(SyncUploadResult(
-          welds: const EntitySyncResult(inserted: 0, errors: []),
-          weldSteps: const EntitySyncResult(inserted: 0, errors: []),
+          machines:   const EntitySyncResult(inserted: 0, errors: []),
+          projects:   const EntitySyncResult(inserted: 0, errors: []),
+          welds:      const EntitySyncResult(inserted: 0, errors: []),
+          weldSteps:  const EntitySyncResult(inserted: 0, errors: []),
           weldErrors: const EntitySyncResult(inserted: 0, errors: []),
           weldPhotos: const EntitySyncResult(inserted: 0, errors: []),
           sensorLogs: const EntitySyncResult(inserted: 0, errors: []),
-          syncedAt: DateTime.now().toUtc().toIso8601String(),
+          syncedAt:   DateTime.now().toUtc().toIso8601String(),
         ));
       }
 
-      // 5. Upload
+      // 5. Upload everything
       final payload = SyncUploadPayload(
-        welds: weldPayloads,
-        weldSteps: stepPayloads,
+        machines:         machinePayloads,
+        projects:         projectPayloads,
+        welds:            weldPayloads,
+        weldSteps:        stepPayloads,
         sensorLogBatches: sensorBatches,
       );
 
@@ -108,7 +164,17 @@ class SyncRepository {
 
       return result.when(
         success: (uploadResult) async {
-          // 6. Mark as synced only if upload succeeded
+          // 6. Mark as synced only if upload succeeded per entity
+          if (!uploadResult.machines.hasErrors) {
+            for (final m in pendingMachines) {
+              await db.machinesDao.markSynced(m.id);
+            }
+          }
+          if (!uploadResult.projects.hasErrors) {
+            for (final p in pendingProjects) {
+              await db.projectsDao.markSynced(p.id);
+            }
+          }
           if (!uploadResult.welds.hasErrors) {
             for (final w in pendingWelds) {
               await db.weldsDao.markSynced(w.id);
@@ -134,6 +200,31 @@ class SyncRepository {
     }
   }
 
+  // ── Force full re-upload (for data that predates the cloud sync feature) ──
+
+  /// Marks ALL local machines and projects as 'pending' so they are included
+  /// in the next upload cycle. Call this once when migrating from a version
+  /// that did not sync these entities, or when the user wants to force a
+  /// full re-upload (e.g. after restoring from backup).
+  Future<void> markAllLocalAsPending() async {
+    await db.transaction(() async {
+      final machines = await db.machinesDao.getAll();
+      for (final m in machines) {
+        await db.machinesDao.upsert(MachinesTableCompanion(
+          id: Value(m.id),
+          syncStatus: const Value('pending'),
+        ));
+      }
+      final projects = await db.projectsDao.getAll();
+      for (final p in projects) {
+        await db.projectsDao.upsert(ProjectsTableCompanion(
+          id: Value(p.id),
+          syncStatus: const Value('pending'),
+        ));
+      }
+    });
+  }
+
   // ── Download (cloud → local) ──────────────────────────────────────────────
 
   /// Downloads changes from the cloud since [since] and writes them to local DB.
@@ -157,6 +248,8 @@ class SyncRepository {
                 description: Value(p['description'] as String?),
                 location: Value(p['location'] as String?),
                 status: Value(p['status'] as String? ?? 'active'),
+                clientName: Value(p['client_name'] as String?),
+                contractNumber: Value(p['contract_number'] as String?),
                 syncStatus: const Value('synced'),
                 lastSyncedAt: Value(DateTime.now()),
                 updatedAt: Value(DateTime.tryParse(p['updated_at'] as String? ?? '')),
@@ -173,8 +266,11 @@ class SyncRepository {
                 type: Value(m['type'] as String),
                 isApproved: Value(m['is_approved'] as bool? ?? false),
                 isActive: Value(m['is_active'] as bool? ?? true),
+                hydraulicCylinderAreaMm2: Value(
+                    (m['hydraulic_cylinder_area_mm2'] as num?)?.toDouble()),
                 lastCalibrationDate: Value(m['last_calibration_date'] as String?),
                 nextCalibrationDate: Value(m['next_calibration_date'] as String?),
+                notes: Value(m['notes'] as String?),
                 syncStatus: const Value('synced'),
                 lastSyncedAt: Value(DateTime.now()),
                 updatedAt: Value(DateTime.tryParse(m['updated_at'] as String? ?? '')),

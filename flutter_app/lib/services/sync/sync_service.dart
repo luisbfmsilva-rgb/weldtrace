@@ -73,6 +73,14 @@ class SyncService {
 
   // ── Public API ────────────────────────────────────────────────────────────
 
+  /// Marks every local machine and project as pending, then runs a full
+  /// sync cycle. Use this once to upload pre-existing device data to the
+  /// cloud, or after reinstalling to ensure nothing is missing.
+  Future<SyncResult> forceSyncAll() async {
+    await repository.markAllLocalAsPending();
+    return syncNow();
+  }
+
   /// Force an immediate upload + download cycle.
   /// Returns the combined result of both operations.
   Future<SyncResult> syncNow({String? projectId}) async {

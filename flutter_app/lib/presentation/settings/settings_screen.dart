@@ -105,6 +105,58 @@ class SettingsScreen extends ConsumerWidget {
             },
           ),
 
+          // ── Force full upload ──────────────────────────────────────────
+          ListTile(
+            leading: const Icon(Icons.cloud_upload_outlined),
+            title: const Text('Enviar tudo para a nuvem'),
+            subtitle: const Text(
+                'Faz upload de todas as máquinas e projectos locais — '
+                'use após reinstalar o app'),
+            onTap: () async {
+              final confirmed = await showDialog<bool>(
+                context: context,
+                builder: (_) => AlertDialog(
+                  title: const Text('Enviar tudo para a nuvem?'),
+                  content: const Text(
+                    'Isto irá marcar todas as máquinas e projectos '
+                    'locais como pendentes e enviá-los para o servidor.\n\n'
+                    'Use isto se reinstalou o app e quer recuperar os '
+                    'seus dados noutro dispositivo.'),
+                  actions: [
+                    TextButton(
+                      onPressed: () => Navigator.pop(context, false),
+                      child: const Text('Cancelar'),
+                    ),
+                    FilledButton(
+                      onPressed: () => Navigator.pop(context, true),
+                      child: const Text('Enviar'),
+                    ),
+                  ],
+                ),
+              );
+              if (confirmed != true || !context.mounted) return;
+
+              ScaffoldMessenger.of(context).showSnackBar(
+                const SnackBar(content: Text('A sincronizar...')),
+              );
+              final service = ref.read(syncServiceProvider);
+              service.start();
+              final result = await service.forceSyncAll();
+              if (context.mounted) {
+                ScaffoldMessenger.of(context).showSnackBar(
+                  SnackBar(
+                    content: Text(result.hasErrors
+                        ? 'Sincronização concluída com erros'
+                        : 'Todos os dados enviados com sucesso'),
+                    backgroundColor: result.hasErrors
+                        ? Colors.orange
+                        : const Color(0xFF2E7D32),
+                  ),
+                );
+              }
+            },
+          ),
+
           // ── Standards ─────────────────────────────────────────────────
           ListTile(
             leading: const Icon(Icons.verified_outlined),

@@ -14,14 +14,72 @@ export async function upload(req: AuthenticatedRequest, res: Response): Promise<
     const body = SyncUploadBody.parse(req.body);
 
     const results: Record<string, EntitySyncResult> = {
-      welds: { inserted: 0, errors: [] },
+      machines:  { inserted: 0, errors: [] },
+      projects:  { inserted: 0, errors: [] },
+      welds:     { inserted: 0, errors: [] },
       weldSteps: { inserted: 0, errors: [] },
       weldErrors: { inserted: 0, errors: [] },
       weldPhotos: { inserted: 0, errors: [] },
       sensorLogs: { inserted: 0, errors: [] },
     };
 
-    // 1. Welds (must be first — all other entities reference weld.id)
+    // 0a. Machines (must exist before welds that reference them)
+    if (body.machines.length > 0) {
+      const records = body.machines.map((m) => ({
+        id:                         m.id,
+        company_id:                 req.user!.companyId,
+        serial_number:              m.serialNumber,
+        model:                      m.model,
+        manufacturer:               m.manufacturer,
+        type:                       m.type,
+        manufacture_year:           m.manufactureYear ?? null,
+        hydraulic_cylinder_area_mm2: m.hydraulicCylinderAreaMm2 ?? null,
+        is_approved:                m.isApproved,
+        is_active:                  m.isActive,
+        last_calibration_date:      m.lastCalibrationDate ?? null,
+        next_calibration_date:      m.nextCalibrationDate ?? null,
+        notes:                      m.notes ?? null,
+        updated_at:                 m.updatedAt ?? new Date().toISOString(),
+      }));
+
+      const { data, error } = await req.supabaseClient!
+        .from("machines")
+        .upsert(records, { onConflict: "id", ignoreDuplicates: false })
+        .select("id");
+
+      results.machines.inserted = data?.length ?? 0;
+      if (error) results.machines.errors.push(error.message);
+    }
+
+    // 0b. Projects (must exist before welds that reference them)
+    if (body.projects.length > 0) {
+      const records = body.projects.map((p) => ({
+        id:              p.id,
+        company_id:      req.user!.companyId,
+        created_by:      req.user!.id,
+        name:            p.name,
+        description:     p.description ?? null,
+        location:        p.location ?? null,
+        status:          p.status,
+        gps_lat:         p.gpsLat ?? null,
+        gps_lng:         p.gpsLng ?? null,
+        start_date:      p.startDate ?? null,
+        end_date:        p.endDate ?? null,
+        client_name:     p.clientName ?? null,
+        contract_number: p.contractNumber ?? null,
+        updated_at:      p.updatedAt ?? new Date().toISOString(),
+      }));
+
+      const { data, error } = await req.supabaseClient!
+        .from("projects")
+        .upsert(records, { onConflict: "id", ignoreDuplicates: false })
+        .select("id");
+
+      results.projects.inserted = data?.length ?? 0;
+      if (error) results.projects.errors.push(error.message);
+    }
+
+    // 1. Welds (must be first among weld entities — all weld sub-entities reference weld.id)
     if (body.welds.length > 0) {
       const records = body.welds.map((w) => ({
         id: w.id,
@@ -188,7 +246,7 @@ export async function getUpdates(req: AuthenticatedRequest, res: Response): Prom
     // Build project and project_users queries with optional project scope
     let projectsQuery = client
       .from("projects")
-      .select("id, name, description, location, status, gps_lat, gps_lng, start_date, end_date, updated_at")
+      .select("id, company_id, name, description, location, status, gps_lat, gps_lng, start_date, end_date, client_name, contract_number, updated_at")
       .gt("updated_at", query.since);
 
     let projectUsersQuery = client
@@ -218,7 +276,7 @@ export async function getUpdates(req: AuthenticatedRequest, res: Response): Prom
       projectUsersQuery,
       client
         .from("machines")
-        .select("id, serial_number, model, manufacturer, type, is_approved, is_active, last_calibration_date, next_calibration_date, updated_at")
+        .select("id, company_id, serial_number, model, manufacturer, type, is_approved, is_active, hydraulic_cylinder_area_mm2, last_calibration_date, next_calibration_date, notes, updated_at")
         .gt("updated_at", query.since),
       calibrationsQuery,
       client

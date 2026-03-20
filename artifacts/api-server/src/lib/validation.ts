@@ -275,7 +275,40 @@ const SyncSensorLogBatchSchema = z.object({
   logs: z.array(SensorLogRecordSchema).min(1).max(200),
 });
 
+const SyncMachineSchema = z.object({
+  id: uuid,
+  serialNumber: z.string().min(1).max(100),
+  model: z.string().min(1).max(255),
+  manufacturer: z.string().min(1).max(255),
+  type: z.enum(["electrofusion", "butt_fusion", "universal"]),
+  manufactureYear: z.number().int().min(1900).max(2100).nullable().optional(),
+  hydraulicCylinderAreaMm2: z.number().positive().nullable().optional(),
+  isApproved: z.boolean().default(false),
+  isActive: z.boolean().default(true),
+  lastCalibrationDate: isoDate.nullable().optional(),
+  nextCalibrationDate: isoDate.nullable().optional(),
+  notes: z.string().max(2000).nullable().optional(),
+  updatedAt: isoTimestamp.nullable().optional(),
+});
+
+const SyncProjectSchema = z.object({
+  id: uuid,
+  name: z.string().min(1).max(255),
+  description: z.string().max(2000).nullable().optional(),
+  location: z.string().max(500).nullable().optional(),
+  status: z.enum(["active", "completed", "suspended"]).default("active"),
+  gpsLat: z.number().min(-90).max(90).nullable().optional(),
+  gpsLng: z.number().min(-180).max(180).nullable().optional(),
+  startDate: isoDate.nullable().optional(),
+  endDate: isoDate.nullable().optional(),
+  clientName: z.string().max(255).nullable().optional(),
+  contractNumber: z.string().max(100).nullable().optional(),
+  updatedAt: isoTimestamp.nullable().optional(),
+});
+
 export const SyncUploadBody = z.object({
+  machines: z.array(SyncMachineSchema).max(50).default([]),
+  projects: z.array(SyncProjectSchema).max(50).default([]),
   welds: z.array(SyncWeldSchema).max(100).default([]),
   weldSteps: z.array(SyncWeldStepSchema).max(500).default([]),
   weldErrors: z.array(SyncWeldErrorSchema).max(200).default([]),
