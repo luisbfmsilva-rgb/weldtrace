@@ -403,7 +403,25 @@ class _WeldingSessionScreenState extends ConsumerState<WeldingSessionScreen> {
     _phaseTimer?.cancel();
     _t4Timer?.cancel();
     _disableWakelock();
-    await _engine?.cancel(reason);
+    final phaseNum  = _currentPhaseIndex + 1;
+    final phaseName = _currentPhaseIndex < widget.phases.length
+        ? widget.phases[_currentPhaseIndex].phase.displayName
+        : 'unknown';
+    await _engine?.cancel('Error in phase $phaseNum ($phaseName): $reason');
+  }
+
+  /// [TEST ONLY] — skip changeover → buildup → cooling in one tap.
+  Future<void> _testSkipChangeoverToCooling() async {
+    setState(() { _changeoverMinPressure = 0.0; });
+    _onChangeoverPressureUpdate(3.0);            // triggers changeover completion
+    await Future.delayed(const Duration(milliseconds: 150));
+    if (!mounted) return;
+    await _startNextPhase();                     // start buildup
+    await Future.delayed(const Duration(milliseconds: 150));
+    if (!mounted) return;
+    _phaseTimer?.cancel();
+    setState(() => _isAutoAdvancing = false);
+    await _completePhase();                      // buildup → fusion → cooling
   }
 
   void _startPhaseTimer() {
@@ -441,7 +459,7 @@ class _WeldingSessionScreenState extends ConsumerState<WeldingSessionScreen> {
         final max = currentPhase.maxDuration.toInt();
         final elapsed = _phaseElapsedSeconds;
         if (nom > 10 && elapsed == nom - 10) {
-          SystemSound.play(SystemSoundType.click); // last 10-second warning
+          HapticFeedback.heavyImpact(); // last 10-second warning
         }
         if (elapsed >= max && !_isAutoAdvancing) {
           setState(() => _isAutoAdvancing = true);
@@ -486,7 +504,7 @@ class _WeldingSessionScreenState extends ConsumerState<WeldingSessionScreen> {
               _coolingWarningMessage =
                   dev > 0.08 ? 'Pressure deviation ${(dev * 100).toStringAsFixed(1)} %' : '';
             });
-            if (dev > 0.08) SystemSound.play(SystemSoundType.click);
+            if (dev > 0.08) HapticFeedback.heavyImpact();
           }
         }
       }
@@ -999,7 +1017,7 @@ class _WeldingSessionScreenState extends ConsumerState<WeldingSessionScreen> {
                     child: _TargetCard(
                       label: 'Remaining',
                       value: fmtR,
-                      subtitle: 'Min: ${minSec}s — heating time',
+                      subtitle: 'Nominal: ${nomSec}s  ·  min ${minSec}s',
                       highlight: lastTen,
                     ),
                   ),
@@ -1082,6 +1100,18 @@ class _WeldingSessionScreenState extends ConsumerState<WeldingSessionScreen> {
                 ),
               ),
               const SizedBox(height: 10),
+              ElevatedButton(
+                style: ElevatedButton.styleFrom(
+                  backgroundColor: Colors.grey.shade600,
+                  minimumSize: const Size(double.infinity, 44),
+                ),
+                onPressed: _testSkipChangeoverToCooling,
+                child: const Text(
+                  '[TEST] Done — skip to Cooling',
+                  style: TextStyle(color: Colors.white, fontSize: 13),
+                ),
+              ),
+              const SizedBox(height: 6),
               OutlinedButton.icon(
                 icon: const Icon(Icons.cancel_outlined),
                 label: const Text('Cancel Weld'),

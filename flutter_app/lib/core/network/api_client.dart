@@ -87,6 +87,41 @@ class ApiClient {
     }
   }
 
+  Future<Result<T>> put<T>(
+    String path,
+    Map<String, dynamic> body,
+    T Function(dynamic json) fromJson,
+  ) async {
+    try {
+      final uri = _buildUri(path, null);
+      final response = await _http.put(
+        uri,
+        headers: await _headers(),
+        body: jsonEncode(body),
+      );
+      return _handleResponse(response, fromJson);
+    } on SocketException catch (e) {
+      return Failure(NetworkException('No internet connection', e));
+    } catch (e) {
+      return Failure(NetworkException('Request failed: $path', e));
+    }
+  }
+
+  Future<Result<T>> delete<T>(
+    String path,
+    T Function(dynamic json) fromJson,
+  ) async {
+    try {
+      final uri = _buildUri(path, null);
+      final response = await _http.delete(uri, headers: await _headers());
+      return _handleResponse(response, fromJson);
+    } on SocketException catch (e) {
+      return Failure(NetworkException('No internet connection', e));
+    } catch (e) {
+      return Failure(NetworkException('Request failed: $path', e));
+    }
+  }
+
   // ── Internal helpers ──────────────────────────────────────────────────────
 
   Uri _buildUri(String path, Map<String, String?>? queryParams) {

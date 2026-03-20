@@ -7,11 +7,50 @@ import '../../di/providers.dart';
 class SettingsScreen extends ConsumerWidget {
   const SettingsScreen({super.key});
 
+  void _showLanguageDialog(BuildContext context) {
+    showDialog<void>(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        title: const Text('Language'),
+        content: const Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            ListTile(
+              leading: Icon(Icons.check, color: Colors.green),
+              title: Text('English'),
+              dense: true,
+            ),
+            ListTile(
+              enabled: false,
+              leading: Icon(Icons.lock_clock_outlined),
+              title: Text('Português (coming soon)'),
+              dense: true,
+            ),
+            ListTile(
+              enabled: false,
+              leading: Icon(Icons.lock_clock_outlined),
+              title: Text('Español (coming soon)'),
+              dense: true,
+            ),
+          ],
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.of(ctx).pop(),
+            child: const Text('Close'),
+          ),
+        ],
+      ),
+    );
+  }
+
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final authState = ref.watch(authProvider);
     final user = authState.user;
     final theme = Theme.of(context);
+    final isManager = user?.role == 'manager';
 
     return Scaffold(
       appBar: AppBar(title: const Text('Settings')),
@@ -97,6 +136,25 @@ class SettingsScreen extends ConsumerWidget {
             subtitle: const Text('DVS 2207 · ISO 21307 · ASTM F2620'),
             onTap: () {},
           ),
+          ListTile(
+            leading: const Icon(Icons.language),
+            title: const Text('Language'),
+            subtitle: const Text('English'),
+            trailing: const Icon(Icons.chevron_right),
+            onTap: () => _showLanguageDialog(context),
+          ),
+
+          if (isManager) ...[
+            const Divider(),
+            ListTile(
+              leading: const Icon(Icons.manage_accounts),
+              title: const Text('User Management'),
+              subtitle: const Text('Add, edit and remove users'),
+              trailing: const Icon(Icons.chevron_right),
+              onTap: () => context.push('/users'),
+            ),
+          ],
+
           const Divider(),
           ListTile(
             leading: Icon(Icons.logout, color: theme.colorScheme.error),

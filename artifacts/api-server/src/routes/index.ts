@@ -7,11 +7,13 @@ import weldsRouter from "./welds.js";
 import sensorLogsRouter from "./sensor_logs.js";
 import standardsRouter from "./standards.js";
 import syncRouter from "./sync.js";
+import usersRouter from "./users.js";
 
 const router: IRouter = Router();
 
 router.use(healthRouter);
 router.use(authRouter);
+router.use(usersRouter);
 router.use(projectsRouter);
 router.use(machinesRouter);
 router.use(weldsRouter);

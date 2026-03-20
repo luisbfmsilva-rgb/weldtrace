@@ -51,7 +51,12 @@ class _WeldsScreenState extends ConsumerState<WeldsScreen> {
                 }
                 var welds = snapshot.data ?? [];
                 if (_filter != 'all') {
-                  welds = welds.where((w) => w.status == _filter).toList();
+                  welds = welds.where((w) {
+                    if (_filter == 'failed') {
+                      return w.status == 'failed' || w.status == 'cancelled';
+                    }
+                    return w.status == _filter;
+                  }).toList();
                 }
                 if (welds.isEmpty) {
                   return _EmptyState(

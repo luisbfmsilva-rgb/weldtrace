@@ -301,6 +301,12 @@ class WeldReportGenerator {
           _sectionTitle('QR Verification', accentColour),
           pw.SizedBox(height: 6),
           _verificationBlock(weldSignature, qrPayload, rowAltColour, accentColour),
+          pw.SizedBox(height: 16),
+
+          // ── 14. Assessment ─────────────────────────────────────────────────
+          _sectionTitle('Assessment', accentColour),
+          pw.SizedBox(height: 6),
+          _assessmentBlock(completionStatus, cancelReason),
           pw.SizedBox(height: 8),
         ],
       ),
@@ -335,12 +341,12 @@ class WeldReportGenerator {
     final colour   = isCancel ? cancelColour : warningColour;
 
     final title = isCancel
-        ? 'SOLDA CANCELADA'
-        : 'RESFRIAMENTO INCOMPLETO';
+        ? 'WELD CANCELLED'
+        : 'COOLING INCOMPLETE';
     final body = isCancel
-        ? (reason.isNotEmpty ? 'Motivo: $reason' : 'Sem motivo registado')
-        : 'O operador encerrou a fase de resfriamento antes do tempo nominal. '
-          'A junta deve ser avaliada antes de entrar em serviço.';
+        ? (reason.isNotEmpty ? reason : 'No reason recorded')
+        : 'The operator ended the cooling phase before the nominal time elapsed. '
+          'The joint must be assessed before entering service.';
 
     return pw.Container(
       padding: const pw.EdgeInsets.all(12),
@@ -366,6 +372,61 @@ class WeldReportGenerator {
           ),
           pw.SizedBox(height: 4),
           pw.Text(body, style: pw.TextStyle(color: colour, fontSize: 10)),
+        ],
+      ),
+    );
+  }
+
+  // ── Assessment block ─────────────────────────────────────────────────────
+
+  static pw.Widget _assessmentBlock(String status, String cancelReason) {
+    const successColour  = PdfColor.fromInt(0xFF1B5E20);  // dark green
+    const warningColour  = PdfColor.fromInt(0xFFE65100);  // deep orange
+    const errorColour    = PdfColor.fromInt(0xFFB71C1C);  // dark red
+
+    final colour = switch (status) {
+      'completed'          => successColour,
+      'cooling_incomplete' => warningColour,
+      _                   => errorColour,
+    };
+
+    final icon = switch (status) {
+      'completed' => '✓',
+      _           => '✗',
+    };
+
+    final message = switch (status) {
+      'completed'          => 'Welding completed successfully.',
+      'cooling_incomplete' =>
+          'Welding completed but cooling phase was ended early. '
+          'The joint must be assessed before entering service.',
+      _                   =>
+          cancelReason.isNotEmpty ? cancelReason : 'Weld cancelled — no reason recorded.',
+    };
+
+    return pw.Container(
+      padding: const pw.EdgeInsets.symmetric(horizontal: 14, vertical: 10),
+      decoration: pw.BoxDecoration(
+        border: pw.Border.all(color: colour, width: 1.5),
+        borderRadius: const pw.BorderRadius.all(pw.Radius.circular(6)),
+      ),
+      child: pw.Row(
+        crossAxisAlignment: pw.CrossAxisAlignment.start,
+        children: [
+          pw.Text(
+            '$icon  ',
+            style: pw.TextStyle(
+              color: colour,
+              fontSize: 13,
+              fontWeight: pw.FontWeight.bold,
+            ),
+          ),
+          pw.Expanded(
+            child: pw.Text(
+              message,
+              style: pw.TextStyle(color: colour, fontSize: 10),
+            ),
+          ),
         ],
       ),
     );

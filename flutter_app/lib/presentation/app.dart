@@ -15,6 +15,7 @@ import 'qr/qr_scan_screen.dart';
 import 'reports/reports_screen.dart';
 import 'sensors/sensor_screen.dart';
 import 'settings/settings_screen.dart';
+import 'users/users_screen.dart';
 import 'shell/main_shell.dart';
 import 'splash/splash_screen.dart';
 import 'welds/welds_screen.dart';
@@ -162,6 +163,12 @@ class FusionCertifyApp extends ConsumerWidget {
             final args = state.extra as WeldSessionArgs;
             return WeldingSessionScreen(args: args);
           },
+        ),
+
+        // ── User management ───────────────────────────────────────────
+        GoRoute(
+          path: '/users',
+          builder: (_, __) => const UsersScreen(),
         ),
 
         // ── QR verification (full-screen) ─────────────────────────────
