@@ -1,5 +1,7 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_secure_storage/flutter_secure_storage.dart';
+import 'package:supabase_flutter/supabase_flutter.dart'
+    hide AuthException, AuthUser;
 
 import '../data/local/database/app_database.dart';
 import '../data/remote/auth_remote_data_source.dart';
@@ -27,10 +29,15 @@ const _secureStorage = FlutterSecureStorage();
 // ── API client ─────────────────────────────────────────────────────────────────
 
 final apiClientProvider = Provider<ApiClient>((ref) {
-  // Reads the access token directly from secure storage to avoid a circular
-  // dependency with authRepositoryProvider.
+  // Always reads the current session token from the Supabase SDK so the
+  // ApiClient never sends an expired JWT.  The SDK automatically refreshes
+  // the token in the background; calling currentSession here guarantees we
+  // use the latest version without any circular dependency.
   return ApiClient(
-    tokenProvider: () => _secureStorage.read(key: 'wt_access_token'),
+    tokenProvider: () async {
+      final session = Supabase.instance.client.auth.currentSession;
+      return session?.accessToken;
+    },
   );
 });
 
