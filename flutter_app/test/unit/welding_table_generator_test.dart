@@ -146,8 +146,8 @@ void main() {
         weldType:    'butt_fusion',
       );
 
-      // Must have all 6 butt-fusion phases
-      expect(table.phases.length, equals(6));
+      // Must have all 7 butt-fusion phases (incl. beadUpAdjust)
+      expect(table.phases.length, equals(7));
 
       // No phase pressure may be negative
       for (final phase in table.phases) {
@@ -240,7 +240,7 @@ void main() {
         weldType: 'butt_fusion',
       );
 
-      expect(table.phases.length, equals(6));
+      expect(table.phases.length, equals(7));
       expect(table.row.isMachinePressure, isTrue);
 
       for (final phase in table.phases) {
@@ -301,7 +301,7 @@ void main() {
         weldType: 'butt_fusion',
       );
 
-      expect(table.phases.length, equals(6));
+      expect(table.phases.length, equals(7));
       expect(table.row.isMachinePressure, isTrue);
 
       for (final phase in table.phases) {
