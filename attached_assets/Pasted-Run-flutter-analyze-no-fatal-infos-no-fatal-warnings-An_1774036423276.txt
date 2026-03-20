@@ -1,0 +1,17 @@
+Run flutter analyze --no-fatal-infos --no-fatal-warnings
+Analyzing flutter_app...                                        
+
+   info • 'withOpacity' is deprecated and shouldn't be used. Use .withValues() to avoid precision loss • lib/presentation/widgets/primary_button.dart:28:56 • deprecated_member_use
+   info • 'withOpacity' is deprecated and shouldn't be used. Use .withValues() to avoid precision loss • lib/presentation/widgets/section_card.dart:29:33 • deprecated_member_use
+   info • 'withOpacity' is deprecated and shouldn't be used. Use .withValues() to avoid precision loss • lib/presentation/widgets/status_badge.dart:42:34 • deprecated_member_use
+   info • 'withOpacity' is deprecated and shouldn't be used. Use .withValues() to avoid precision loss • lib/presentation/widgets/status_badge.dart:44:38 • deprecated_member_use
+   info • 'withOpacity' is deprecated and shouldn't be used. Use .withValues() to avoid precision loss • lib/presentation/widgets/status_badge.dart:46:34 • deprecated_member_use
+   info • 'withOpacity' is deprecated and shouldn't be used. Use .withValues() to avoid precision loss • lib/presentation/widgets/status_badge.dart:48:34 • deprecated_member_use
+   info • 'withOpacity' is deprecated and shouldn't be used. Use .withValues() to avoid precision loss • lib/presentation/widgets/status_badge.dart:50:32 • deprecated_member_use
+warning • The declaration '_statusBanner' isn't referenced • lib/services/welding_trace/weld_report_generator.dart:425:20 • unused_element
+   info • The import of 'dart:typed_data' is unnecessary because all of the used elements are also provided by the import of 'package:drift/drift.dart' • lib/workflow/weld_workflow_engine.dart:3:8 • unnecessary_import
+  error • The named parameter 'phase' is required, but there's no corresponding argument • lib/workflow/weld_workflow_engine.dart:166:18 • missing_required_argument
+  error • The named parameter 'phase' is required, but there's no corresponding argument • lib/workflow/weld_workflow_engine.dart:168:18 • missing_required_argument
+
+11 issues found. (ran in 20.3s)
+Error: Process completed with exit code 1.

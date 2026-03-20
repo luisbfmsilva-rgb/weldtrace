@@ -1,6 +1,5 @@
 import 'dart:async';
 import 'dart:convert';
-import 'dart:typed_data';
 
 import 'package:logger/logger.dart';
 import 'package:uuid/uuid.dart';
@@ -163,9 +162,17 @@ class WeldWorkflowEngine {
     for (final phase in phases) {
       final pressure = phase.nominalPressureBar ?? 0.0;
       if (phase.nominalDuration <= 0) continue;
-      points.add(WeldTracePoint(timeSeconds: t, pressureBar: pressure));
+      points.add(WeldTracePoint(
+        timeSeconds: t,
+        pressureBar: pressure,
+        phase: phase.phase.displayName,
+      ));
       t += phase.nominalDuration;
-      points.add(WeldTracePoint(timeSeconds: t, pressureBar: pressure));
+      points.add(WeldTracePoint(
+        timeSeconds: t,
+        pressureBar: pressure,
+        phase: phase.phase.displayName,
+      ));
     }
     return points;
   }

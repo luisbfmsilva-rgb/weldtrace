@@ -420,52 +420,6 @@ class WeldReportGenerator {
   static String computePdfHash(Uint8List pdfBytes) =>
       sha256.convert(pdfBytes).toString();
 
-  // ── Status banner ────────────────────────────────────────────────────────
-
-  static pw.Widget _statusBanner(String status, String reason) {
-    const cancelColour   = PdfColor.fromInt(0xFFB71C1C);   // red-dark
-    const warningColour  = PdfColor.fromInt(0xFFE65100);   // deep-orange
-
-    final isCancel = status == 'cancelled';
-    final colour   = isCancel ? cancelColour : warningColour;
-
-    final title = isCancel
-        ? 'WELD CANCELLED'
-        : 'COOLING INCOMPLETE';
-    final body = isCancel
-        ? (reason.isNotEmpty ? reason : 'No reason recorded')
-        : 'The operator ended the cooling phase before the nominal time elapsed. '
-          'The joint must be assessed before entering service.';
-
-    return pw.Container(
-      padding: const pw.EdgeInsets.all(12),
-      decoration: pw.BoxDecoration(
-        color: PdfColor.fromInt(colour.toInt() & 0x22FFFFFF | 0x22000000),
-        border: pw.Border.all(color: colour, width: 2),
-        borderRadius: const pw.BorderRadius.all(pw.Radius.circular(6)),
-      ),
-      child: pw.Column(
-        crossAxisAlignment: pw.CrossAxisAlignment.start,
-        children: [
-          pw.Row(
-            children: [
-              pw.Text(
-                '[!]  $title',
-                style: pw.TextStyle(
-                  color: colour,
-                  fontWeight: pw.FontWeight.bold,
-                  fontSize: 13,
-                ),
-              ),
-            ],
-          ),
-          pw.SizedBox(height: 4),
-          pw.Text(body, style: pw.TextStyle(color: colour, fontSize: 10)),
-        ],
-      ),
-    );
-  }
-
   // ── Assessment block ─────────────────────────────────────────────────────
 
   static pw.Widget _assessmentBlock(String status, String cancelReason) {
