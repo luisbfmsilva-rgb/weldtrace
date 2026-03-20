@@ -3,12 +3,13 @@
 
 enum WeldingPhase {
   // ── Butt-fusion phases ──────────────────────────────────────────────────
-  heatingUp(order: 1, displayName: 'Formação do Cordão', unit: 's'),
-  heating(order: 2, displayName: 'Aquecimento', unit: 's'),
-  changeover(order: 3, displayName: 'Troca de Ferramenta', unit: 's'),
-  buildup(order: 4, displayName: 'Pressurização', unit: 's'),
-  fusion(order: 5, displayName: 'Fusão', unit: 's'),
-  cooling(order: 6, displayName: 'Resfriamento', unit: 's'),
+  beadUpAdjust(order: 0, displayName: 'Bead-Up Pressure Adjustment', unit: 's'),
+  heatingUp(order: 1, displayName: 'Bead Up', unit: 's'),
+  heating(order: 2, displayName: 'Heating', unit: 's'),
+  changeover(order: 3, displayName: 'Changeover (t3)', unit: 's'),
+  buildup(order: 4, displayName: 'Build-Up (t4)', unit: 's'),
+  fusion(order: 5, displayName: 'Fusion', unit: 's'),
+  cooling(order: 6, displayName: 'Cooling', unit: 's'),
 
   // ── Electrofusion phases ────────────────────────────────────────────────
   efClamping(order: 1, displayName: 'Fixação', unit: 's'),

@@ -1,8 +1,11 @@
 import 'dart:async';
 import 'dart:convert';
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:geolocator/geolocator.dart';
 import 'package:go_router/go_router.dart';
+import 'package:wakelock_plus/wakelock_plus.dart';
 
 import '../../di/providers.dart';
 import '../../services/sensor/sensor_service.dart';
@@ -12,7 +15,7 @@ import '../../workflow/welding_phase.dart';
 import 'nominal_curve_builder.dart';
 import 'pressure_time_graph.dart';
 
-/// Arguments passed via GoRouter [extra] from WeldSetupScreen.
+/// Arguments passed via GoRouter [extra] from WeldSetupScreen / PreparationScreen.
 class WeldSessionArgs {
   const WeldSessionArgs({
     required this.weldId,
@@ -36,6 +39,10 @@ class WeldSessionArgs {
     this.coolingTimeSec           = 0.0,
     this.beadHeightMm             = 0.0,
     this.jointId                  = '',
+    // ── Preparation-phase data ────────────────────────────────────────────
+    this.dragPressureBar          = 0.0,
+    this.wallThicknessMm          = 0.0,
+    this.outerDiameterMm          = 0.0,
   });
 
   final String weldId;
@@ -59,6 +66,44 @@ class WeldSessionArgs {
   final double coolingTimeSec;
   final double beadHeightMm;
   final String jointId;
+
+  /// Drag pressure measured live during the preparation phase [bar].
+  final double dragPressureBar;
+
+  /// Pipe wall thickness in mm (numeric; used for bead-height / misalignment calcs).
+  final double wallThicknessMm;
+
+  /// Pipe outer diameter in mm (numeric; used for gap-width table in preparation).
+  final double outerDiameterMm;
+
+  WeldSessionArgs copyWith({
+    double? dragPressureBar,
+  }) =>
+      WeldSessionArgs(
+        weldId:                  weldId,
+        phases:                  phases,
+        projectName:             projectName,
+        machineId:               machineId,
+        machineName:             machineName,
+        machineModel:            machineModel,
+        machineSerialNumber:     machineSerialNumber,
+        hydraulicCylinderAreaMm2: hydraulicCylinderAreaMm2,
+        operatorName:            operatorName,
+        operatorId:              operatorId,
+        pipeMaterial:            pipeMaterial,
+        pipeDiameter:            pipeDiameter,
+        pipeSdr:                 pipeSdr,
+        wallThicknessStr:        wallThicknessStr,
+        standardUsed:            standardUsed,
+        fusionPressureBar:       fusionPressureBar,
+        heatingTimeSec:          heatingTimeSec,
+        coolingTimeSec:          coolingTimeSec,
+        beadHeightMm:            beadHeightMm,
+        jointId:                 jointId,
+        dragPressureBar:         dragPressureBar ?? this.dragPressureBar,
+        wallThicknessMm:         wallThicknessMm,
+        outerDiameterMm:         outerDiameterMm,
+      );
 }
 
 /// Live welding session screen.
@@ -106,18 +151,32 @@ class _WeldingSessionScreenState extends ConsumerState<WeldingSessionScreen> {
   late NominalCurveData _nominalData;
   final List<StreamSubscription> _subs = [];
 
-  // ── Bead formation (heatingUp phase) ──────────────────────────────────────
-  bool _beadConfirmed = false;
-  final TextEditingController _beadHeightController = TextEditingController();
+  // ── beadUpAdjust phase ────────────────────────────────────────────────────
+  // (operator manually confirms pressure adjustment before bead-up)
 
-  // ── Pressure reduction countdown (after bead confirmation) ────────────────
-  bool _inPressureReduction = false;
-  int _pressureReductionElapsed = 0;
-  int _pressureReductionTotal = 0;
-  Timer? _pressureReductionTimer;
+  // ── heatingUp (Bead Up) phase ─────────────────────────────────────────────
+  int _beadUpViolationSeconds = 0; // consecutive seconds of pressure violation
 
-  // ── Cooling early finish ───────────────────────────────────────────────────
+  // ── changeover (t3) / buildup (t4) ───────────────────────────────────────
+  bool _changeoverT4Started = false;    // true once pressure starts rising
+  double? _changeoverMinPressure;       // lowest pressure seen during t3
+  int _t4ElapsedSeconds = 0;
+  Timer? _t4Timer;
+
+  // ── Guards against re-entrancy during auto-advance ────────────────────────
+  bool _isAutoAdvancing = false;
+
+  // ── Cooling pressure monitoring ───────────────────────────────────────────
   bool _coolingIncomplete = false;
+  int _coolingViolationSeconds = 0;
+  String _coolingWarningMessage = '';
+
+  // ── GPS coordinates (captured on weld complete) ───────────────────────────
+  double? _gpsLat;
+  double? _gpsLng;
+
+  // ── Wakelock ──────────────────────────────────────────────────────────────
+  bool _wakelockEnabled = false;
 
   // ── Resume support ─────────────────────────────────────────────────────────
   bool _sessionMetaSaved = false;
@@ -223,16 +282,25 @@ class _WeldingSessionScreenState extends ConsumerState<WeldingSessionScreen> {
   void _listenToSensor() {
     final sensor = ref.read(sensorServiceProvider);
     _subs.add(sensor.readingStream.listen((r) {
-      if (mounted) {
-        setState(() {
-          _latestPressure = r.pressureBar;
-          _latestTemperature = r.temperatureCelsius;
-          if (_weldStartedAt != null &&
-              _workflowState != WeldWorkflowState.completed &&
-              _workflowState != WeldWorkflowState.cancelled) {
-            _sensorReadings.add(r);
-          }
-        });
+      if (!mounted) return;
+      setState(() {
+        _latestPressure    = r.pressureBar;
+        _latestTemperature = r.temperatureCelsius;
+        if (_weldStartedAt != null &&
+            _workflowState != WeldWorkflowState.completed &&
+            _workflowState != WeldWorkflowState.cancelled) {
+          _sensorReadings.add(r);
+        }
+      });
+
+      // Changeover: detect pressure rise for t4
+      final currentPhase = _currentPhaseIndex < widget.phases.length
+          ? widget.phases[_currentPhaseIndex]
+          : null;
+      if (currentPhase?.phase == WeldingPhase.changeover &&
+          (_workflowState == WeldWorkflowState.phaseActive ||
+           _workflowState == WeldWorkflowState.parameterViolation)) {
+        _onChangeoverPressureUpdate(r.pressureBar);
       }
     }));
     _subs.add(sensor.connectionStateStream.listen((s) {
@@ -244,9 +312,9 @@ class _WeldingSessionScreenState extends ConsumerState<WeldingSessionScreen> {
   void dispose() {
     for (final s in _subs) s.cancel();
     _phaseTimer?.cancel();
-    _pressureReductionTimer?.cancel();
-    _beadHeightController.dispose();
+    _t4Timer?.cancel();
     _engine?.dispose();
+    _disableWakelock();
     super.dispose();
   }
 
@@ -257,111 +325,245 @@ class _WeldingSessionScreenState extends ConsumerState<WeldingSessionScreen> {
     if (!mounted) return;
     final now = DateTime.now();
     setState(() {
-      // _currentPhaseIndex is already correct:
-      // • First call (idle → phase 0): stays at 0.
-      // • After _completePhase(): already incremented to the next index.
       _phaseElapsedSeconds = 0;
       _violations.clear();
-      _beadConfirmed = false;
-      _inPressureReduction = false;
       _weldStartedAt ??= now;
+      // reset phase-specific state
+      _beadUpViolationSeconds   = 0;
+      _changeoverT4Started      = false;
+      _changeoverMinPressure    = null;
+      _t4ElapsedSeconds         = 0;
+      _coolingViolationSeconds  = 0;
+      _coolingWarningMessage    = '';
+      _isAutoAdvancing          = false;
       _nominalData = NominalCurveBuilder.updateActivePhase(
         _nominalData,
         widget.phases,
         _currentPhaseIndex,
       );
     });
+    _t4Timer?.cancel();
     _startPhaseTimer();
+    _enableWakelock();
   }
 
   Future<void> _completePhase() async {
     _phaseTimer?.cancel();
-    _pressureReductionTimer?.cancel();
+    _t4Timer?.cancel();
+    final completedPhase = _currentPhaseIndex < widget.phases.length
+        ? widget.phases[_currentPhaseIndex].phase
+        : null;
+
     await _engine?.completeCurrentPhase();
     if (!mounted) return;
     setState(() {
       _currentPhaseIndex++;
-      _phaseElapsedSeconds = 0;
-      _inPressureReduction = false;
+      _phaseElapsedSeconds  = 0;
+      _coolingViolationSeconds = 0;
+      _coolingWarningMessage   = '';
       _nominalData = NominalCurveBuilder.updateActivePhase(
         _nominalData,
         widget.phases,
         _currentPhaseIndex,
       );
     });
+
+    // Auto-advance: heating → changeover (t3 starts immediately)
+    if (completedPhase == WeldingPhase.heating) {
+      await _startNextPhase();
+    }
+
+    // Auto-skip: fusion (zero-duration) → cooling
+    if (completedPhase == WeldingPhase.buildup) {
+      // advance to fusion
+      await _startNextPhase();
+      // immediately complete fusion and start cooling
+      if (mounted) {
+        await Future.delayed(const Duration(milliseconds: 100));
+        if (mounted) await _completePhase();
+        if (mounted) await _startNextPhase(); // start cooling
+      }
+    }
   }
 
   Future<void> _finishWeld() async {
     _phaseTimer?.cancel();
-    await _engine?.completeWeld(coolingIncomplete: _coolingIncomplete);
+    _t4Timer?.cancel();
+    await _captureGps();
+    _disableWakelock();
+    await _engine?.completeWeld(
+      coolingIncomplete: _coolingIncomplete,
+      gpsLat: _gpsLat,
+      gpsLng: _gpsLng,
+    );
   }
 
   Future<void> _cancelWeld(String reason) async {
     _phaseTimer?.cancel();
-    _pressureReductionTimer?.cancel();
+    _t4Timer?.cancel();
+    _disableWakelock();
     await _engine?.cancel(reason);
   }
 
   void _startPhaseTimer() {
     _phaseTimer?.cancel();
     _phaseTimer = Timer.periodic(const Duration(seconds: 1), (_) {
-      if (mounted) setState(() => _phaseElapsedSeconds++);
-    });
-  }
+      if (!mounted) return;
+      setState(() => _phaseElapsedSeconds++);
 
-  // ── Bead formation ─────────────────────────────────────────────────────────
+      final currentPhase = _currentPhaseIndex < widget.phases.length
+          ? widget.phases[_currentPhaseIndex]
+          : null;
+      if (currentPhase == null) return;
 
-  Future<void> _confirmBead() async {
-    final elapsed = _phaseElapsedSeconds;
-    final height  = double.tryParse(
-      _beadHeightController.text.replaceAll(',', '.'),
-    );
-    try {
-      final db = ref.read(databaseProvider);
-      await db.weldsDao.saveBeadData(
-        id:                  widget.args.weldId,
-        beadFormationSeconds: elapsed,
-        beadHeightMm:        height,
-      );
-    } catch (_) {}
+      // heatingUp (Bead Up): auto-cancel if pressure violates >3s
+      if (currentPhase.phase == WeldingPhase.heatingUp) {
+        final p = _latestPressure;
+        final nom = currentPhase.nominalPressureBar;
+        if (p != null && nom != null) {
+          final inRange = (p - nom).abs() / nom <= 0.10;
+          if (!inRange) {
+            setState(() => _beadUpViolationSeconds++);
+            if (_beadUpViolationSeconds >= 3) {
+              _.cancel();
+              _cancelWeld('Pressure violation >3 s during Bead Up phase');
+            }
+          } else {
+            setState(() => _beadUpViolationSeconds = 0);
+          }
+        }
+      }
 
-    if (!mounted) return;
-    setState(() => _beadConfirmed = true);
-    _startPressureReductionCountdown();
-  }
+      // heating: beep last 10 s; auto-cancel on maxDuration exceeded
+      if (currentPhase.phase == WeldingPhase.heating) {
+        final nom = currentPhase.nominalDuration.toInt();
+        final max = currentPhase.maxDuration.toInt();
+        final elapsed = _phaseElapsedSeconds;
+        if (nom > 10 && elapsed == nom - 10) {
+          SystemSound.play(SystemSoundType.click); // last 10-second warning
+        }
+        if (elapsed >= max && !_isAutoAdvancing) {
+          setState(() => _isAutoAdvancing = true);
+          _.cancel();
+          _cancelWeld('Excessive heating time — weld cycle aborted');
+        }
+      }
 
-  // ── Pressure reduction countdown ───────────────────────────────────────────
+      // t4 (buildup): auto-advance when pressure reaches cooling target
+      if (currentPhase.phase == WeldingPhase.buildup && !_isAutoAdvancing) {
+        final p = _latestPressure;
+        final target = currentPhase.nominalPressureBar;
+        if (p != null && target != null && p >= target * 0.95) {
+          setState(() => _isAutoAdvancing = true);
+          _.cancel();
+          _completePhase(); // auto: buildup → fusion → cooling
+        }
+      }
 
-  void _startPressureReductionCountdown() {
-    final changeover = widget.phases.firstWhere(
-      (p) => p.phase == WeldingPhase.changeover,
-      orElse: () => PhaseParameters(
-        phase:            WeldingPhase.changeover,
-        nominalDuration:  30,
-        minDuration:      0,
-        maxDuration:      60,
-      ),
-    );
-    final total = changeover.nominalDuration.toInt().clamp(5, 300);
-    setState(() {
-      _pressureReductionElapsed = 0;
-      _pressureReductionTotal   = total;
-      _inPressureReduction      = true;
-    });
-
-    _pressureReductionTimer?.cancel();
-    _pressureReductionTimer = Timer.periodic(const Duration(seconds: 1), (t) {
-      if (!mounted) { t.cancel(); return; }
-      setState(() => _pressureReductionElapsed++);
-
-      if (_pressureReductionElapsed >= _pressureReductionTotal) {
-        t.cancel();
-        if (!mounted) return;
-        // Timeout → auto-advance (completePhase advances heatingUp → heating)
-        setState(() => _inPressureReduction = false);
-        _completePhase();
+      // cooling: ±8 % warn; ±10 % >2s cancel
+      if (currentPhase.phase == WeldingPhase.cooling) {
+        final p = _latestPressure;
+        final nom = currentPhase.nominalPressureBar;
+        if (p != null && nom != null) {
+          final dev = (p - nom).abs() / nom;
+          if (dev > 0.10) {
+            setState(() {
+              _coolingViolationSeconds++;
+              _coolingWarningMessage =
+                  'Pressure deviation ${(dev * 100).toStringAsFixed(1)} %'
+                  ' — will cancel in ${(2 - _coolingViolationSeconds).clamp(0, 2)} s';
+            });
+            if (_coolingViolationSeconds >= 2 && !_isAutoAdvancing) {
+              setState(() => _isAutoAdvancing = true);
+              _.cancel();
+              _cancelWeld(
+                  'Cooling pressure deviation >10 % for >2 s — weld cancelled');
+            }
+          } else {
+            setState(() {
+              _coolingViolationSeconds = 0;
+              _coolingWarningMessage =
+                  dev > 0.08 ? 'Pressure deviation ${(dev * 100).toStringAsFixed(1)} %' : '';
+            });
+            if (dev > 0.08) SystemSound.play(SystemSoundType.click);
+          }
+        }
       }
     });
+  }
+
+  // ── Wakelock ────────────────────────────────────────────────────────────────
+
+  Future<void> _enableWakelock() async {
+    if (_wakelockEnabled) return;
+    try {
+      await WakelockPlus.enable();
+      if (mounted) setState(() => _wakelockEnabled = true);
+    } catch (_) {}
+  }
+
+  Future<void> _disableWakelock() async {
+    if (!_wakelockEnabled) return;
+    try {
+      await WakelockPlus.disable();
+      if (mounted) setState(() => _wakelockEnabled = false);
+    } catch (_) {}
+  }
+
+  // ── GPS capture ─────────────────────────────────────────────────────────────
+
+  Future<void> _captureGps() async {
+    try {
+      final perm = await Geolocator.checkPermission();
+      LocationPermission eff = perm;
+      if (perm == LocationPermission.denied) {
+        eff = await Geolocator.requestPermission();
+      }
+      if (eff == LocationPermission.denied ||
+          eff == LocationPermission.deniedForever) return;
+      final pos = await Geolocator.getCurrentPosition(
+        locationSettings: const LocationSettings(
+          accuracy: LocationAccuracy.high,
+          timeLimit: Duration(seconds: 10),
+        ),
+      );
+      if (mounted) {
+        setState(() {
+          _gpsLat = pos.latitude;
+          _gpsLng = pos.longitude;
+        });
+      }
+    } catch (_) {}
+  }
+
+  // ── Changeover t4 detection ─────────────────────────────────────────────────
+
+  void _onChangeoverPressureUpdate(double pressureBar) {
+    if (_changeoverT4Started || _isAutoAdvancing) return;
+
+    // Track the minimum pressure seen (pipe gap after plate removal)
+    if (_changeoverMinPressure == null ||
+        pressureBar < _changeoverMinPressure!) {
+      setState(() => _changeoverMinPressure = pressureBar);
+    }
+
+    // Pressure rising ≥ 2 bar above minimum → machine closing (t4)
+    final minP = _changeoverMinPressure ?? pressureBar;
+    if (pressureBar >= minP + 2.0 && !_isAutoAdvancing) {
+      setState(() {
+        _changeoverT4Started = true;
+        _isAutoAdvancing = true;
+      });
+      _t4Timer?.cancel();
+      _t4ElapsedSeconds = 0;
+      _t4Timer = Timer.periodic(const Duration(seconds: 1), (t) {
+        if (!mounted) { t.cancel(); return; }
+        setState(() => _t4ElapsedSeconds++);
+      });
+      // Auto-complete changeover → buildup
+      _isAutoAdvancing = false;
+      _completePhase();
+    }
   }
 
   // ── Cooling early-finish dialog ────────────────────────────────────────────
@@ -507,16 +709,39 @@ class _WeldingSessionScreenState extends ConsumerState<WeldingSessionScreen> {
       body: Column(
         children: [
 
-          // ── Pressure reduction overlay ─────────────────────────────────────
-          if (_inPressureReduction) _PressureReductionBanner(
-            elapsed: _pressureReductionElapsed,
-            total:   _pressureReductionTotal,
-            onSkip:  () {
-              _pressureReductionTimer?.cancel();
-              setState(() => _inPressureReduction = false);
-              _completePhase();
-            },
-          ),
+          // ── Changeover banner (t3 / t4) ───────────────────────────────────
+          if (_workflowState == WeldWorkflowState.phaseActive &&
+              _currentPhaseIndex < widget.phases.length &&
+              widget.phases[_currentPhaseIndex].phase ==
+                  WeldingPhase.changeover)
+            _ChangeoverBanner(
+              t3Seconds: _phaseElapsedSeconds,
+              t4Started: _changeoverT4Started,
+              t4Seconds: _t4ElapsedSeconds,
+            ),
+
+          // ── Cooling pressure warning ───────────────────────────────────────
+          if (_coolingWarningMessage.isNotEmpty)
+            Container(
+              color: _coolingViolationSeconds >= 1
+                  ? const Color(0xFFB71C1C)
+                  : const Color(0xFFF57C00),
+              padding:
+                  const EdgeInsets.symmetric(horizontal: 16, vertical: 6),
+              child: Row(children: [
+                const Icon(Icons.warning_amber, color: Colors.white, size: 16),
+                const SizedBox(width: 8),
+                Expanded(
+                  child: Text(
+                    _coolingWarningMessage,
+                    style: const TextStyle(
+                        color: Colors.white,
+                        fontSize: 12,
+                        fontWeight: FontWeight.w600),
+                  ),
+                ),
+              ]),
+            ),
 
           // ── Cooling incomplete warning ─────────────────────────────────────
           if (_coolingIncomplete)
@@ -644,15 +869,14 @@ class _WeldingSessionScreenState extends ConsumerState<WeldingSessionScreen> {
   Widget _buildActionButtons(BuildContext context, PhaseParameters? currentPhase) {
     final theme = Theme.of(context);
 
-    final bool isHeatingUpPhase = currentPhase?.phase == WeldingPhase.heatingUp;
-    final bool isCoolingPhase   = currentPhase?.phase == WeldingPhase.cooling;
+    final WeldingPhase? phase = currentPhase?.phase;
 
     switch (_workflowState) {
       // ── Idle — not yet started ─────────────────────────────────────────────
       case WeldWorkflowState.idle:
         return ElevatedButton.icon(
           icon: const Icon(Icons.play_arrow),
-          label: Text('Iniciar — ${widget.phases.first.phase.displayName}'),
+          label: Text('Start — ${widget.phases.first.phase.displayName}'),
           style: ElevatedButton.styleFrom(minimumSize: const Size(double.infinity, 52)),
           onPressed: _startNextPhase,
         );
@@ -660,37 +884,34 @@ class _WeldingSessionScreenState extends ConsumerState<WeldingSessionScreen> {
       // ── Active / violation ─────────────────────────────────────────────────
       case WeldWorkflowState.phaseActive:
       case WeldWorkflowState.parameterViolation:
-        // ── heatingUp: bead formation UI ──────────────────────────────────
-        if (isHeatingUpPhase && !_beadConfirmed && !_inPressureReduction) {
+
+        // ── beadUpAdjust: pressure adjustment before bead-up ───────────────
+        if (phase == WeldingPhase.beadUpAdjust) {
+          final nom = currentPhase?.nominalPressureBar ?? widget.args.fusionPressureBar;
+          final drag = widget.args.dragPressureBar;
+          final targetMachine = nom + drag;
           return Column(
             crossAxisAlignment: CrossAxisAlignment.stretch,
             children: [
-              // Bead height input
-              TextField(
-                controller: _beadHeightController,
-                keyboardType:
-                    const TextInputType.numberWithOptions(decimal: true),
-                decoration: const InputDecoration(
-                  labelText: 'Altura do cordão (mm) — opcional',
-                  hintText: 'ex.: 2.0',
-                  prefixIcon: Icon(Icons.straighten),
-                  border: OutlineInputBorder(),
-                ),
+              _TargetCard(
+                label: 'Target Machine Pressure',
+                value: '${targetMachine.toStringAsFixed(1)} bar',
+                subtitle: 'Gauge ${nom.toStringAsFixed(1)} bar + drag ${drag.toStringAsFixed(1)} bar',
               ),
               const SizedBox(height: 12),
               ElevatedButton.icon(
                 icon: const Icon(Icons.check_circle_outline),
-                label: const Text('Cordão formado ✓'),
+                label: const Text('Pressure Set — Done!'),
                 style: ElevatedButton.styleFrom(
-                  backgroundColor: const Color(0xFF2E7D32),
+                  backgroundColor: const Color(0xFF1565C0),
                   minimumSize: const Size(double.infinity, 52),
                 ),
-                onPressed: _confirmBead,
+                onPressed: _completePhase,
               ),
               const SizedBox(height: 10),
               OutlinedButton.icon(
                 icon: const Icon(Icons.cancel_outlined),
-                label: const Text('Cancelar Solda'),
+                label: const Text('Cancel Weld'),
                 style: OutlinedButton.styleFrom(
                   foregroundColor: theme.colorScheme.error,
                   side: BorderSide(color: theme.colorScheme.error),
@@ -702,18 +923,227 @@ class _WeldingSessionScreenState extends ConsumerState<WeldingSessionScreen> {
           );
         }
 
-        // ── cooling: allow early finish with warning ────────────────────────
-        if (isCoolingPhase) {
-          final nominal  = currentPhase?.nominalDuration ?? 0;
-          final isOnTime = _phaseElapsedSeconds >= nominal.toInt();
+        // ── heatingUp (Bead Up): form bead; auto-cancel >3s violation ─────
+        if (phase == WeldingPhase.heatingUp) {
+          final nom = currentPhase?.nominalPressureBar ?? 0.0;
+          final drag = widget.args.dragPressureBar;
+          final targetMachine = nom + drag;
+          final beadTarget = widget.args.beadHeightMm > 0
+              ? widget.args.beadHeightMm
+              : (widget.args.wallThicknessMm * 0.10 / 0.5).ceil() * 0.5;
+          final mm = _beadUpViolationSeconds > 0;
           return Column(
             crossAxisAlignment: CrossAxisAlignment.stretch,
             children: [
+              _TargetCard(
+                label: 'Target Machine Pressure',
+                value: '${targetMachine.toStringAsFixed(1)} bar',
+                subtitle: 'Min bead height: ${beadTarget.toStringAsFixed(1)} mm',
+              ),
+              if (mm) ...[
+                const SizedBox(height: 8),
+                Container(
+                  padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+                  decoration: BoxDecoration(
+                    color: Colors.red.shade50,
+                    borderRadius: BorderRadius.circular(8),
+                    border: Border.all(color: Colors.red),
+                  ),
+                  child: Text(
+                    'Pressure deviation! Auto-cancel in ${(3 - _beadUpViolationSeconds).clamp(0, 3)} s',
+                    style: const TextStyle(color: Colors.red, fontWeight: FontWeight.bold),
+                  ),
+                ),
+              ],
+              const SizedBox(height: 12),
+              ElevatedButton.icon(
+                icon: const Icon(Icons.check_circle_outline),
+                label: const Text('Bead Formed — Done!'),
+                style: ElevatedButton.styleFrom(
+                  backgroundColor: const Color(0xFF2E7D32),
+                  minimumSize: const Size(double.infinity, 52),
+                ),
+                onPressed: _completePhase,
+              ),
+              const SizedBox(height: 10),
+              OutlinedButton.icon(
+                icon: const Icon(Icons.cancel_outlined),
+                label: const Text('Cancel Weld'),
+                style: OutlinedButton.styleFrom(
+                  foregroundColor: theme.colorScheme.error,
+                  side: BorderSide(color: theme.colorScheme.error),
+                  minimumSize: const Size(double.infinity, 48),
+                ),
+                onPressed: _showCancelDialog,
+              ),
+            ],
+          );
+        }
+
+        // ── heating: countdown, max pressure, last-10s warning, Done! ─────
+        if (phase == WeldingPhase.heating) {
+          final nomSec    = (currentPhase?.nominalDuration ?? 0).toInt();
+          final minSec    = (currentPhase?.minDuration    ?? 0).toInt();
+          final maxPbar   = currentPhase?.maxPressureBar ?? 0.0;
+          final drag      = widget.args.dragPressureBar;
+          final remaining = (nomSec - _phaseElapsedSeconds).clamp(0, nomSec);
+          final fmtR      = '${(remaining ~/ 60).toString().padLeft(2, '0')}:'
+                            '${(remaining % 60).toString().padLeft(2, '0')}';
+          final afterMin  = _phaseElapsedSeconds >= minSec;
+          final lastTen   = remaining <= 10 && remaining > 0;
+          return Column(
+            crossAxisAlignment: CrossAxisAlignment.stretch,
+            children: [
+              Row(
+                children: [
+                  Expanded(
+                    child: _TargetCard(
+                      label: 'Remaining',
+                      value: fmtR,
+                      subtitle: 'Min: ${minSec}s — heating time',
+                      highlight: lastTen,
+                    ),
+                  ),
+                  const SizedBox(width: 12),
+                  Expanded(
+                    child: _TargetCard(
+                      label: 'Max Machine Pressure',
+                      value: '${(maxPbar + drag).toStringAsFixed(1)} bar',
+                      subtitle: 'p2 ${maxPbar.toStringAsFixed(1)} + drag ${drag.toStringAsFixed(1)}',
+                    ),
+                  ),
+                ],
+              ),
+              if (lastTen) ...[
+                const SizedBox(height: 8),
+                Container(
+                  padding: const EdgeInsets.all(10),
+                  decoration: BoxDecoration(
+                    color: Colors.orange.shade50,
+                    borderRadius: BorderRadius.circular(8),
+                    border: Border.all(color: Colors.orange),
+                  ),
+                  child: const Text(
+                    '⚡ Last 10 seconds of heating — prepare to remove plate!',
+                    style: TextStyle(color: Colors.orange, fontWeight: FontWeight.bold),
+                    textAlign: TextAlign.center,
+                  ),
+                ),
+              ],
+              const SizedBox(height: 12),
+              ElevatedButton.icon(
+                icon: const Icon(Icons.remove_circle_outline),
+                label: const Text('Remove Heater Plate — Done!'),
+                style: ElevatedButton.styleFrom(
+                  backgroundColor: afterMin ? const Color(0xFF2E7D32) : Colors.grey,
+                  minimumSize: const Size(double.infinity, 52),
+                ),
+                onPressed: afterMin ? _completePhase : null,
+              ),
+              if (!afterMin) ...[
+                const SizedBox(height: 6),
+                Text(
+                  'Button unlocks after ${minSec}s of heating',
+                  style: TextStyle(fontSize: 12, color: Colors.grey.shade600),
+                  textAlign: TextAlign.center,
+                ),
+              ],
+              const SizedBox(height: 10),
+              OutlinedButton.icon(
+                icon: const Icon(Icons.cancel_outlined),
+                label: const Text('Cancel Weld'),
+                style: OutlinedButton.styleFrom(
+                  foregroundColor: theme.colorScheme.error,
+                  side: BorderSide(color: theme.colorScheme.error),
+                  minimumSize: const Size(double.infinity, 48),
+                ),
+                onPressed: _showCancelDialog,
+              ),
+            ],
+          );
+        }
+
+        // ── changeover (t3): waiting for pressure to rise (banner handles) ─
+        if (phase == WeldingPhase.changeover) {
+          return Column(
+            crossAxisAlignment: CrossAxisAlignment.stretch,
+            children: [
+              Container(
+                padding: const EdgeInsets.all(14),
+                decoration: BoxDecoration(
+                  color: Colors.orange.shade50,
+                  borderRadius: BorderRadius.circular(10),
+                  border: Border.all(color: Colors.orange.shade300),
+                ),
+                child: const Text(
+                  'Remove the heater plate and close the machine.\n'
+                  'Changeover (t4) starts automatically when pressure rises.',
+                  style: TextStyle(fontSize: 13),
+                  textAlign: TextAlign.center,
+                ),
+              ),
+              const SizedBox(height: 10),
+              OutlinedButton.icon(
+                icon: const Icon(Icons.cancel_outlined),
+                label: const Text('Cancel Weld'),
+                style: OutlinedButton.styleFrom(
+                  foregroundColor: theme.colorScheme.error,
+                  side: BorderSide(color: theme.colorScheme.error),
+                  minimumSize: const Size(double.infinity, 48),
+                ),
+                onPressed: _showCancelDialog,
+              ),
+            ],
+          );
+        }
+
+        // ── buildup (t4): auto-advancing to cooling ────────────────────────
+        if (phase == WeldingPhase.buildup) {
+          final target = currentPhase?.nominalPressureBar ?? 0.0;
+          return Column(
+            crossAxisAlignment: CrossAxisAlignment.stretch,
+            children: [
+              _TargetCard(
+                label: 'Auto-advancing to Cooling when…',
+                value: 'P ≥ ${target.toStringAsFixed(1)} bar',
+                subtitle: 'Machine closing — maintain fusion pressure',
+              ),
+              const SizedBox(height: 10),
+              OutlinedButton.icon(
+                icon: const Icon(Icons.cancel_outlined),
+                label: const Text('Cancel Weld'),
+                style: OutlinedButton.styleFrom(
+                  foregroundColor: theme.colorScheme.error,
+                  side: BorderSide(color: theme.colorScheme.error),
+                  minimumSize: const Size(double.infinity, 48),
+                ),
+                onPressed: _showCancelDialog,
+              ),
+            ],
+          );
+        }
+
+        // ── cooling: countdown + early finish ─────────────────────────────
+        if (phase == WeldingPhase.cooling) {
+          final nomSec  = (currentPhase?.nominalDuration ?? 0).toInt();
+          final isOnTime = _phaseElapsedSeconds >= nomSec;
+          final remaining = (nomSec - _phaseElapsedSeconds).clamp(0, nomSec);
+          final fmtR   = '${(remaining ~/ 60).toString().padLeft(2, '0')}:'
+                         '${(remaining % 60).toString().padLeft(2, '0')}';
+          return Column(
+            crossAxisAlignment: CrossAxisAlignment.stretch,
+            children: [
+              _TargetCard(
+                label: isOnTime ? 'Cooling Complete' : 'Cooling Remaining',
+                value: isOnTime ? '✓' : fmtR,
+                subtitle: 'Keep pressure stable ± 8 % limit',
+              ),
+              const SizedBox(height: 12),
               ElevatedButton.icon(
                 icon: const Icon(Icons.ac_unit),
                 label: Text(isOnTime
-                    ? 'Concluir Resfriamento'
-                    : 'Encerrar Resfriamento Antes do Prazo'),
+                    ? 'Complete Cooling'
+                    : 'End Cooling Early'),
                 style: ElevatedButton.styleFrom(
                   backgroundColor:
                       isOnTime ? const Color(0xFF2E7D32) : Colors.orange,
@@ -729,7 +1159,7 @@ class _WeldingSessionScreenState extends ConsumerState<WeldingSessionScreen> {
               const SizedBox(height: 10),
               OutlinedButton.icon(
                 icon: const Icon(Icons.cancel_outlined),
-                label: const Text('Cancelar Solda'),
+                label: const Text('Cancel Weld'),
                 style: OutlinedButton.styleFrom(
                   foregroundColor: theme.colorScheme.error,
                   side: BorderSide(color: theme.colorScheme.error),
@@ -741,7 +1171,7 @@ class _WeldingSessionScreenState extends ConsumerState<WeldingSessionScreen> {
           );
         }
 
-        // ── normal phase ───────────────────────────────────────────────────
+        // ── generic fallback ───────────────────────────────────────────────
         {
           final nominalDuration = currentPhase?.nominalDuration ?? 0;
           final phaseComplete = nominalDuration > 0 &&
@@ -753,8 +1183,8 @@ class _WeldingSessionScreenState extends ConsumerState<WeldingSessionScreen> {
                 icon: const Icon(Icons.skip_next),
                 label: Text(
                   _currentPhaseIndex < widget.phases.length - 1
-                      ? 'Concluir — Próxima: ${widget.phases[_currentPhaseIndex + 1].phase.displayName}'
-                      : 'Concluir Fase Final',
+                      ? 'Complete — Next: ${widget.phases[_currentPhaseIndex + 1].phase.displayName}'
+                      : 'Complete Final Phase',
                 ),
                 style: ElevatedButton.styleFrom(
                   backgroundColor: phaseComplete
@@ -767,7 +1197,7 @@ class _WeldingSessionScreenState extends ConsumerState<WeldingSessionScreen> {
               const SizedBox(height: 10),
               OutlinedButton.icon(
                 icon: const Icon(Icons.cancel_outlined),
-                label: const Text('Cancelar Solda'),
+                label: const Text('Cancel Weld'),
                 style: OutlinedButton.styleFrom(
                   foregroundColor: theme.colorScheme.error,
                   side: BorderSide(color: theme.colorScheme.error),
@@ -779,14 +1209,14 @@ class _WeldingSessionScreenState extends ConsumerState<WeldingSessionScreen> {
           );
         }
 
-      // ── Phase complete — waiting to start next ─────────────────────────────
+      // ── Phase complete — auto-handled for heating/buildup ──────────────────
       case WeldWorkflowState.phaseComplete:
         final isLastPhase = _currentPhaseIndex >= widget.phases.length;
         return ElevatedButton.icon(
           icon: Icon(isLastPhase ? Icons.check_circle : Icons.navigate_next),
           label: Text(isLastPhase
-              ? 'Finalizar Solda'
-              : 'Iniciar ${widget.phases[_currentPhaseIndex].phase.displayName}'),
+              ? 'Finish Weld'
+              : 'Start ${widget.phases[_currentPhaseIndex].phase.displayName}'),
           style: ElevatedButton.styleFrom(minimumSize: const Size(double.infinity, 52)),
           onPressed: isLastPhase ? _finishWeld : _startNextPhase,
         );
@@ -804,26 +1234,38 @@ class _WeldingSessionScreenState extends ConsumerState<WeldingSessionScreen> {
                 border:
                     Border.all(color: const Color(0xFF2E7D32).withOpacity(0.4)),
               ),
-              child: const Row(
-                mainAxisAlignment: MainAxisAlignment.center,
+              child: Column(
                 children: [
-                  Icon(Icons.verified, color: Color(0xFF2E7D32), size: 28),
-                  SizedBox(width: 12),
-                  Text(
-                    'Solda concluída e certificada',
-                    style: TextStyle(
-                      color: Color(0xFF2E7D32),
-                      fontWeight: FontWeight.w700,
-                      fontSize: 17,
-                    ),
+                  const Row(
+                    mainAxisAlignment: MainAxisAlignment.center,
+                    children: [
+                      Icon(Icons.verified, color: Color(0xFF2E7D32), size: 28),
+                      SizedBox(width: 12),
+                      Text(
+                        'Weld Certified!',
+                        style: TextStyle(
+                          color: Color(0xFF2E7D32),
+                          fontWeight: FontWeight.w700,
+                          fontSize: 17,
+                        ),
+                      ),
+                    ],
                   ),
+                  if (_gpsLat != null && _gpsLng != null) ...[
+                    const SizedBox(height: 6),
+                    Text(
+                      'GPS: ${_gpsLat!.toStringAsFixed(6)}, ${_gpsLng!.toStringAsFixed(6)}',
+                      style: const TextStyle(
+                          color: Color(0xFF2E7D32), fontSize: 12),
+                    ),
+                  ],
                 ],
               ),
             ),
             const SizedBox(height: 16),
             ElevatedButton.icon(
               icon: const Icon(Icons.arrow_back),
-              label: const Text('Voltar aos Projectos'),
+              label: const Text('Back to Projects'),
               style: ElevatedButton.styleFrom(
                 backgroundColor: const Color(0xFF2E7D32),
                 minimumSize: const Size(double.infinity, 52),
@@ -849,7 +1291,7 @@ class _WeldingSessionScreenState extends ConsumerState<WeldingSessionScreen> {
                   Icon(Icons.cancel,
                       color: theme.colorScheme.onErrorContainer),
                   const SizedBox(width: 8),
-                  Text('Solda cancelada — registo guardado',
+                  Text('Weld cancelled — record saved',
                       style: TextStyle(
                           color: theme.colorScheme.onErrorContainer)),
                 ],
@@ -860,7 +1302,7 @@ class _WeldingSessionScreenState extends ConsumerState<WeldingSessionScreen> {
               style: ElevatedButton.styleFrom(
                   minimumSize: const Size(double.infinity, 52)),
               onPressed: () => context.go('/projects'),
-              child: const Text('Voltar aos Projectos'),
+              child: const Text('Back to Projects'),
             ),
           ],
         );
@@ -871,82 +1313,101 @@ class _WeldingSessionScreenState extends ConsumerState<WeldingSessionScreen> {
 
 // ── Sub-widgets ───────────────────────────────────────────────────────────────
 
-/// Overlay banner shown during pressure reduction countdown between heatingUp
-/// confirmation and the start of the changeover / heat-soak phase.
-class _PressureReductionBanner extends StatelessWidget {
-  const _PressureReductionBanner({
-    required this.elapsed,
-    required this.total,
-    required this.onSkip,
+/// Banner displayed at the top of the session screen during the changeover
+/// phase. Shows t3 (plate removal) and t4 (machine closing) timers.
+class _ChangeoverBanner extends StatelessWidget {
+  const _ChangeoverBanner({
+    required this.t3Seconds,
+    required this.t4Started,
+    required this.t4Seconds,
   });
 
-  final int elapsed;
-  final int total;
-  final VoidCallback onSkip;
+  final int t3Seconds;
+  final bool t4Started;
+  final int t4Seconds;
+
+  static String _fmt(int s) =>
+      '${(s ~/ 60).toString().padLeft(2, '0')}:'
+      '${(s % 60).toString().padLeft(2, '0')}';
 
   @override
   Widget build(BuildContext context) {
-    final remaining = (total - elapsed).clamp(0, total);
-    final progress  = total > 0 ? (elapsed / total).clamp(0.0, 1.0) : 0.0;
-    final fmtR      = '${(remaining ~/ 60).toString().padLeft(2, '0')}:'
-                      '${(remaining % 60).toString().padLeft(2, '0')}';
-
     return Container(
-      color: const Color(0xFFE65100),
+      color: t4Started ? const Color(0xFF1565C0) : const Color(0xFFE65100),
       padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
+      child: Row(
+        children: [
+          Icon(
+            t4Started ? Icons.settings : Icons.remove_circle_outline,
+            color: Colors.white,
+            size: 20,
+          ),
+          const SizedBox(width: 10),
+          Expanded(
+            child: Text(
+              t4Started
+                  ? 'Machine closing (t4) — Build-Up pressure'
+                  : 'Remove heater plate (t3)',
+              style: const TextStyle(
+                  color: Colors.white,
+                  fontWeight: FontWeight.w700,
+                  fontSize: 13),
+            ),
+          ),
+          Text(
+            t4Started ? 't4 ${_fmt(t4Seconds)}' : 't3 ${_fmt(t3Seconds)}',
+            style: const TextStyle(
+              color: Colors.white,
+              fontWeight: FontWeight.w700,
+              fontSize: 18,
+              fontFeatures: [FontFeature.tabularFigures()],
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+/// Small info card for displaying a target parameter with subtitle.
+class _TargetCard extends StatelessWidget {
+  const _TargetCard({
+    required this.label,
+    required this.value,
+    this.subtitle,
+    this.highlight = false,
+  });
+
+  final String label;
+  final String value;
+  final String? subtitle;
+  final bool highlight;
+
+  @override
+  Widget build(BuildContext context) {
+    final color = highlight ? Colors.orange : const Color(0xFF1565C0);
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
+      decoration: BoxDecoration(
+        color: color.withOpacity(0.07),
+        borderRadius: BorderRadius.circular(10),
+        border: Border.all(color: color.withOpacity(0.4)),
+      ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Row(
-            children: [
-              const Icon(Icons.compress, color: Colors.white, size: 18),
-              const SizedBox(width: 8),
-              const Expanded(
-                child: Text(
-                  'Reduzir pressão / Remover calefator',
-                  style: TextStyle(
-                    color: Colors.white,
-                    fontWeight: FontWeight.w700,
-                    fontSize: 14,
-                  ),
-                ),
-              ),
-              Text(
-                fmtR,
-                style: const TextStyle(
-                  color: Colors.white,
-                  fontWeight: FontWeight.w700,
-                  fontSize: 18,
-                  fontFeatures: [FontFeature.tabularFigures()],
-                ),
-              ),
-              const SizedBox(width: 8),
-              GestureDetector(
-                onTap: onSkip,
-                child: Container(
-                  padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
-                  decoration: BoxDecoration(
-                    border: Border.all(color: Colors.white70),
-                    borderRadius: BorderRadius.circular(6),
-                  ),
-                  child: const Text(
-                    'Avançar',
-                    style: TextStyle(color: Colors.white, fontSize: 12),
-                  ),
-                ),
-              ),
-            ],
-          ),
-          const SizedBox(height: 6),
-          ClipRRect(
-            borderRadius: BorderRadius.circular(3),
-            child: LinearProgressIndicator(
-              value: 1.0 - progress,
-              minHeight: 5,
-              backgroundColor: Colors.white24,
-              valueColor: const AlwaysStoppedAnimation(Colors.white),
-            ),
-          ),
+          Text(label,
+              style: TextStyle(
+                  fontSize: 11, fontWeight: FontWeight.w600, color: color)),
+          const SizedBox(height: 4),
+          Text(value,
+              style: TextStyle(
+                  fontSize: 22, fontWeight: FontWeight.bold, color: color,
+                  fontFeatures: const [FontFeature.tabularFigures()])),
+          if (subtitle != null)
+            Text(subtitle!,
+                style:
+                    TextStyle(fontSize: 11, color: Colors.grey.shade600)),
         ],
       ),
     );

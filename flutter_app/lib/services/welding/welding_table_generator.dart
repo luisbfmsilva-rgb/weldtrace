@@ -215,12 +215,25 @@ class WeldingTableGenerator {
     final buT = (record.buildupTimeS ?? 15).toDouble();
 
     return [
-      // 1. Heating-up (bead formation — MANUAL completion by operator)
+      // 0. Bead-up pressure adjustment — operator adjusts machine to target
+      //    before starting the bead.  No time limit; manual only.
+      PhaseParameters(
+        phase: WeldingPhase.beadUpAdjust,
+        nominalDuration: 0,
+        minDuration: 0,
+        maxDuration: 600,          // max 10 min to adjust; safety net only
+        nominalPressureBar: huNom,
+        minPressureBar: null,      // no violation monitoring — just guidance
+        maxPressureBar: null,
+        isManualCompletion: true,
+      ),
+
+      // 1. Bead-up / Heating-up (bead formation — MANUAL; auto-cancel on >3s violation)
       PhaseParameters(
         phase: WeldingPhase.heatingUp,
         nominalDuration: huT,
         minDuration: 0,
-        maxDuration: huT * 3.0,   // generous max; operator confirms bead
+        maxDuration: huT * 3.0,
         nominalPressureBar: huNom,
         minPressureBar: huNom != null ? huNom * (1 - presTol) : null,
         maxPressureBar: huNom != null ? huNom * (1 + presTol) : null,

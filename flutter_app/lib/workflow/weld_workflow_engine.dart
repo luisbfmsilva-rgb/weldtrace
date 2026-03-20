@@ -298,7 +298,11 @@ class WeldWorkflowEngine {
   ///
   /// [coolingIncomplete] — pass true when the operator ended cooling before
   /// the nominal cooling time elapsed.  The PDF will include a warning banner.
-  Future<void> completeWeld({bool coolingIncomplete = false}) async {
+  Future<void> completeWeld({
+    bool coolingIncomplete = false,
+    double? gpsLat,
+    double? gpsLng,
+  }) async {
     sensorService.stopCapture();
     _sensorSub?.cancel();
 
@@ -376,6 +380,8 @@ class WeldWorkflowEngine {
         machineSerialNumber:      machineSerialNumber,
         hydraulicCylinderAreaMm2: hydraulicCylinderAreaMm2,
         completionStatus: coolingIncomplete ? 'cooling_incomplete' : 'completed',
+        gpsLat: gpsLat,
+        gpsLng: gpsLng,
       );
       _logger.i('[WeldWorkflow] PDF report generated (${pdfBytes.length} bytes)');
     } catch (e) {

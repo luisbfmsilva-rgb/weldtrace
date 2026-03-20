@@ -85,6 +85,9 @@ class WeldReportGenerator {
     /// 'completed' | 'cooling_incomplete' | 'cancelled'
     String completionStatus        = 'completed',
     String cancelReason            = '',
+    // ── V1.2 — GPS location ──────────────────────────────────────────────
+    double? gpsLat,
+    double? gpsLng,
   }) async {
     final pdf = pw.Document(
       author:  'Sertec FusionCertify',
@@ -150,6 +153,9 @@ class WeldReportGenerator {
               ['Date',         dateStr],
               if (operatorName.isNotEmpty) ['Operator', operatorName],
               if (operatorId.isNotEmpty)   ['Operator ID', operatorId],
+              if (gpsLat != null && gpsLng != null)
+                ['Location (GPS)',
+                 '${gpsLat.toStringAsFixed(6)}, ${gpsLng.toStringAsFixed(6)}'],
             ],
             altColour: rowAltColour,
           ),

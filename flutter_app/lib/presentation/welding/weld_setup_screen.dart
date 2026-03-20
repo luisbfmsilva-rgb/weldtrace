@@ -80,7 +80,7 @@ class _WeldSetupScreenState extends ConsumerState<WeldSetupScreen> {
         final beadMm    = row?.minBeadHeightMm ?? 0.0;
 
         context.go(
-          '/weld/session',
+          '/weld/preparation',
           extra: WeldSessionArgs(
             weldId:                  next.createdWeldId!,
             phases:                  next.createdPhases!,
@@ -101,6 +101,9 @@ class _WeldSetupScreenState extends ConsumerState<WeldSetupScreen> {
             heatingTimeSec:          heatingS,
             coolingTimeSec:          coolingS,
             beadHeightMm:            beadMm,
+            dragPressureBar:         next.dragPressureBar ?? 0.0,
+            wallThicknessMm:         wt,
+            outerDiameterMm:         next.pipeDiameterMm ?? 0.0,
           ),
         );
         // Reset notifier so back-navigation does not re-navigate
@@ -244,11 +247,36 @@ class _WeldSetupScreenState extends ConsumerState<WeldSetupScreen> {
                             ))
                         .toList(),
                     onChanged: (v) {
-                      if (v != null) {
-                        ref
-                            .read(weldSetupProvider.notifier)
-                            .selectStandard(v);
+                      if (v == null) return;
+                      // Check if the selected standard is ASTM or ISO
+                      final selected = setup.standards
+                          .firstWhere((s) => s.id == v,
+                              orElse: () => setup.standards.first);
+                      final code = selected.code.toLowerCase();
+                      if (code.contains('iso') || code.contains('astm')) {
+                        showDialog(
+                          context: context,
+                          builder: (_) => AlertDialog(
+                            title: const Text('Standard Not Yet Available'),
+                            content: Text(
+                              '${selected.name} has not been implemented yet.\n\n'
+                              'Only DVS 2207-1 parameters are currently supported. '
+                              'Please select DVS 2207 or leave the field empty to '
+                              'use DVS defaults.',
+                            ),
+                            actions: [
+                              TextButton(
+                                onPressed: () => Navigator.of(context).pop(),
+                                child: const Text('OK'),
+                              ),
+                            ],
+                          ),
+                        );
+                        return; // do NOT update the selection
                       }
+                      ref
+                          .read(weldSetupProvider.notifier)
+                          .selectStandard(v);
                     },
                   ),
             const SizedBox(height: 14),

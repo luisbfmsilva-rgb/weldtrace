@@ -19,6 +19,7 @@ import 'shell/main_shell.dart';
 import 'splash/splash_screen.dart';
 import 'welds/welds_screen.dart';
 import 'welds/weld_detail_screen.dart';
+import 'welding/preparation_screen.dart';
 import 'welding/weld_setup_screen.dart';
 import 'welding/weld_type_selector_screen.dart';
 import 'welding/welding_session_screen.dart';
@@ -147,6 +148,13 @@ class FusionCertifyApp extends ConsumerWidget {
               },
             ),
           ],
+        ),
+        GoRoute(
+          path: '/weld/preparation',
+          builder: (context, state) {
+            final args = state.extra as WeldSessionArgs;
+            return PreparationScreen(args: args);
+          },
         ),
         GoRoute(
           path: '/weld/session',
