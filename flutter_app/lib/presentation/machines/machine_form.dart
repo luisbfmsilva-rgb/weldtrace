@@ -4,6 +4,7 @@ import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:uuid/uuid.dart';
 
+import '../../core/l10n/app_localizations.dart';
 import '../../core/theme/app_colors.dart';
 import '../../data/local/database/app_database.dart';
 import '../../di/providers.dart';
@@ -49,6 +50,8 @@ class _MachineFormScreenState extends ConsumerState<MachineFormScreen> {
 
     // Auto-fill next calibration date whenever last calibration date changes.
     _calDate.addListener(_autoFillNextCalDate);
+    // Rebuild to refresh the calibration-valid warning.
+    _calNext.addListener(() => setState(() {}));
   }
 
   void _autoFillNextCalDate() {
@@ -71,6 +74,7 @@ class _MachineFormScreenState extends ConsumerState<MachineFormScreen> {
   @override
   void dispose() {
     _calDate.removeListener(_autoFillNextCalDate);
+    _calNext.removeListener(() {});
     for (final c in [_manufacturer, _model, _serial, _area, _notes, _calDate, _calNext]) {
       c.dispose();
     }
@@ -92,9 +96,21 @@ class _MachineFormScreenState extends ConsumerState<MachineFormScreen> {
     }
   }
 
+  /// Returns true if the machine has an unexpired next calibration date.
+  bool get _calibrationValid {
+    final raw = _calNext.text.trim();
+    if (raw.isEmpty) return false;
+    final date = DateTime.tryParse(raw);
+    if (date == null) return false;
+    return date.isAfter(DateTime.now());
+  }
+
   Future<void> _save() async {
     if (!_formKey.currentState!.validate()) return;
     setState(() => _saving = true);
+
+    // If calibration is missing or expired, force isApproved = false.
+    final effectiveIsApproved = _calibrationValid ? _isApproved : false;
 
     final db = ref.read(databaseProvider);
     final auth = ref.read(authProvider);
@@ -111,7 +127,7 @@ class _MachineFormScreenState extends ConsumerState<MachineFormScreen> {
         serialNumber: Value(_serial.text.trim()),
         hydraulicCylinderAreaMm2: Value(area),
         type: Value(_type),
-        isApproved: Value(_isApproved),
+        isApproved: Value(effectiveIsApproved),
         isActive: const Value(true),
         notes: Value(_notes.text.trim().isEmpty ? null : _notes.text.trim()),
         lastCalibrationDate: Value(_calDate.text.trim().isEmpty ? null : _calDate.text.trim()),
@@ -133,31 +149,58 @@ class _MachineFormScreenState extends ConsumerState<MachineFormScreen> {
 
   @override
   Widget build(BuildContext context) {
+    final l10n = AppLocalizations.of(context);
     return Scaffold(
       backgroundColor: AppColors.lightGray,
-      appBar: AppBar(title: Text(_isEdit ? 'Edit Machine' : 'New Machine')),
+      appBar: AppBar(
+        title: Text(l10n.t(_isEdit ? 'Edit Machine' : 'New Machine')),
+      ),
       body: Form(
         key: _formKey,
         child: ListView(
           padding: const EdgeInsets.all(16),
           children: [
             // ── Identity ────────────────────────────────────────────────
-            _card('Identity', [
-              _field('Manufacturer / Brand *', _manufacturer, required: true),
+            _card(l10n.t('Identity'), [
+              _field(
+                l10n.t('Manufacturer / Brand'),
+                _manufacturer,
+                required: true,
+                requiredMsg: l10n.t('Required field'),
+              ),
               const SizedBox(height: 14),
-              _field('Model *', _model, required: true),
+              _field(
+                l10n.t('Model'),
+                _model,
+                required: true,
+                requiredMsg: l10n.t('Required field'),
+              ),
               const SizedBox(height: 14),
-              _field('Serial Number *', _serial, required: true),
+              _field(
+                l10n.t('Serial Number'),
+                _serial,
+                required: true,
+                requiredMsg: l10n.t('Required field'),
+              ),
             ]),
             const SizedBox(height: 12),
 
             // ── Type ────────────────────────────────────────────────────
-            _card('Welding Type', [
+            _card(l10n.t('Welding Type'), [
               SegmentedButton<String>(
-                segments: const [
-                  ButtonSegment(value: 'butt_fusion', label: Text('Butt Fusion')),
-                  ButtonSegment(value: 'electrofusion', label: Text('Electrofusion')),
-                  ButtonSegment(value: 'universal', label: Text('Universal')),
+                segments: [
+                  ButtonSegment(
+                    value: 'butt_fusion',
+                    label: Text(l10n.t('Butt Fusion')),
+                  ),
+                  ButtonSegment(
+                    value: 'electrofusion',
+                    label: Text(l10n.t('Electrofusion')),
+                  ),
+                  ButtonSegment(
+                    value: 'universal',
+                    label: Text(l10n.t('Universal')),
+                  ),
                 ],
                 selected: {_type},
                 onSelectionChanged: (s) => setState(() => _type = s.first),
@@ -174,46 +217,74 @@ class _MachineFormScreenState extends ConsumerState<MachineFormScreen> {
             const SizedBox(height: 12),
 
             // ── Hydraulic ───────────────────────────────────────────────
-            _card('Hydraulic Cylinder', [
-              const Text(
-                'Critical for pressure calculations. Found on the machine data plate or calibration certificate.',
-                style: TextStyle(fontSize: 12, color: AppColors.neutralGray),
+            _card(l10n.t('Hydraulic Cylinder'), [
+              Text(
+                l10n.t('Critical for pressure calculations. Found on the machine data plate or calibration certificate.'),
+                style: const TextStyle(fontSize: 12, color: AppColors.neutralGray),
               ),
               const SizedBox(height: 12),
               TextFormField(
                 controller: _area,
                 keyboardType: const TextInputType.numberWithOptions(decimal: true),
                 inputFormatters: [FilteringTextInputFormatter.allow(RegExp(r'[\d,.]'))],
-                decoration: const InputDecoration(
-                  labelText: 'Hydraulic Cylinder Area (mm²)',
+                decoration: InputDecoration(
+                  labelText: l10n.t('Hydraulic Cylinder Area (mm²)'),
                   suffixText: 'mm²',
-                  helperText: 'e.g. 491.00 for Ø25mm piston',
+                  helperText: l10n.t('e.g. 491.00 for Ø25mm piston'),
                 ),
               ),
             ]),
             const SizedBox(height: 12),
 
             // ── Calibration ─────────────────────────────────────────────
-            _card('Calibração', [
-              const Text(
-                'A data da próxima calibração é preenchida automaticamente (1 ano após a última).',
-                style: TextStyle(fontSize: 12, color: AppColors.neutralGray),
+            _card(l10n.t('Calibration'), [
+              Text(
+                l10n.t('Calibration date is auto-filled (1 year after last calibration).'),
+                style: const TextStyle(fontSize: 12, color: AppColors.neutralGray),
               ),
               const SizedBox(height: 12),
-              _datePicker('Última Calibração', _calDate),
+              _datePicker(l10n.t('Last Calibration Date'), _calDate),
               const SizedBox(height: 14),
-              _datePicker('Próxima Calibração', _calNext),
+              _datePicker(l10n.t('Next Calibration Date'), _calNext),
             ]),
             const SizedBox(height: 12),
 
             // ── Status ──────────────────────────────────────────────────
             _card('Status', [
+              if (!_calibrationValid) ...[
+                Container(
+                  padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+                  decoration: BoxDecoration(
+                    color: Colors.orange.shade50,
+                    borderRadius: BorderRadius.circular(8),
+                    border: Border.all(color: Colors.orange.shade400),
+                  ),
+                  child: Row(
+                    children: [
+                      Icon(Icons.warning_amber_rounded,
+                          color: Colors.orange.shade700, size: 18),
+                      const SizedBox(width: 8),
+                      Expanded(
+                        child: Text(
+                          l10n.t('Calibration missing or expired — approval disabled automatically.'),
+                          style: const TextStyle(fontSize: 12),
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+                const SizedBox(height: 10),
+              ],
               SwitchListTile(
-                title: const Text('Machine Approved',
-                    style: TextStyle(fontWeight: FontWeight.w600)),
-                subtitle: const Text('Approved machines can be used in welds'),
-                value: _isApproved,
-                onChanged: (v) => setState(() => _isApproved = v),
+                title: Text(
+                  l10n.t('Machine Approved'),
+                  style: const TextStyle(fontWeight: FontWeight.w600),
+                ),
+                subtitle: Text(l10n.t('Approved machines can be used in welds')),
+                value: _calibrationValid ? _isApproved : false,
+                onChanged: _calibrationValid
+                    ? (v) => setState(() => _isApproved = v)
+                    : null,
                 activeColor: AppColors.sertecRed,
                 contentPadding: EdgeInsets.zero,
               ),
@@ -221,7 +292,10 @@ class _MachineFormScreenState extends ConsumerState<MachineFormScreen> {
             const SizedBox(height: 12),
 
             // ── Notes ───────────────────────────────────────────────────
-            _card('Notes', [_field('Notes', _notes, maxLines: 3)]),
+            _card(
+              l10n.t('Notes'),
+              [_field(l10n.t('Notes'), _notes, maxLines: 3)],
+            ),
             const SizedBox(height: 20),
 
             FilledButton(
@@ -229,12 +303,21 @@ class _MachineFormScreenState extends ConsumerState<MachineFormScreen> {
               style: FilledButton.styleFrom(
                 backgroundColor: AppColors.sertecRed,
                 minimumSize: const Size(double.infinity, 52),
-                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(12)),
               ),
               child: _saving
-                  ? const SizedBox(width: 20, height: 20, child: CircularProgressIndicator(strokeWidth: 2, color: Colors.white))
-                  : Text(_isEdit ? 'Save Changes' : 'Register Machine',
-                      style: const TextStyle(fontSize: 15, fontWeight: FontWeight.w600)),
+                  ? const SizedBox(
+                      width: 20,
+                      height: 20,
+                      child: CircularProgressIndicator(
+                          strokeWidth: 2, color: Colors.white),
+                    )
+                  : Text(
+                      l10n.t(_isEdit ? 'Save Changes' : 'Register Machine'),
+                      style: const TextStyle(
+                          fontSize: 15, fontWeight: FontWeight.w600),
+                    ),
             ),
           ],
         ),
@@ -250,7 +333,11 @@ class _MachineFormScreenState extends ConsumerState<MachineFormScreen> {
           boxShadow: [BoxShadow(color: Colors.black.withValues(alpha: 0.04), blurRadius: 8)],
         ),
         child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-          Text(title, style: const TextStyle(fontWeight: FontWeight.w700, fontSize: 13, color: AppColors.sertecRed)),
+          Text(title,
+              style: const TextStyle(
+                  fontWeight: FontWeight.w700,
+                  fontSize: 13,
+                  color: AppColors.sertecRed)),
           const SizedBox(height: 12),
           ...children,
         ]),
@@ -270,6 +357,7 @@ class _MachineFormScreenState extends ConsumerState<MachineFormScreen> {
     String label,
     TextEditingController ctrl, {
     bool required = false,
+    String? requiredMsg,
     int maxLines = 1,
   }) =>
       TextFormField(
@@ -277,7 +365,8 @@ class _MachineFormScreenState extends ConsumerState<MachineFormScreen> {
         maxLines: maxLines,
         decoration: InputDecoration(labelText: label),
         validator: required
-            ? (v) => (v == null || v.trim().isEmpty) ? 'Required field' : null
+            ? (v) =>
+                (v == null || v.trim().isEmpty) ? (requiredMsg ?? 'Required field') : null
             : null,
       );
 }

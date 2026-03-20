@@ -32,7 +32,7 @@ class AppLocalizations {
     'Welds': 'Soldas',
     'Machines': 'Máquinas',
     'Reports': 'Relatórios',
-    'Settings': 'Configurações',
+    'Settings': 'Config',
     'Users': 'Usuários',
     'Dashboard': 'Painel',
     'Sign In': 'Entrar',
@@ -65,8 +65,10 @@ class AppLocalizations {
 
     // MACHINES
     'New Machine': 'Nova máquina',
+    'Edit Machine': 'Editar máquina',
     'Add Machine': 'Adicionar máquina',
     'Register Machine': 'Registrar máquina',
+    'Save Changes': 'Salvar alterações',
     'Machine deleted': 'Máquina excluída',
     'Machine Approved': 'Máquina aprovada',
     'Approved machines can be used in welds':
@@ -76,7 +78,24 @@ class AppLocalizations {
     'No machines registered.': 'Nenhuma máquina registrada.',
     'Delete Machine?': 'Excluir máquina?',
     'Hydraulic Cylinder Area': 'Área útil do cilindro [mm²]',
+    'Hydraulic Cylinder Area (mm²)': 'Área útil do cilindro (mm²)',
     'Ambient Temperature (°C)': 'Temperatura ambiente (°C)',
+    // Machine form
+    'Identity': 'Identificação',
+    'Manufacturer / Brand': 'Fabricante / Marca',
+    'Welding Type': 'Tipo de solda',
+    'Hydraulic Cylinder': 'Cilindro hidráulico',
+    'Critical for pressure calculations. Found on the machine data plate or calibration certificate.':
+        'Crítico para o cálculo de pressão. Encontrado na plaqueta de dados da máquina ou no certificado de calibração.',
+    'Calibration': 'Calibração',
+    'Calibration date is auto-filled (1 year after last calibration).':
+        'A data da próxima calibração é preenchida automaticamente (1 ano após a última).',
+    'Last Calibration Date': 'Última calibração',
+    'Next Calibration Date': 'Próxima calibração',
+    'Calibration missing or expired — approval disabled automatically.':
+        'Calibração ausente ou vencida — aprovação desativada automaticamente.',
+    'Required field': 'Campo obrigatório',
+    'e.g. 491.00 for Ø25mm piston': 'ex: 491,00 para êmbolo Ø25mm',
 
     // WELD SETUP
     'New Weld': 'Nova solda',
@@ -155,6 +174,7 @@ class AppLocalizations {
     'Cancel': 'Cancelar',
 
     // WELDING SESSION
+    'Pressure Set — Done!': 'Pressão configurada - Pronto!',
     'Bead-Up Pressure Adjustment': 'Ajustar a pressão de pré-aquecimento',
     'Bead Up': 'Pré-aquecimento',
     'Heating': 'Aquecimento',
@@ -179,6 +199,8 @@ class AppLocalizations {
         'Avançar automaticamente para o resfriamento quando...',
     'Keep pressure stable ± 8 % limit':
         'Mantenha a pressão estável dentro do limite de ± 8 %',
+    'Complete Cooling': 'Concluir resfriamento',
+    'End Cooling Early': 'Encerrar resfriamento antes do tempo',
     'Cooling Remaining': 'Resfriamento restante',
     'Sensor not connected — pressure will be recorded as 0':
         'Sensor desconectado - a pressão será registrada como 0',

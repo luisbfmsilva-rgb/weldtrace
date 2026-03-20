@@ -103,6 +103,9 @@ class WeldReportGenerator {
     Uint8List? weldPhotoBytes,
     Uint8List? welderPhotoBytes,
     Uint8List? alignmentPhotoBytes,
+    // ── V1.5 — Observations / notes & nominal (theoretical) curve ─────────
+    String notes              = '',
+    List<WeldTracePoint> nominalCurve = const [],
   }) async {
     final pdf = pw.Document(
       author:  'Sertec FusionCertify',
@@ -139,14 +142,7 @@ class WeldReportGenerator {
       pw.MultiPage(
         pageTheme: pw.PageTheme(
           pageFormat: PdfPageFormat.a4,
-          margin: const pw.EdgeInsets.fromLTRB(48, 36, 36, 36),
-          buildBackground: (context) => pw.Container(
-            decoration: const pw.BoxDecoration(
-              border: pw.Border(
-                left: pw.BorderSide(color: accentColour, width: 4),
-              ),
-            ),
-          ),
+          margin: const pw.EdgeInsets.fromLTRB(36, 36, 36, 36),
         ),
         header: (context) => _buildHeader(
           headerColour,
@@ -158,12 +154,6 @@ class WeldReportGenerator {
         footer: (context) => _buildFooter(context, accentColour),
         build: (context) => [
           pw.SizedBox(height: 12),
-
-          // ── 0. Completion status banner (non-'completed' only) ────────────
-          if (completionStatus != 'completed') ...[
-            _statusBanner(completionStatus, cancelReason),
-            pw.SizedBox(height: 12),
-          ],
 
           // ── 1. Project ────────────────────────────────────────────────────
           _sectionTitle('Project', accentColour),
@@ -300,9 +290,9 @@ class WeldReportGenerator {
           pw.SizedBox(height: 16),
 
           // ── 9. Pressure × Time Chart ──────────────────────────────────────
-          _sectionTitle('Pressure × Time Curve', accentColour),
+          _sectionTitle('Curva Pressão × Tempo', accentColour),
           pw.SizedBox(height: 6),
-          _chart(curve, accentColour),
+          _chart(curve, accentColour, nominalCurve: nominalCurve),
           pw.SizedBox(height: 16),
 
           // ── 10. Signature ──────────────────────────────────────────────────
@@ -336,6 +326,26 @@ class WeldReportGenerator {
           pw.SizedBox(height: 6),
           _assessmentBlock(completionStatus, cancelReason),
           pw.SizedBox(height: 8),
+
+          // ── 14b. Observations / notes (optional) ───────────────────────────
+          if (notes.trim().isNotEmpty) ...[
+            _sectionTitle('Observações', accentColour),
+            pw.SizedBox(height: 6),
+            pw.Container(
+              width: double.infinity,
+              padding: const pw.EdgeInsets.all(10),
+              decoration: pw.BoxDecoration(
+                color: rowAltColour,
+                borderRadius: const pw.BorderRadius.all(pw.Radius.circular(4)),
+                border: pw.Border.all(color: PdfColors.grey300),
+              ),
+              child: pw.Text(
+                notes.trim(),
+                style: const pw.TextStyle(fontSize: 10),
+              ),
+            ),
+            pw.SizedBox(height: 16),
+          ],
 
           // ── 15. Alignment photo (optional, from preparation step 4) ────────
           if (alignmentPhotoBytes != null) ...[
@@ -440,7 +450,7 @@ class WeldReportGenerator {
           pw.Row(
             children: [
               pw.Text(
-                '⚠  $title',
+                '[!]  $title',
                 style: pw.TextStyle(
                   color: colour,
                   fontWeight: pw.FontWeight.bold,
@@ -470,8 +480,8 @@ class WeldReportGenerator {
     };
 
     final icon = switch (status) {
-      'completed' => '✓',
-      _           => '✗',
+      'completed' => 'OK',
+      _           => 'XX',
     };
 
     final message = switch (status) {
@@ -687,14 +697,21 @@ class WeldReportGenerator {
     }
   }
 
-  static pw.Widget _chart(List<WeldTracePoint> curve, PdfColor accentColour) {
+  static pw.Widget _chart(
+    List<WeldTracePoint> curve,
+    PdfColor accentColour, {
+    List<WeldTracePoint> nominalCurve = const [],
+  }) {
     const chartHeight  = 150.0;
     const chartWidth   = 440.0;
     const yLabelWidth  = 22.0;
     final axisStyle    = pw.TextStyle(fontSize: 7, color: PdfColors.grey600);
 
     pw.Widget chartBody;
-    if (curve.length < 2) {
+    // Show the theoretical curve even when no actual data was recorded.
+    final hasActual  = curve.length >= 2;
+    final hasNominal = nominalCurve.length >= 2;
+    if (!hasActual && !hasNominal) {
       chartBody = pw.Container(
         width:  chartWidth,
         height: chartHeight,
@@ -704,7 +721,7 @@ class WeldReportGenerator {
         ),
         child: pw.Center(
           child: pw.Text(
-            curve.isEmpty ? 'No data recorded' : 'Insufficient data (< 2 samples)',
+            'No data recorded',
             style: pw.TextStyle(
               color:     PdfColors.grey500,
               fontSize:  9,
@@ -723,7 +740,11 @@ class WeldReportGenerator {
             color:  PdfColors.white,
           ),
           child: pw.CustomPaint(
-            painter: _curvePainter(curve, accentColour),
+            painter: _curvePainter(
+              curve,
+              accentColour,
+              nominalCurve: nominalCurve,
+            ),
             child: pw.SizedBox(width: chartWidth, height: chartHeight),
           ),
         );
@@ -762,7 +783,7 @@ class WeldReportGenerator {
               child: pw.Center(
                 child: pw.Transform.rotate(
                   angle: -1.5708, // -π/2
-                  child: pw.Text('Pressure (bar)', style: axisStyle),
+                  child: pw.Text('Pressao [bar]', style: axisStyle),
                 ),
               ),
             ),
@@ -1078,13 +1099,18 @@ class WeldReportGenerator {
 ///   `typedef CustomPainter = void Function(PdfGraphics, PdfPoint)`
 pw.CustomPainter _curvePainter(
   List<WeldTracePoint> curve,
-  PdfColor lineColour,
-) =>
+  PdfColor lineColour, {
+  List<WeldTracePoint> nominalCurve = const [],
+}) =>
     (PdfGraphics canvas, PdfPoint size) {
-      if (curve.length < 2) return;
+      final hasActual  = curve.length >= 2;
+      final hasNominal = nominalCurve.length >= 2;
+      if (!hasActual && !hasNominal) return;
 
-      final maxT = curve.map((p) => p.timeSeconds).reduce(math.max);
-      final maxP = curve.map((p) => p.pressureBar).reduce(math.max);
+      // Compute scale from all available data.
+      final allPoints = [...curve, ...nominalCurve];
+      final maxT = allPoints.map((p) => p.timeSeconds).reduce(math.max);
+      final maxP = allPoints.map((p) => p.pressureBar).reduce(math.max);
       final effectiveMaxT = maxT > 0 ? maxT : 1.0;
       final effectiveMaxP = maxP > 0 ? maxP : 1.0;
 
@@ -1098,6 +1124,7 @@ pw.CustomPainter _curvePainter(
       double cy(WeldTracePoint p) =>
           mb + (p.pressureBar / effectiveMaxP) * h;
 
+      // Grid lines
       canvas.setStrokeColor(PdfColors.grey300);
       canvas.setLineWidth(0.4);
       for (int i = 1; i <= 3; i++) {
@@ -1111,13 +1138,52 @@ pw.CustomPainter _curvePainter(
         canvas.strokePath();
       }
 
-      canvas.setStrokeColor(lineColour);
-      canvas.setLineWidth(1.2);
-      canvas.moveTo(cx(curve.first), cy(curve.first));
-      for (int i = 1; i < curve.length; i++) {
-        canvas.lineTo(cx(curve[i]), cy(curve[i]));
+      // Theoretical (nominal) curve — dashed grey line
+      if (hasNominal) {
+        canvas.setStrokeColor(PdfColors.blueGrey300);
+        canvas.setLineWidth(0.8);
+        canvas.moveTo(cx(nominalCurve.first), cy(nominalCurve.first));
+        for (int i = 1; i < nominalCurve.length; i++) {
+          // Simulate dashes: draw segment, skip one unit
+          final x1 = cx(nominalCurve[i - 1]);
+          final y1 = cy(nominalCurve[i - 1]);
+          final x2 = cx(nominalCurve[i]);
+          final y2 = cy(nominalCurve[i]);
+          final dx = x2 - x1;
+          final dy = y2 - y1;
+          final len = math.sqrt(dx * dx + dy * dy);
+          if (len == 0) continue;
+          const dash = 4.0;
+          const gap  = 3.0;
+          double t = 0;
+          bool draw = true;
+          while (t < len) {
+            final seg = draw ? dash : gap;
+            final t2  = math.min(t + seg, len);
+            final px1 = x1 + dx * (t / len);
+            final py1 = y1 + dy * (t / len);
+            final px2 = x1 + dx * (t2 / len);
+            final py2 = y1 + dy * (t2 / len);
+            if (draw) {
+              canvas.drawLine(px1, py1, px2, py2);
+              canvas.strokePath();
+            }
+            t += seg;
+            draw = !draw;
+          }
+        }
       }
-      canvas.strokePath();
+
+      // Actual (measured) curve — solid coloured line
+      if (hasActual) {
+        canvas.setStrokeColor(lineColour);
+        canvas.setLineWidth(1.2);
+        canvas.moveTo(cx(curve.first), cy(curve.first));
+        for (int i = 1; i < curve.length; i++) {
+          canvas.lineTo(cx(curve[i]), cy(curve[i]));
+        }
+        canvas.strokePath();
+      }
     };
 
 // ── QR code painter ────────────────────────────────────────────────────────────

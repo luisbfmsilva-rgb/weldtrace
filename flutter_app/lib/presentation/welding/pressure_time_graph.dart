@@ -280,20 +280,21 @@ class _PressureTimeGraphState extends State<PressureTimeGraph> {
   // ── Domain calculation ────────────────────────────────────────────────────
 
   double _computeXMax(bool isOperational, List<FlSpot> actualSpots) {
-    if (isOperational) return 100.0;          // always 0–100 % in OP mode
-    // Technical: sliding window — show last 300 s; minimum range = 30 s
+    if (isOperational) return 100.0;
+    // Technical: track the latest data point; always show 60 s of breathing room.
     if (actualSpots.isEmpty) {
-      return math.max(widget.nominalData.totalDuration * 1.08, 30.0);
+      return math.max(widget.nominalData.totalDuration * 1.08, 60.0);
     }
     final latest = actualSpots.last.x;
-    return math.max(latest + 10, 300.0);
+    return latest + 60.0;
   }
 
   double _computeXMin(bool isOperational, List<FlSpot> actualSpots) {
     if (isOperational) return 0.0;
     if (actualSpots.isEmpty) return 0.0;
     final latest = actualSpots.last.x;
-    return math.max(0.0, latest - 300.0);    // 5-minute sliding window
+    // Show a 5-minute sliding window once enough data exists; otherwise start at 0.
+    return math.max(0.0, latest - 300.0);
   }
 
   double _computeYMax(List<FlSpot> spots) {
@@ -346,8 +347,8 @@ class _PressureTimeGraphState extends State<PressureTimeGraph> {
       // ── Axes titles ────────────────────────────────────────────────────
       titlesData: FlTitlesData(
         leftTitles: AxisTitles(
-          axisNameWidget: _AxisLabel(label: 'P (bar)', rotate: true),
-          axisNameSize: 22,
+          axisNameWidget: _AxisLabel(label: 'Pressão [bar]', rotate: true),
+          axisNameSize: 28,
           sideTitles: SideTitles(
             showTitles: true,
             reservedSize: 38,
@@ -509,10 +510,7 @@ class _PressureTimeGraphState extends State<PressureTimeGraph> {
                 ? const Color(0xFF0052CC)
                 : theme.colorScheme.outline.withValues(alpha: 0.6),
           ),
-          labelResolver: (_) {
-            final name = marker.label;
-            return name.length > 8 ? '${name.substring(0, 7)}…' : name;
-          },
+          labelResolver: (_) => marker.label,
         ),
       ));
     }

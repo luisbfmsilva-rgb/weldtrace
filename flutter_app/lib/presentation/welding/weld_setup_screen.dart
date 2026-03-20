@@ -120,6 +120,7 @@ class _WeldSetupScreenState extends ConsumerState<WeldSetupScreen> {
             machineLastCalibration:  next.machineLastCalibration,
             machineNextCalibration:  next.machineNextCalibration,
             weldNumber:              next.createdWeldNumber,
+            notes:                   next.notes ?? '',
           ),
         );
         // Reset notifier so back-navigation does not re-navigate

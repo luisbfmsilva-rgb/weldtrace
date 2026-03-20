@@ -101,6 +101,7 @@ class WeldWorkflowEngine {
     this.machineLastCalibration  = '',
     this.machineNextCalibration  = '',
     this.weldNumber              = 0,
+    this.notes                   = '',
     this.alignmentPhotoBytes,
     WeldTraceRecorder? traceRecorder,
     WeldSyncService?   syncService,
@@ -142,6 +143,8 @@ class WeldWorkflowEngine {
   final String     machineLastCalibration;
   final String     machineNextCalibration;
   final int        weldNumber;
+  // ── V1.5 — observations and nominal curve ─────────────────────────────────
+  final String     notes;
   final Uint8List? alignmentPhotoBytes;
 
   final WeldTraceRecorder _recorder;
@@ -149,6 +152,23 @@ class WeldWorkflowEngine {
 
   /// Read-only view of the live recording curve.
   List<WeldTracePoint> get traceCurve => _recorder.points;
+
+  /// Builds a theoretical (nominal) pressure-time curve from the phase list.
+  ///
+  /// Each phase contributes two points: start and end at its nominal pressure.
+  /// Zero-pressure changeover is represented by a drop to 0 between heating and buildup.
+  List<WeldTracePoint> _buildNominalCurve() {
+    final points = <WeldTracePoint>[];
+    double t = 0.0;
+    for (final phase in phases) {
+      final pressure = phase.nominalPressureBar ?? 0.0;
+      if (phase.nominalDuration <= 0) continue;
+      points.add(WeldTracePoint(timeSeconds: t, pressureBar: pressure));
+      t += phase.nominalDuration;
+      points.add(WeldTracePoint(timeSeconds: t, pressureBar: pressure));
+    }
+    return points;
+  }
 
   WeldWorkflowState _state = WeldWorkflowState.idle;
   WeldWorkflowState get state => _state;
@@ -298,6 +318,8 @@ class WeldWorkflowEngine {
         machineLastCalibration:  machineLastCalibration,
         machineNextCalibration:  machineNextCalibration,
         weldNumber:              weldNumber,
+        notes:                   notes,
+        nominalCurve:            _buildNominalCurve(),
         alignmentPhotoBytes:     alignmentPhotoBytes,
       );
       _logger.i('[WeldWorkflow] Cancellation PDF generated (${pdfBytes.length} bytes)');
@@ -421,6 +443,8 @@ class WeldWorkflowEngine {
         machineLastCalibration:   machineLastCalibration,
         machineNextCalibration:   machineNextCalibration,
         weldNumber:               weldNumber,
+        notes:                    notes,
+        nominalCurve:             _buildNominalCurve(),
         weldPhotoBytes:           weldPhotoBytes,
         welderPhotoBytes:         welderPhotoBytes,
         alignmentPhotoBytes:      alignmentPhotoBytes,

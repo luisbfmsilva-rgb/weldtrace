@@ -9,6 +9,7 @@ import 'package:go_router/go_router.dart';
 import 'package:image_picker/image_picker.dart';
 import 'package:wakelock_plus/wakelock_plus.dart';
 
+import '../../core/l10n/app_localizations.dart';
 import '../../core/providers/company_logo_provider.dart';
 import '../../di/providers.dart';
 import '../../services/sensor/sensor_service.dart';
@@ -52,6 +53,7 @@ class WeldSessionArgs {
     this.machineLastCalibration   = '',
     this.machineNextCalibration   = '',
     this.weldNumber               = 0,
+    this.notes                    = '',
     // ── Preparation photo (step 4) ────────────────────────────────────────
     this.alignmentPhotoBytes,
   });
@@ -102,12 +104,16 @@ class WeldSessionArgs {
   /// Sequential weld number within the project (1-based, computed at creation).
   final int weldNumber;
 
+  /// Free-text operator observations / notes.
+  final String notes;
+
   /// JPEG/PNG bytes of the aligned pipe ends (captured in step 4 of preparation).
   /// Null if the operator skipped the photo.
   final Uint8List? alignmentPhotoBytes;
 
   WeldSessionArgs copyWith({
     double?    dragPressureBar,
+    String?    notes,
     Uint8List? alignmentPhotoBytes,
   }) =>
       WeldSessionArgs(
@@ -139,7 +145,8 @@ class WeldSessionArgs {
         machineLastCalibration:  machineLastCalibration,
         machineNextCalibration:  machineNextCalibration,
         weldNumber:              weldNumber,
-        alignmentPhotoBytes:     alignmentPhotoBytes ?? this.alignmentPhotoBytes,
+        notes:                   notes                ?? this.notes,
+        alignmentPhotoBytes:     alignmentPhotoBytes  ?? this.alignmentPhotoBytes,
       );
 }
 
@@ -264,6 +271,7 @@ class _WeldingSessionScreenState extends ConsumerState<WeldingSessionScreen> {
       machineLastCalibration:  a.machineLastCalibration,
       machineNextCalibration:  a.machineNextCalibration,
       weldNumber:              a.weldNumber,
+      notes:                   a.notes,
       alignmentPhotoBytes:     a.alignmentPhotoBytes,
     );
 
@@ -625,8 +633,10 @@ class _WeldingSessionScreenState extends ConsumerState<WeldingSessionScreen> {
         final nom = currentPhase.nominalDuration.toInt();
         final max = currentPhase.maxDuration.toInt();
         final elapsed = _phaseElapsedSeconds;
-        if (nom > 10 && elapsed == nom - 10) {
-          HapticFeedback.heavyImpact(); // last 10-second warning
+        // Beep + haptic every second during the last 10 s of heating.
+        if (nom > 10 && elapsed >= nom - 10 && elapsed < nom) {
+          SystemSound.play(SystemSoundType.alert);
+          HapticFeedback.heavyImpact();
         }
         if (elapsed >= max && !_isAutoAdvancing) {
           setState(() => _isAutoAdvancing = true);
@@ -1056,6 +1066,7 @@ class _WeldingSessionScreenState extends ConsumerState<WeldingSessionScreen> {
 
   Widget _buildActionButtons(BuildContext context, PhaseParameters? currentPhase) {
     final theme = Theme.of(context);
+    final l10n  = AppLocalizations.of(context);
 
     final WeldingPhase? phase = currentPhase?.phase;
 
@@ -1082,14 +1093,14 @@ class _WeldingSessionScreenState extends ConsumerState<WeldingSessionScreen> {
             crossAxisAlignment: CrossAxisAlignment.stretch,
             children: [
               _TargetCard(
-                label: 'Target Machine Pressure',
+                label: l10n.t('Target Machine Pressure'),
                 value: '${targetMachine.toStringAsFixed(1)} bar',
                 subtitle: 'Gauge ${nom.toStringAsFixed(1)} bar + drag ${drag.toStringAsFixed(1)} bar',
               ),
               const SizedBox(height: 12),
               ElevatedButton.icon(
                 icon: const Icon(Icons.check_circle_outline),
-                label: const Text('Pressure Set — Done!'),
+                label: Text(l10n.t('Pressure Set — Done!')),
                 style: ElevatedButton.styleFrom(
                   backgroundColor: const Color(0xFF1565C0),
                   minimumSize: const Size(double.infinity, 52),
@@ -1099,7 +1110,7 @@ class _WeldingSessionScreenState extends ConsumerState<WeldingSessionScreen> {
               const SizedBox(height: 10),
               OutlinedButton.icon(
                 icon: const Icon(Icons.cancel_outlined),
-                label: const Text('Cancel Weld'),
+                label: Text(l10n.t('Cancel Weld')),
                 style: OutlinedButton.styleFrom(
                   foregroundColor: theme.colorScheme.error,
                   side: BorderSide(color: theme.colorScheme.error),
@@ -1124,7 +1135,7 @@ class _WeldingSessionScreenState extends ConsumerState<WeldingSessionScreen> {
             crossAxisAlignment: CrossAxisAlignment.stretch,
             children: [
               _TargetCard(
-                label: 'Target Machine Pressure',
+                label: l10n.t('Target Machine Pressure'),
                 value: '${targetMachine.toStringAsFixed(1)} bar',
                 subtitle: 'Min bead height: ${beadTarget.toStringAsFixed(1)} mm',
               ),
@@ -1146,7 +1157,7 @@ class _WeldingSessionScreenState extends ConsumerState<WeldingSessionScreen> {
               const SizedBox(height: 12),
               ElevatedButton.icon(
                 icon: const Icon(Icons.check_circle_outline),
-                label: const Text('Bead Formed — Done!'),
+                label: Text(l10n.t('Bead Formed — Done!')),
                 style: ElevatedButton.styleFrom(
                   backgroundColor: const Color(0xFF2E7D32),
                   minimumSize: const Size(double.infinity, 52),
@@ -1156,7 +1167,7 @@ class _WeldingSessionScreenState extends ConsumerState<WeldingSessionScreen> {
               const SizedBox(height: 10),
               OutlinedButton.icon(
                 icon: const Icon(Icons.cancel_outlined),
-                label: const Text('Cancel Weld'),
+                label: Text(l10n.t('Cancel Weld')),
                 style: OutlinedButton.styleFrom(
                   foregroundColor: theme.colorScheme.error,
                   side: BorderSide(color: theme.colorScheme.error),
@@ -1186,7 +1197,7 @@ class _WeldingSessionScreenState extends ConsumerState<WeldingSessionScreen> {
                 children: [
                   Expanded(
                     child: _TargetCard(
-                      label: 'Remaining',
+                      label: l10n.t('Remaining'),
                       value: fmtR,
                       subtitle: 'Nominal: ${nomSec}s  ·  min ${minSec}s',
                       highlight: lastTen,
@@ -1195,7 +1206,7 @@ class _WeldingSessionScreenState extends ConsumerState<WeldingSessionScreen> {
                   const SizedBox(width: 12),
                   Expanded(
                     child: _TargetCard(
-                      label: 'Max Machine Pressure',
+                      label: l10n.t('Max Machine Pressure'),
                       value: '${(maxPbar + drag).toStringAsFixed(1)} bar',
                       subtitle: 'p2 ${maxPbar.toStringAsFixed(1)} + drag ${drag.toStringAsFixed(1)}',
                     ),
@@ -1221,12 +1232,12 @@ class _WeldingSessionScreenState extends ConsumerState<WeldingSessionScreen> {
               const SizedBox(height: 12),
               ElevatedButton.icon(
                 icon: const Icon(Icons.remove_circle_outline),
-                label: const Text('Remove Heater Plate — Done!'),
+                label: Text(l10n.t('Remove Heater Plate — Done!')),
                 style: ElevatedButton.styleFrom(
                   backgroundColor: afterMin ? const Color(0xFF2E7D32) : Colors.grey,
                   minimumSize: const Size(double.infinity, 52),
                 ),
-                onPressed: afterMin ? _completePhase : null,
+                onPressed: (afterMin && !lastTen) ? _completePhase : null,
               ),
               if (!afterMin) ...[
                 const SizedBox(height: 6),
@@ -1236,10 +1247,22 @@ class _WeldingSessionScreenState extends ConsumerState<WeldingSessionScreen> {
                   textAlign: TextAlign.center,
                 ),
               ],
+              if (lastTen) ...[
+                const SizedBox(height: 6),
+                Text(
+                  'Aguardar fim dos 10s para retirar placa',
+                  style: TextStyle(
+                    fontSize: 12,
+                    color: Colors.orange.shade700,
+                    fontWeight: FontWeight.w600,
+                  ),
+                  textAlign: TextAlign.center,
+                ),
+              ],
               const SizedBox(height: 10),
               OutlinedButton.icon(
                 icon: const Icon(Icons.cancel_outlined),
-                label: const Text('Cancel Weld'),
+                label: Text(l10n.t('Cancel Weld')),
                 style: OutlinedButton.styleFrom(
                   foregroundColor: theme.colorScheme.error,
                   side: BorderSide(color: theme.colorScheme.error),
@@ -1285,7 +1308,7 @@ class _WeldingSessionScreenState extends ConsumerState<WeldingSessionScreen> {
               const SizedBox(height: 6),
               OutlinedButton.icon(
                 icon: const Icon(Icons.cancel_outlined),
-                label: const Text('Cancel Weld'),
+                label: Text(l10n.t('Cancel Weld')),
                 style: OutlinedButton.styleFrom(
                   foregroundColor: theme.colorScheme.error,
                   side: BorderSide(color: theme.colorScheme.error),
@@ -1311,7 +1334,7 @@ class _WeldingSessionScreenState extends ConsumerState<WeldingSessionScreen> {
               const SizedBox(height: 10),
               OutlinedButton.icon(
                 icon: const Icon(Icons.cancel_outlined),
-                label: const Text('Cancel Weld'),
+                label: Text(l10n.t('Cancel Weld')),
                 style: OutlinedButton.styleFrom(
                   foregroundColor: theme.colorScheme.error,
                   side: BorderSide(color: theme.colorScheme.error),
@@ -1334,16 +1357,16 @@ class _WeldingSessionScreenState extends ConsumerState<WeldingSessionScreen> {
             crossAxisAlignment: CrossAxisAlignment.stretch,
             children: [
               _TargetCard(
-                label: isOnTime ? 'Cooling Complete' : 'Cooling Remaining',
-                value: isOnTime ? '✓' : fmtR,
-                subtitle: 'Keep pressure stable ± 8 % limit',
+                label: isOnTime ? l10n.t('Completed') : l10n.t('Cooling Remaining'),
+                value: isOnTime ? 'OK' : fmtR,
+                subtitle: l10n.t('Keep pressure stable ± 8 % limit'),
               ),
               const SizedBox(height: 12),
               ElevatedButton.icon(
                 icon: const Icon(Icons.ac_unit),
-                label: Text(isOnTime
+                label: Text(l10n.t(isOnTime
                     ? 'Complete Cooling'
-                    : 'End Cooling Early'),
+                    : 'End Cooling Early')),
                 style: ElevatedButton.styleFrom(
                   backgroundColor:
                       isOnTime ? const Color(0xFF2E7D32) : Colors.orange,
@@ -1359,7 +1382,7 @@ class _WeldingSessionScreenState extends ConsumerState<WeldingSessionScreen> {
               const SizedBox(height: 10),
               OutlinedButton.icon(
                 icon: const Icon(Icons.cancel_outlined),
-                label: const Text('Cancel Weld'),
+                label: Text(l10n.t('Cancel Weld')),
                 style: OutlinedButton.styleFrom(
                   foregroundColor: theme.colorScheme.error,
                   side: BorderSide(color: theme.colorScheme.error),
@@ -1397,7 +1420,7 @@ class _WeldingSessionScreenState extends ConsumerState<WeldingSessionScreen> {
               const SizedBox(height: 10),
               OutlinedButton.icon(
                 icon: const Icon(Icons.cancel_outlined),
-                label: const Text('Cancel Weld'),
+                label: Text(l10n.t('Cancel Weld')),
                 style: OutlinedButton.styleFrom(
                   foregroundColor: theme.colorScheme.error,
                   side: BorderSide(color: theme.colorScheme.error),
