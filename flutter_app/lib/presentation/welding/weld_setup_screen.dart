@@ -101,7 +101,7 @@ class _WeldSetupScreenState extends ConsumerState<WeldSetupScreen> {
             heatingTimeSec:          heatingS,
             coolingTimeSec:          coolingS,
             beadHeightMm:            beadMm,
-            dragPressureBar:         next.dragPressureBar ?? 0.0,
+            dragPressureBar:         next.dragPressureBar,
             wallThicknessMm:         wt,
             outerDiameterMm:         next.pipeDiameterMm ?? 0.0,
           ),

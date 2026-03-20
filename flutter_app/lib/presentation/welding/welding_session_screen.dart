@@ -298,9 +298,10 @@ class _WeldingSessionScreenState extends ConsumerState<WeldingSessionScreen> {
           ? widget.phases[_currentPhaseIndex]
           : null;
       if (currentPhase?.phase == WeldingPhase.changeover &&
+          r.pressureBar != null &&
           (_workflowState == WeldWorkflowState.phaseActive ||
            _workflowState == WeldWorkflowState.parameterViolation)) {
-        _onChangeoverPressureUpdate(r.pressureBar);
+        _onChangeoverPressureUpdate(r.pressureBar!);
       }
     }));
     _subs.add(sensor.connectionStateStream.listen((s) {
@@ -522,10 +523,8 @@ class _WeldingSessionScreenState extends ConsumerState<WeldingSessionScreen> {
       if (eff == LocationPermission.denied ||
           eff == LocationPermission.deniedForever) return;
       final pos = await Geolocator.getCurrentPosition(
-        locationSettings: const LocationSettings(
-          accuracy: LocationAccuracy.high,
-          timeLimit: Duration(seconds: 10),
-        ),
+        desiredAccuracy: LocationAccuracy.high,
+        timeLimit: const Duration(seconds: 10),
       );
       if (mounted) {
         setState(() {

@@ -33,7 +33,6 @@ class _PreparationScreenState extends ConsumerState<PreparationScreen> {
   final TextEditingController _misalignmentController =
       TextEditingController();
   bool _gapWidthChecked = false;
-  bool _facingDoneAtLeastOnce = false;
 
   final List<StreamSubscription> _subs = [];
 
