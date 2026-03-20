@@ -244,7 +244,7 @@ class _CompanyLogoTile extends StatelessWidget {
           ? ClipRRect(
               borderRadius: BorderRadius.circular(6),
               child: Image.memory(
-                logoBytes!,
+                logoBytes,
                 width: 40,
                 height: 40,
                 fit: BoxFit.contain,

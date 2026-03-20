@@ -132,7 +132,7 @@ class _SensorScreenState extends ConsumerState<SensorScreen> {
               'The WeldTrace sensor kit connects via Bluetooth to this tablet. '
               'Ensure the sensor is powered on and within 5 metres.',
               style: theme.textTheme.bodySmall?.copyWith(
-                  color: theme.colorScheme.onSurface.withOpacity(0.5)),
+                  color: theme.colorScheme.onSurface.withValues(alpha: 0.5)),
               textAlign: TextAlign.center,
             ),
           ],
@@ -160,9 +160,9 @@ class _ConnectionStatusCard extends StatelessWidget {
     return Container(
       padding: const EdgeInsets.all(20),
       decoration: BoxDecoration(
-        color: color.withOpacity(0.08),
+        color: color.withValues(alpha: 0.08),
         borderRadius: BorderRadius.circular(12),
-        border: Border.all(color: color.withOpacity(0.3)),
+        border: Border.all(color: color.withValues(alpha: 0.3)),
       ),
       child: Row(
         children: [
@@ -173,7 +173,7 @@ class _ConnectionStatusCard extends StatelessWidget {
             children: [
               Text('Sensor Status',
                   style: theme.textTheme.bodySmall
-                      ?.copyWith(color: color.withOpacity(0.7))),
+                      ?.copyWith(color: color.withValues(alpha: 0.7))),
               Text(label,
                   style: TextStyle(
                       color: color,
@@ -204,9 +204,9 @@ class _LiveReading extends StatelessWidget {
     return Container(
       padding: const EdgeInsets.all(16),
       decoration: BoxDecoration(
-        color: color.withOpacity(0.07),
+        color: color.withValues(alpha: 0.07),
         borderRadius: BorderRadius.circular(12),
-        border: Border.all(color: color.withOpacity(0.2)),
+        border: Border.all(color: color.withValues(alpha: 0.2)),
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,

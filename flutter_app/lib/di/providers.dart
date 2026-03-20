@@ -1,5 +1,4 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:flutter_secure_storage/flutter_secure_storage.dart';
 import 'package:supabase_flutter/supabase_flutter.dart'
     hide AuthException, AuthUser;
 
@@ -22,26 +21,12 @@ final databaseProvider = Provider<AppDatabase>((ref) {
   return db;
 });
 
-// ── Secure storage (shared instance) ──────────────────────────────────────────
-
-const _secureStorage = FlutterSecureStorage();
-
 // ── API client ─────────────────────────────────────────────────────────────────
 
 final apiClientProvider = Provider<ApiClient>((ref) {
-  // Use getSession() (async) so the Supabase SDK can silently refresh an
-  // expired token before we read the accessToken.  This prevents the 401
-  // that occurs when currentSession is read synchronously during a brief
-  // window where the old token has expired but the new one is not yet cached.
   return ApiClient(
     tokenProvider: () async {
-      try {
-        final response = await Supabase.instance.client.auth.getSession();
-        return response.data.session?.accessToken;
-      } catch (_) {
-        // Fallback: return null (request will proceed without auth header)
-        return null;
-      }
+      return Supabase.instance.client.auth.currentSession?.accessToken;
     },
   );
 });

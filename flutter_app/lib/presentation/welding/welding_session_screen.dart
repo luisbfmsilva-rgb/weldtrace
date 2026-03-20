@@ -1,6 +1,5 @@
 import 'dart:async';
 import 'dart:convert';
-import 'dart:typed_data';
 
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
@@ -1430,10 +1429,10 @@ class _WeldingSessionScreenState extends ConsumerState<WeldingSessionScreen> {
             Container(
               padding: const EdgeInsets.all(16),
               decoration: BoxDecoration(
-                color: const Color(0xFF2E7D32).withOpacity(0.1),
+                color: const Color(0xFF2E7D32).withValues(alpha: 0.1),
                 borderRadius: BorderRadius.circular(12),
                 border:
-                    Border.all(color: const Color(0xFF2E7D32).withOpacity(0.4)),
+                    Border.all(color: const Color(0xFF2E7D32).withValues(alpha: 0.4)),
               ),
               child: Column(
                 children: [
@@ -1590,9 +1589,9 @@ class _TargetCard extends StatelessWidget {
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
       decoration: BoxDecoration(
-        color: color.withOpacity(0.07),
+        color: color.withValues(alpha: 0.07),
         borderRadius: BorderRadius.circular(10),
-        border: Border.all(color: color.withOpacity(0.4)),
+        border: Border.all(color: color.withValues(alpha: 0.4)),
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
@@ -1647,7 +1646,7 @@ class _SensorStatusBar extends StatelessWidget {
     };
 
     return Container(
-      color: color.withOpacity(0.08),
+      color: color.withValues(alpha: 0.08),
       padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
       child: Row(
         children: [
@@ -1682,7 +1681,7 @@ class _PhaseProgressStepper extends StatelessWidget {
     return Container(
       padding: const EdgeInsets.all(16),
       decoration: BoxDecoration(
-        border: Border.all(color: theme.colorScheme.outline.withOpacity(0.2)),
+        border: Border.all(color: theme.colorScheme.outline.withValues(alpha: 0.2)),
         borderRadius: BorderRadius.circular(12),
       ),
       child: Column(
@@ -1703,7 +1702,7 @@ class _PhaseProgressStepper extends StatelessWidget {
                 ? const Color(0xFF2E7D32)
                 : isActive
                     ? theme.colorScheme.primary
-                    : theme.colorScheme.outline.withOpacity(0.4);
+                    : theme.colorScheme.outline.withValues(alpha: 0.4);
 
             return Padding(
               padding: const EdgeInsets.symmetric(vertical: 4),
@@ -1776,9 +1775,9 @@ class _PhaseTimerCard extends StatelessWidget {
     return Container(
       padding: const EdgeInsets.all(16),
       decoration: BoxDecoration(
-        color: barColor.withOpacity(0.05),
+        color: barColor.withValues(alpha: 0.05),
         borderRadius: BorderRadius.circular(12),
-        border: Border.all(color: barColor.withOpacity(0.3)),
+        border: Border.all(color: barColor.withValues(alpha: 0.3)),
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
@@ -1809,7 +1808,7 @@ class _PhaseTimerCard extends StatelessWidget {
             child: LinearProgressIndicator(
               value: progress,
               minHeight: 8,
-              backgroundColor: barColor.withOpacity(0.15),
+              backgroundColor: barColor.withValues(alpha: 0.15),
               valueColor: AlwaysStoppedAnimation(barColor),
             ),
           ),
@@ -1818,11 +1817,11 @@ class _PhaseTimerCard extends StatelessWidget {
             mainAxisAlignment: MainAxisAlignment.spaceBetween,
             children: [
               Text('Target: ${_fmt(nominal)}',
-                  style: TextStyle(fontSize: 11, color: barColor.withOpacity(0.7))),
+                  style: TextStyle(fontSize: 11, color: barColor.withValues(alpha: 0.7))),
               if (phase.maxDuration > 0)
                 Text('Max: ${_fmt(phase.maxDuration.toInt())}',
                     style: TextStyle(
-                        fontSize: 11, color: theme.colorScheme.error.withOpacity(0.7))),
+                        fontSize: 11, color: theme.colorScheme.error.withValues(alpha: 0.7))),
             ],
           ),
           if (isOvertime)
@@ -1868,10 +1867,10 @@ class _ReadingCard extends StatelessWidget {
     return Container(
       padding: const EdgeInsets.all(14),
       decoration: BoxDecoration(
-        color: displayColor.withOpacity(0.07),
+        color: displayColor.withValues(alpha: 0.07),
         borderRadius: BorderRadius.circular(12),
         border: Border.all(
-          color: displayColor.withOpacity(isAlert ? 0.8 : 0.2),
+          color: displayColor.withValues(alpha: isAlert ? 0.8 : 0.2),
           width: isAlert ? 1.5 : 1,
         ),
       ),

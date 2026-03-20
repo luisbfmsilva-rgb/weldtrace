@@ -1,7 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
-import '../../core/network/api_client.dart';
 import '../../di/providers.dart';
 
 // ── Simple user model ────────────────────────────────────────────────────────
@@ -404,7 +403,7 @@ class _UsersScreenState extends ConsumerState<UsersScreen> {
                           child: ListTile(
                             leading: CircleAvatar(
                               backgroundColor:
-                                  _roleColor(u.role).withOpacity(0.15),
+                                  _roleColor(u.role).withValues(alpha: 0.15),
                               child: Text(
                                 '${u.firstName.isNotEmpty ? u.firstName[0] : '?'}'
                                 '${u.lastName.isNotEmpty  ? u.lastName[0]  : '?'}',
@@ -423,7 +422,7 @@ class _UsersScreenState extends ConsumerState<UsersScreen> {
                                   label: Text(u.role,
                                       style: const TextStyle(fontSize: 11)),
                                   backgroundColor:
-                                      _roleColor(u.role).withOpacity(0.12),
+                                      _roleColor(u.role).withValues(alpha: 0.12),
                                   side: BorderSide.none,
                                   padding: EdgeInsets.zero,
                                   materialTapTargetSize:

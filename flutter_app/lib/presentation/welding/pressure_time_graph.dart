@@ -229,11 +229,11 @@ class _PressureTimeGraphState extends State<PressureTimeGraph> {
             color: theme.colorScheme.surface,
             borderRadius: BorderRadius.circular(12),
             border: Border.all(
-              color: theme.colorScheme.outline.withOpacity(0.15),
+              color: theme.colorScheme.outline.withValues(alpha: 0.15),
             ),
             boxShadow: [
               BoxShadow(
-                color: Colors.black.withOpacity(0.04),
+                color: Colors.black.withValues(alpha: 0.04),
                 blurRadius: 6,
                 offset: const Offset(0, 2),
               ),
@@ -334,11 +334,11 @@ class _PressureTimeGraphState extends State<PressureTimeGraph> {
             ? 10.0   // every 10 % in OP mode
             : _niceInterval(xMax - xMin, 6),
         getDrawingHorizontalLine: (_) => FlLine(
-          color: theme.colorScheme.outline.withOpacity(0.12),
+          color: theme.colorScheme.outline.withValues(alpha: 0.12),
           strokeWidth: 1,
         ),
         getDrawingVerticalLine: (_) => FlLine(
-          color: theme.colorScheme.outline.withOpacity(0.10),
+          color: theme.colorScheme.outline.withValues(alpha: 0.10),
           strokeWidth: 1,
         ),
       ),
@@ -378,8 +378,8 @@ class _PressureTimeGraphState extends State<PressureTimeGraph> {
       borderData: FlBorderData(
         show: true,
         border: Border(
-          bottom: BorderSide(color: theme.colorScheme.outline.withOpacity(0.3), width: 1),
-          left:   BorderSide(color: theme.colorScheme.outline.withOpacity(0.3), width: 1),
+          bottom: BorderSide(color: theme.colorScheme.outline.withValues(alpha: 0.3), width: 1),
+          left:   BorderSide(color: theme.colorScheme.outline.withValues(alpha: 0.3), width: 1),
           top:    BorderSide.none,
           right:  BorderSide.none,
         ),
@@ -422,7 +422,7 @@ class _PressureTimeGraphState extends State<PressureTimeGraph> {
         BetweenBarsData(
           fromIndex: _idxMinBand,
           toIndex:   _idxMaxBand,
-          color: const Color(0xFF0052CC).withOpacity(0.07),
+          color: const Color(0xFF0052CC).withValues(alpha: 0.07),
         ),
       ],
     );
@@ -491,8 +491,8 @@ class _PressureTimeGraphState extends State<PressureTimeGraph> {
 
       final isActive = marker.isActive;
       final color = isActive
-          ? const Color(0xFF0052CC).withOpacity(0.55)
-          : theme.colorScheme.outline.withOpacity(0.25);
+          ? const Color(0xFF0052CC).withValues(alpha: 0.55)
+          : theme.colorScheme.outline.withValues(alpha: 0.25);
 
       lines.add(VerticalLine(
         x: xPos,
@@ -507,7 +507,7 @@ class _PressureTimeGraphState extends State<PressureTimeGraph> {
             fontWeight: isActive ? FontWeight.w700 : FontWeight.w400,
             color: isActive
                 ? const Color(0xFF0052CC)
-                : theme.colorScheme.outline.withOpacity(0.6),
+                : theme.colorScheme.outline.withValues(alpha: 0.6),
           ),
           labelResolver: (_) {
             final name = marker.label;
@@ -593,8 +593,8 @@ class _ToggleChip extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final bg  = selected ? theme.colorScheme.primary : Colors.transparent;
-    final fg  = selected ? Colors.white : theme.colorScheme.onSurface.withOpacity(0.6);
-    final bdr = selected ? Colors.transparent : theme.colorScheme.outline.withOpacity(0.3);
+    final fg  = selected ? Colors.white : theme.colorScheme.onSurface.withValues(alpha: 0.6);
+    final bdr = selected ? Colors.transparent : theme.colorScheme.outline.withValues(alpha: 0.3);
 
     return GestureDetector(
       onTap: onTap,
@@ -634,7 +634,7 @@ class _ChartLegend extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final color = Theme.of(context).colorScheme.onSurface.withOpacity(0.5);
+    final color = Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.5);
     return Row(
       children: [
         _LegendDot(color: const Color(0xFFD32F2F), dashed: false),
@@ -650,8 +650,8 @@ class _ChartLegend extends StatelessWidget {
         const SizedBox(width: 12),
         Container(width: 18, height: 8,
           decoration: BoxDecoration(
-            color: const Color(0xFF0052CC).withOpacity(0.12),
-            border: Border.all(color: const Color(0xFF0052CC).withOpacity(0.2)),
+            color: const Color(0xFF0052CC).withValues(alpha: 0.12),
+            border: Border.all(color: const Color(0xFF0052CC).withValues(alpha: 0.2)),
           ),
         ),
         const SizedBox(width: 4),
@@ -719,7 +719,7 @@ class _AxisLabel extends StatelessWidget {
       label,
       style: TextStyle(
         fontSize: 10,
-        color: Theme.of(context).colorScheme.onSurface.withOpacity(0.5),
+        color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.5),
       ),
     );
     return rotate ? RotatedBox(quarterTurns: 3, child: text) : text;
@@ -737,7 +737,7 @@ class _YTitle extends StatelessWidget {
           value.toStringAsFixed(value < 10 ? 1 : 0),
           style: TextStyle(
             fontSize: 9,
-            color: Theme.of(context).colorScheme.onSurface.withOpacity(0.5),
+            color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.5),
           ),
           textAlign: TextAlign.right,
         ),
@@ -753,7 +753,7 @@ class _XTitle extends StatelessWidget {
         value.toStringAsFixed(0),
         style: TextStyle(
           fontSize: 9,
-          color: Theme.of(context).colorScheme.onSurface.withOpacity(0.5),
+          color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.5),
         ),
       );
 }
@@ -767,7 +767,7 @@ class _XTitlePct extends StatelessWidget {
         '${value.toStringAsFixed(0)}%',
         style: TextStyle(
           fontSize: 8,
-          color: Theme.of(context).colorScheme.onSurface.withOpacity(0.5),
+          color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.5),
         ),
       );
 }
@@ -796,7 +796,7 @@ class PressureGraphLegend extends StatelessWidget {
           Container(
             padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 3),
             decoration: BoxDecoration(
-              color: theme.colorScheme.primary.withOpacity(0.12),
+              color: theme.colorScheme.primary.withValues(alpha: 0.12),
               borderRadius: BorderRadius.circular(20),
             ),
             child: Text(
@@ -813,7 +813,7 @@ class PressureGraphLegend extends StatelessWidget {
             '$readingCount pts',
             style: TextStyle(
               fontSize: 11,
-              color: theme.colorScheme.onSurface.withOpacity(0.45),
+              color: theme.colorScheme.onSurface.withValues(alpha: 0.45),
             ),
           ),
         ],

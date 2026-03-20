@@ -542,7 +542,7 @@ class _SectionHeader extends StatelessWidget {
           const SizedBox(height: 6),
           Divider(
             height: 1,
-            color: theme.colorScheme.primary.withOpacity(0.2),
+            color: theme.colorScheme.primary.withValues(alpha: 0.2),
           ),
           const SizedBox(height: 12),
         ],
@@ -565,7 +565,7 @@ class _SectionLabel extends StatelessWidget {
                 color: Theme.of(context)
                     .colorScheme
                     .onSurface
-                    .withOpacity(0.6),
+                    .withValues(alpha: 0.6),
               ),
         ),
       );
@@ -613,7 +613,7 @@ class _DisabledDropdownHint extends StatelessWidget {
                 color: Theme.of(context)
                     .colorScheme
                     .onSurface
-                    .withOpacity(0.4),
+                    .withValues(alpha: 0.4),
               ),
         ),
       );
@@ -628,7 +628,7 @@ class _NoDataWarning extends StatelessWidget {
     return Container(
       padding: const EdgeInsets.all(12),
       decoration: BoxDecoration(
-        color: Colors.amber.withOpacity(0.1),
+        color: Colors.amber.withValues(alpha: 0.1),
         borderRadius: BorderRadius.circular(8),
         border: Border.all(color: Colors.amber),
       ),
@@ -735,9 +735,9 @@ class _WeldingTableCard extends StatelessWidget {
     return Container(
       margin: const EdgeInsets.only(bottom: 16),
       decoration: BoxDecoration(
-        color: blue.withOpacity(0.04),
+        color: blue.withValues(alpha: 0.04),
         borderRadius: BorderRadius.circular(12),
-        border: Border.all(color: blue.withOpacity(0.35)),
+        border: Border.all(color: blue.withValues(alpha: 0.35)),
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
@@ -746,7 +746,7 @@ class _WeldingTableCard extends StatelessWidget {
           Container(
             padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
             decoration: BoxDecoration(
-              color: blue.withOpacity(0.08),
+              color: blue.withValues(alpha: 0.08),
               borderRadius: const BorderRadius.vertical(top: Radius.circular(11)),
             ),
             child: Row(
@@ -847,7 +847,7 @@ class _TableSection extends StatelessWidget {
             fontSize: 9,
             fontWeight: FontWeight.w700,
             letterSpacing: 0.8,
-            color: Theme.of(context).colorScheme.onSurface.withOpacity(0.45),
+            color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.45),
           ),
         ),
       );
@@ -867,9 +867,9 @@ class _ParameterPreviewCard extends StatelessWidget {
       margin: const EdgeInsets.only(bottom: 16),
       padding: const EdgeInsets.all(16),
       decoration: BoxDecoration(
-        color: weldTraceGreen.withOpacity(0.05),
+        color: weldTraceGreen.withValues(alpha: 0.05),
         borderRadius: BorderRadius.circular(12),
-        border: Border.all(color: weldTraceGreen.withOpacity(0.4)),
+        border: Border.all(color: weldTraceGreen.withValues(alpha: 0.4)),
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
@@ -924,8 +924,8 @@ class _ParamRow extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final dimColor = Theme.of(context).colorScheme.onSurface.withOpacity(0.55);
-    final veryDimColor = Theme.of(context).colorScheme.onSurface.withOpacity(0.38);
+    final dimColor = Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.55);
+    final veryDimColor = Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.38);
     return Padding(
       padding: const EdgeInsets.symmetric(vertical: 3),
       child: Row(
