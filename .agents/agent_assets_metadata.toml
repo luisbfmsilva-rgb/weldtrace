@@ -66,3 +66,9 @@ id = "gXx1IuyIhl5MQ9EqOXxoE"
 uri = "file://weld_pdfs/10_PE100rc_200mm_SDR17_trench_repair.pdf"
 type = "pdf"
 title = "10 — PE100rc 200mm Emergency Trench Repair (DVS 2207, 95 samples)"
+
+[[outputs]]
+id = "hdyE9HDWI2rnKXAo9SIpO"
+uri = "file://sertec_translations.xlsx"
+type = "table"
+title = "Sertec FusionCertify — Planilha de Traduções"
