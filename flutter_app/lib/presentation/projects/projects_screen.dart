@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
+import '../../core/l10n/app_localizations.dart';
 import '../../core/theme/app_colors.dart';
 import '../../data/local/database/app_database.dart';
 import '../../di/providers.dart';
@@ -13,23 +14,24 @@ class ProjectsScreen extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
-    final db = ref.watch(databaseProvider);
+    final db   = ref.watch(databaseProvider);
+    final l10n = AppLocalizations.of(context);
 
     return Scaffold(
       backgroundColor: AppColors.lightGray,
       appBar: AppBar(
-        title: const Text('Projects'),
+        title: Text(l10n.t('Projects')),
         actions: [
           IconButton(
             icon: const Icon(Icons.sync_outlined),
-            tooltip: 'Sync',
+            tooltip: l10n.t('Sync'),
             onPressed: () async {
               final service = ref.read(syncServiceProvider);
               service.start();
               await service.syncNow();
               if (context.mounted) {
                 ScaffoldMessenger.of(context).showSnackBar(
-                  const SnackBar(content: Text('Sync complete')),
+                  SnackBar(content: Text(l10n.t('Sync complete'))),
                 );
               }
             },
@@ -61,7 +63,7 @@ class ProjectsScreen extends ConsumerWidget {
         backgroundColor: AppColors.sertecRed,
         foregroundColor: Colors.white,
         icon: const Icon(Icons.add),
-        label: const Text('New Project'),
+        label: Text(l10n.t('New Project')),
         onPressed: () => _openForm(context),
       ),
     );
@@ -74,17 +76,23 @@ class ProjectsScreen extends ConsumerWidget {
   }
 
   void _delete(BuildContext context, WidgetRef ref, ProjectRecord project) async {
+    final l10n = AppLocalizations.of(context);
     final ok = await showDialog<bool>(
       context: context,
       builder: (ctx) => AlertDialog(
-        title: const Text('Delete Project?'),
-        content: Text('This will permanently delete "${project.name}". This action cannot be undone.'),
+        title: Text(l10n.t('Delete Project?')),
+        content: Text(
+          l10n.t('This will permanently delete this project. This action cannot be undone.'),
+        ),
         actions: [
-          TextButton(onPressed: () => Navigator.pop(ctx, false), child: const Text('Cancel')),
+          TextButton(
+            onPressed: () => Navigator.pop(ctx, false),
+            child: Text(l10n.t('Cancel')),
+          ),
           FilledButton(
             onPressed: () => Navigator.pop(ctx, true),
             style: FilledButton.styleFrom(backgroundColor: Colors.red),
-            child: const Text('Delete'),
+            child: Text(l10n.t('Delete')),
           ),
         ],
       ),
@@ -93,7 +101,7 @@ class ProjectsScreen extends ConsumerWidget {
       await ref.read(databaseProvider).projectsDao.deleteById(project.id);
       if (context.mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('Project deleted')),
+          SnackBar(content: Text(l10n.t('Project deleted'))),
         );
       }
     }
@@ -113,7 +121,7 @@ class _ProjectCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final theme = Theme.of(context);
+    final theme    = Theme.of(context);
     final isActive = project.status == 'active';
 
     return Container(
@@ -209,6 +217,7 @@ class _EmptyState extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final l10n = AppLocalizations.of(context);
     return Center(
       child: Padding(
         padding: const EdgeInsets.all(32),
@@ -224,17 +233,17 @@ class _EmptyState extends StatelessWidget {
               child: const Icon(Icons.folder_open_outlined, size: 36, color: AppColors.sertecRed),
             ),
             const SizedBox(height: 20),
-            const Text('No projects yet.',
-                style: TextStyle(fontSize: 16, fontWeight: FontWeight.w600, color: Color(0xFF333333))),
+            Text(l10n.t('No projects yet.'),
+                style: const TextStyle(fontSize: 16, fontWeight: FontWeight.w600, color: Color(0xFF333333))),
             const SizedBox(height: 8),
-            const Text('Create your first project to start recording welds.',
-                style: TextStyle(fontSize: 13, color: AppColors.neutralGray), textAlign: TextAlign.center),
+            Text(l10n.t('Create your first project to start recording welds.'),
+                style: const TextStyle(fontSize: 13, color: AppColors.neutralGray), textAlign: TextAlign.center),
             const SizedBox(height: 24),
             FilledButton.icon(
               onPressed: onAdd,
               style: FilledButton.styleFrom(backgroundColor: AppColors.sertecRed),
               icon: const Icon(Icons.add),
-              label: const Text('Create Project'),
+              label: Text(l10n.t('Create Project')),
             ),
           ],
         ),

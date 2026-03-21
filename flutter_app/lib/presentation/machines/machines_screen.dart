@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
+import '../../core/l10n/app_localizations.dart';
 import '../../core/theme/app_colors.dart';
 import '../../data/local/database/app_database.dart';
 import '../../di/providers.dart';
@@ -11,11 +12,12 @@ class MachinesScreen extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
-    final db = ref.watch(databaseProvider);
+    final db   = ref.watch(databaseProvider);
+    final l10n = AppLocalizations.of(context);
 
     return Scaffold(
       backgroundColor: AppColors.lightGray,
-      appBar: AppBar(title: const Text('Machines')),
+      appBar: AppBar(title: Text(l10n.t('Machines'))),
       body: StreamBuilder<List<MachineRecord>>(
         stream: db.machinesDao.watchAll(),
         builder: (context, snapshot) {
@@ -41,7 +43,7 @@ class MachinesScreen extends ConsumerWidget {
         backgroundColor: AppColors.sertecRed,
         foregroundColor: Colors.white,
         icon: const Icon(Icons.add),
-        label: const Text('Add Machine'),
+        label: Text(l10n.t('Add Machine')),
         onPressed: () => _openForm(context),
       ),
     );
@@ -54,17 +56,21 @@ class MachinesScreen extends ConsumerWidget {
   }
 
   void _delete(BuildContext context, WidgetRef ref, MachineRecord machine) async {
+    final l10n = AppLocalizations.of(context);
     final ok = await showDialog<bool>(
       context: context,
       builder: (ctx) => AlertDialog(
-        title: const Text('Delete Machine?'),
-        content: Text('Delete "${machine.manufacturer} ${machine.model}" (S/N: ${machine.serialNumber})?'),
+        title: Text(l10n.t('Delete Machine?')),
+        content: Text(l10n.t('This will permanently delete this machine. This action cannot be undone.')),
         actions: [
-          TextButton(onPressed: () => Navigator.pop(ctx, false), child: const Text('Cancel')),
+          TextButton(
+            onPressed: () => Navigator.pop(ctx, false),
+            child: Text(l10n.t('Cancel')),
+          ),
           FilledButton(
             onPressed: () => Navigator.pop(ctx, true),
             style: FilledButton.styleFrom(backgroundColor: Colors.red),
-            child: const Text('Delete'),
+            child: Text(l10n.t('Delete')),
           ),
         ],
       ),
@@ -73,7 +79,7 @@ class MachinesScreen extends ConsumerWidget {
       await ref.read(databaseProvider).machinesDao.deleteById(machine.id);
       if (context.mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('Machine deleted')),
+          SnackBar(content: Text(l10n.t('Machine deleted'))),
         );
       }
     }
@@ -88,7 +94,8 @@ class _MachineCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final theme = Theme.of(context);
+    final theme    = Theme.of(context);
+    final l10n     = AppLocalizations.of(context);
     final approved = machine.isApproved;
 
     return Container(
@@ -126,18 +133,24 @@ class _MachineCard extends StatelessWidget {
                     _Badge(label: machine.type.toUpperCase().replaceAll('_', ' '),
                         color: AppColors.sertecRed),
                     const SizedBox(width: 6),
-                    _Badge(label: approved ? 'APPROVED' : 'PENDING',
-                        color: approved ? const Color(0xFF2E7D32) : Colors.orange),
+                    _Badge(
+                      label: approved ? l10n.t('Approved') : l10n.t('Pending'),
+                      color: approved ? const Color(0xFF2E7D32) : Colors.orange,
+                    ),
                   ]),
                   if (machine.hydraulicCylinderAreaMm2 != null) ...[
                     const SizedBox(height: 3),
-                    Text('Cylinder: ${machine.hydraulicCylinderAreaMm2!.toStringAsFixed(2)} mm²',
-                        style: const TextStyle(fontSize: 11, color: AppColors.neutralGray)),
+                    Text(
+                      '${l10n.t('Cylinder')}: ${machine.hydraulicCylinderAreaMm2!.toStringAsFixed(2)} mm²',
+                      style: const TextStyle(fontSize: 11, color: AppColors.neutralGray),
+                    ),
                   ],
                   if (machine.nextCalibrationDate != null) ...[
                     const SizedBox(height: 2),
-                    Text('Cal. due: ${machine.nextCalibrationDate}',
-                        style: TextStyle(fontSize: 11, color: theme.colorScheme.error)),
+                    Text(
+                      '${l10n.t('Cal. due')}: ${machine.nextCalibrationDate}',
+                      style: TextStyle(fontSize: 11, color: theme.colorScheme.error),
+                    ),
                   ],
                 ],
               ),
@@ -148,13 +161,13 @@ class _MachineCard extends StatelessWidget {
                   icon: const Icon(Icons.edit_outlined, size: 20),
                   color: AppColors.neutralGray,
                   onPressed: onEdit,
-                  tooltip: 'Edit',
+                  tooltip: l10n.t('Edit'),
                 ),
                 IconButton(
                   icon: const Icon(Icons.delete_outline, size: 20),
                   color: Colors.redAccent,
                   onPressed: onDelete,
-                  tooltip: 'Delete',
+                  tooltip: l10n.t('Delete'),
                 ),
               ],
             ),
@@ -187,33 +200,36 @@ class _EmptyState extends StatelessWidget {
   final VoidCallback onAdd;
 
   @override
-  Widget build(BuildContext context) => Center(
-        child: Padding(
-          padding: const EdgeInsets.all(32),
-          child: Column(
-            mainAxisAlignment: MainAxisAlignment.center,
-            children: [
-              Container(
-                width: 80, height: 80,
-                decoration: BoxDecoration(
-                  color: AppColors.sertecRed.withValues(alpha: 0.07), shape: BoxShape.circle),
-                child: const Icon(Icons.precision_manufacturing_outlined, size: 36, color: AppColors.sertecRed),
-              ),
-              const SizedBox(height: 20),
-              const Text('No machines registered.',
-                  style: TextStyle(fontSize: 16, fontWeight: FontWeight.w600, color: Color(0xFF333333))),
-              const SizedBox(height: 8),
-              const Text('Register your welding machines before starting a weld.',
-                  style: TextStyle(fontSize: 13, color: AppColors.neutralGray), textAlign: TextAlign.center),
-              const SizedBox(height: 24),
-              FilledButton.icon(
-                onPressed: onAdd,
-                style: FilledButton.styleFrom(backgroundColor: AppColors.sertecRed),
-                icon: const Icon(Icons.add),
-                label: const Text('Add Machine'),
-              ),
-            ],
-          ),
+  Widget build(BuildContext context) {
+    final l10n = AppLocalizations.of(context);
+    return Center(
+      child: Padding(
+        padding: const EdgeInsets.all(32),
+        child: Column(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            Container(
+              width: 80, height: 80,
+              decoration: BoxDecoration(
+                color: AppColors.sertecRed.withValues(alpha: 0.07), shape: BoxShape.circle),
+              child: const Icon(Icons.precision_manufacturing_outlined, size: 36, color: AppColors.sertecRed),
+            ),
+            const SizedBox(height: 20),
+            Text(l10n.t('No machines registered.'),
+                style: const TextStyle(fontSize: 16, fontWeight: FontWeight.w600, color: Color(0xFF333333))),
+            const SizedBox(height: 8),
+            Text(l10n.t('Register your welding machines before starting a weld.'),
+                style: const TextStyle(fontSize: 13, color: AppColors.neutralGray), textAlign: TextAlign.center),
+            const SizedBox(height: 24),
+            FilledButton.icon(
+              onPressed: onAdd,
+              style: FilledButton.styleFrom(backgroundColor: AppColors.sertecRed),
+              icon: const Icon(Icons.add),
+              label: Text(l10n.t('Add Machine')),
+            ),
+          ],
         ),
-      );
+      ),
+    );
+  }
 }

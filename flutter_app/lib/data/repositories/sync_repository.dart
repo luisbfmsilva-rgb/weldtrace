@@ -4,22 +4,22 @@ import '../../core/errors/app_exception.dart';
 import '../../core/utils/result.dart';
 import '../local/database/app_database.dart';
 import '../models/sync_models.dart';
-import '../remote/sync_remote_data_source.dart';
+import '../remote/supabase_sync_data_source.dart';
 
-/// Coordinates offline data upload and cloud-to-local update download.
+/// Coordinates offline data upload and cloud-to-local update download
+/// using direct Supabase client calls (no intermediate Express API).
 class SyncRepository {
   const SyncRepository({
     required this.remoteDataSource,
     required this.db,
   });
 
-  final SyncRemoteDataSource remoteDataSource;
+  final SupabaseSyncDataSource remoteDataSource;
   final AppDatabase db;
 
   // ── Upload (local → cloud) ────────────────────────────────────────────────
 
-  /// Uploads all pending local records to the cloud.
-  /// Returns the upload result or a [SyncException].
+  /// Uploads all pending local records to Supabase via direct upsert.
   Future<Result<SyncUploadResult>> syncUpload() async {
     try {
       // 1. Gather pending records from every DAO in parallel
@@ -52,7 +52,7 @@ class SyncRepository {
         }
       }
 
-      // 3a. Build machine payloads
+      // 3a. Build machine payloads (camelCase — converted to snake_case in data source)
       final machinePayloads = pendingMachines.map((m) => {
             'id':                    m.id,
             'serialNumber':          m.serialNumber,
@@ -92,20 +92,20 @@ class SyncRepository {
 
       // 3c. Build weld payloads
       final weldPayloads = pendingWelds.map((w) => {
-            'id': w.id,
+            'id':        w.id,
             'projectId': w.projectId,
             'machineId': w.machineId,
-            'weldType': w.weldType,
-            'status': w.status,
+            'weldType':  w.weldType,
+            'status':    w.status,
             'pipeMaterial': w.pipeMaterial,
             'pipeDiameter': w.pipeDiameter,
-            if (w.pipeSdr != null) 'pipeSdr': w.pipeSdr,
-            if (w.pipeWallThickness != null) 'pipeWallThickness': w.pipeWallThickness,
+            if (w.pipeSdr != null)            'pipeSdr':            w.pipeSdr,
+            if (w.pipeWallThickness != null)  'pipeWallThickness':  w.pipeWallThickness,
             if (w.ambientTemperature != null) 'ambientTemperature': w.ambientTemperature,
-            if (w.gpsLat != null) 'gpsLat': w.gpsLat,
-            if (w.gpsLng != null) 'gpsLng': w.gpsLng,
-            if (w.standardUsed != null) 'standardUsed': w.standardUsed,
-            if (w.standardId != null) 'standardId': w.standardId,
+            if (w.gpsLat != null)             'gpsLat':             w.gpsLat,
+            if (w.gpsLng != null)             'gpsLng':             w.gpsLng,
+            if (w.standardUsed != null)       'standardUsed':       w.standardUsed,
+            if (w.standardId != null)         'standardId':         w.standardId,
             'isCancelled': w.isCancelled,
             if (w.cancelReason != null) 'cancelReason': w.cancelReason,
             if (w.cancelTimestamp != null)
@@ -116,20 +116,21 @@ class SyncRepository {
               'completedAt': w.completedAt!.toUtc().toIso8601String(),
           }).toList();
 
-      // 4. Build weld step payloads
+      // 3d. Build weld step payloads
       final stepPayloads = pendingSteps.map((s) => {
-            'id': s.id,
-            'weldId': s.weldId,
+            'id':        s.id,
+            'weldId':    s.weldId,
             'phaseName': s.phaseName,
             'phaseOrder': s.phaseOrder,
-            if (s.startedAt != null) 'startedAt': s.startedAt!.toUtc().toIso8601String(),
+            if (s.startedAt != null)
+              'startedAt': s.startedAt!.toUtc().toIso8601String(),
             if (s.completedAt != null)
               'completedAt': s.completedAt!.toUtc().toIso8601String(),
-            if (s.nominalValue != null) 'nominalValue': s.nominalValue,
-            if (s.actualValue != null) 'actualValue': s.actualValue,
-            if (s.unit != null) 'unit': s.unit,
-            if (s.validationPassed != null) 'validationPassed': s.validationPassed,
-            if (s.notes != null) 'notes': s.notes,
+            if (s.nominalValue != null)      'nominalValue':      s.nominalValue,
+            if (s.actualValue != null)       'actualValue':       s.actualValue,
+            if (s.unit != null)              'unit':              s.unit,
+            if (s.validationPassed != null)  'validationPassed':  s.validationPassed,
+            if (s.notes != null)             'notes':             s.notes,
           }).toList();
 
       final nothingToUpload = machinePayloads.isEmpty &&
@@ -151,7 +152,7 @@ class SyncRepository {
         ));
       }
 
-      // 5. Upload everything
+      // 4. Upload everything
       final payload = SyncUploadPayload(
         machines:         machinePayloads,
         projects:         projectPayloads,
@@ -164,7 +165,7 @@ class SyncRepository {
 
       return result.when(
         success: (uploadResult) async {
-          // 6. Mark as synced only if upload succeeded per entity
+          // 5. Mark as synced only if upload succeeded per entity
           if (!uploadResult.machines.hasErrors) {
             for (final m in pendingMachines) {
               await db.machinesDao.markSynced(m.id);
@@ -200,12 +201,9 @@ class SyncRepository {
     }
   }
 
-  // ── Force full re-upload (for data that predates the cloud sync feature) ──
+  // ── Force full re-upload ──────────────────────────────────────────────────
 
-  /// Marks ALL local machines and projects as 'pending' so they are included
-  /// in the next upload cycle. Call this once when migrating from a version
-  /// that did not sync these entities, or when the user wants to force a
-  /// full re-upload (e.g. after restoring from backup).
+  /// Marks ALL local machines and projects as 'pending' for forced re-upload.
   Future<void> markAllLocalAsPending() async {
     await db.transaction(() async {
       final machines = await db.machinesDao.getAll();
@@ -227,7 +225,6 @@ class SyncRepository {
 
   // ── Download (cloud → local) ──────────────────────────────────────────────
 
-  /// Downloads changes from the cloud since [since] and writes them to local DB.
   Future<Result<SyncUpdatesResponse>> syncDownload({
     required DateTime since,
     String? projectId,
@@ -289,8 +286,7 @@ class SyncRepository {
                 isActive: Value(s['is_active'] as bool? ?? true),
                 syncStatus: const Value('synced'),
                 lastSyncedAt: Value(DateTime.now()),
-                updatedAt: Value(
-                    DateTime.tryParse(s['updated_at'] as String? ?? '')),
+                updatedAt: Value(DateTime.tryParse(s['updated_at'] as String? ?? '')),
               )).toList();
           await db.weldingParametersDao.upsertAllStandards(standardRows);
 
@@ -302,22 +298,18 @@ class SyncRepository {
                 pipeMaterial: Value(p['pipe_material'] as String),
                 pipeDiameterMm: Value((p['pipe_diameter_mm'] as num).toDouble()),
                 sdrRating: Value(p['sdr_rating'] as String),
-                wallThicknessMm: Value(
-                    (p['wall_thickness_mm'] as num?)?.toDouble()),
+                wallThicknessMm: Value((p['wall_thickness_mm'] as num?)?.toDouble()),
                 ambientTempMinCelsius: Value(
-                    (p['ambient_temp_min_celsius'] as num?)?.toDouble() ??
-                        -15.0),
+                    (p['ambient_temp_min_celsius'] as num?)?.toDouble() ?? -15.0),
                 ambientTempMaxCelsius: Value(
-                    (p['ambient_temp_max_celsius'] as num?)?.toDouble() ??
-                        50.0),
+                    (p['ambient_temp_max_celsius'] as num?)?.toDouble() ?? 50.0),
                 heatingUpTimeS: Value(p['heating_up_time_s'] as int?),
                 heatingUpPressureBar: Value(
                     (p['heating_up_pressure_bar'] as num?)?.toDouble()),
                 heatingTimeS: Value(p['heating_time_s'] as int?),
                 heatingPressureBar: Value(
                     (p['heating_pressure_bar'] as num?)?.toDouble()),
-                changeoverTimeMaxS:
-                    Value(p['changeover_time_max_s'] as int?),
+                changeoverTimeMaxS: Value(p['changeover_time_max_s'] as int?),
                 buildupTimeS: Value(p['buildup_time_s'] as int?),
                 fusionTimeS: Value(p['fusion_time_s'] as int?),
                 fusionPressureBar: Value(
@@ -343,8 +335,7 @@ class SyncRepository {
                 isActive: Value(p['is_active'] as bool? ?? true),
                 syncStatus: const Value('synced'),
                 lastSyncedAt: Value(DateTime.now()),
-                updatedAt: Value(
-                    DateTime.tryParse(p['updated_at'] as String? ?? '')),
+                updatedAt: Value(DateTime.tryParse(p['updated_at'] as String? ?? '')),
               )).toList();
           await db.weldingParametersDao.upsertAllParameters(paramRows);
 

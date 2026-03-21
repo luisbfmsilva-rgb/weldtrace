@@ -4,13 +4,13 @@ import 'package:supabase_flutter/supabase_flutter.dart'
 
 import '../data/local/database/app_database.dart';
 import '../data/remote/auth_remote_data_source.dart';
-import '../data/remote/sync_remote_data_source.dart';
+import '../data/remote/supabase_sync_data_source.dart';
 import '../data/repositories/auth_repository.dart';
 import '../data/repositories/sync_repository.dart';
 import '../data/repositories/weld_parameters_repository.dart';
+import '../core/network/api_client.dart';
 import '../services/sync/sync_service.dart';
 import '../services/sensor/sensor_service.dart';
-import '../core/network/api_client.dart';
 import '../presentation/welding/weld_setup_notifier.dart';
 
 // ── Database ──────────────────────────────────────────────────────────────────
@@ -21,13 +21,12 @@ final databaseProvider = Provider<AppDatabase>((ref) {
   return db;
 });
 
-// ── API client ─────────────────────────────────────────────────────────────────
+// ── API client (used by UsersScreen and other direct API callers) ─────────────
 
 final apiClientProvider = Provider<ApiClient>((ref) {
   return ApiClient(
-    tokenProvider: () async {
-      return Supabase.instance.client.auth.currentSession?.accessToken;
-    },
+    tokenProvider: () async =>
+        Supabase.instance.client.auth.currentSession?.accessToken,
   );
 });
 
@@ -45,9 +44,8 @@ final authRepositoryProvider = Provider<AuthRepository>((ref) {
 
 final syncRepositoryProvider = Provider<SyncRepository>((ref) {
   final db = ref.watch(databaseProvider);
-  final api = ref.watch(apiClientProvider);
   return SyncRepository(
-    remoteDataSource: SyncRemoteDataSource(api),
+    remoteDataSource: const SupabaseSyncDataSource(),
     db: db,
   );
 });

@@ -3,6 +3,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:intl/intl.dart';
 
+import '../../core/l10n/app_localizations.dart';
 import '../../core/theme/app_colors.dart';
 import '../../data/local/database/app_database.dart';
 import '../../di/providers.dart';
@@ -12,8 +13,9 @@ class DashboardScreen extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
-    final db = ref.watch(databaseProvider);
+    final db   = ref.watch(databaseProvider);
     final auth = ref.watch(authProvider);
+    final l10n = AppLocalizations.of(context);
 
     return Scaffold(
       backgroundColor: AppColors.lightGray,
@@ -28,7 +30,7 @@ class DashboardScreen extends ConsumerWidget {
         actions: [
           IconButton(
             icon: const Icon(Icons.qr_code_scanner_outlined),
-            tooltip: 'Verify Weld',
+            tooltip: l10n.t('Verify Weld'),
             onPressed: () => context.push('/qr/verify'),
           ),
         ],
@@ -38,24 +40,71 @@ class DashboardScreen extends ConsumerWidget {
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            // ── Welcome ───────────────────────────────────────────────────
             if (auth.user != null) ...[
               _WelcomeCard(user: auth.user),
               const SizedBox(height: 16),
             ],
 
-            // ── Stats row ─────────────────────────────────────────────────
-            _StatsRow(db: db),
+            // ── Stats row ────────────────────────────────────────────────
+            Row(
+              children: [
+                Expanded(child: _StreamStatCard(
+                  label: l10n.t('Active Projects'),
+                  icon: Icons.folder_open_outlined,
+                  color: AppColors.sertecRed,
+                  stream: db.projectsDao.watchAll().map(
+                    (list) => list.where((p) => p.status == 'active').length.toString(),
+                  ),
+                )),
+                const SizedBox(width: 10),
+                Expanded(child: _StreamStatCard(
+                  label: l10n.t('Total Welds'),
+                  icon: Icons.local_fire_department_outlined,
+                  color: const Color(0xFF1565C0),
+                  stream: db.weldsDao.watchAll().map((list) => list.length.toString()),
+                )),
+                const SizedBox(width: 10),
+                Expanded(child: _StreamStatCard(
+                  label: l10n.t('Machines'),
+                  icon: Icons.precision_manufacturing_outlined,
+                  color: const Color(0xFF2E7D32),
+                  stream: db.machinesDao.watchAll().map((list) => list.length.toString()),
+                )),
+              ],
+            ),
             const SizedBox(height: 20),
 
             // ── Quick actions ─────────────────────────────────────────────
-            const _SectionHeader(title: 'Quick Actions'),
+            _SectionHeader(title: l10n.t('Quick Actions')),
             const SizedBox(height: 10),
-            _QuickActions(),
+            Row(
+              children: [
+                Expanded(child: _ActionButton(
+                  label: l10n.t('New Project'),
+                  icon: Icons.add_circle_outline,
+                  color: AppColors.sertecRed,
+                  onTap: () => context.push('/projects/new'),
+                )),
+                const SizedBox(width: 10),
+                Expanded(child: _ActionButton(
+                  label: l10n.t('New Weld'),
+                  icon: Icons.local_fire_department_outlined,
+                  color: const Color(0xFF1565C0),
+                  onTap: () => context.push('/weld/setup'),
+                )),
+                const SizedBox(width: 10),
+                Expanded(child: _ActionButton(
+                  label: l10n.t('Add Machine'),
+                  icon: Icons.precision_manufacturing_outlined,
+                  color: const Color(0xFF2E7D32),
+                  onTap: () => context.push('/machines/new'),
+                )),
+              ],
+            ),
             const SizedBox(height: 20),
 
             // ── Recent welds ──────────────────────────────────────────────
-            const _SectionHeader(title: 'Recent Welds'),
+            _SectionHeader(title: l10n.t('Recent Welds')),
             const SizedBox(height: 10),
             _RecentWeldsList(db: db),
           ],
@@ -65,7 +114,7 @@ class DashboardScreen extends ConsumerWidget {
   }
 }
 
-// ── Welcome card ───────────────────────────────────────────────────────────────
+// ── Welcome card ────────────────────────────────────────────────────────────────
 
 class _WelcomeCard extends StatelessWidget {
   const _WelcomeCard({required this.user});
@@ -132,42 +181,7 @@ class _WelcomeCard extends StatelessWidget {
   }
 }
 
-// ── Stats row ──────────────────────────────────────────────────────────────────
-
-class _StatsRow extends StatelessWidget {
-  const _StatsRow({required this.db});
-  final AppDatabase db;
-
-  @override
-  Widget build(BuildContext context) {
-    return Row(
-      children: [
-        Expanded(child: _StreamStatCard(
-          label: 'Active Projects',
-          icon: Icons.folder_open_outlined,
-          color: AppColors.sertecRed,
-          stream: db.projectsDao.watchAll().map(
-            (list) => list.where((p) => p.status == 'active').length.toString(),
-          ),
-        )),
-        const SizedBox(width: 10),
-        Expanded(child: _StreamStatCard(
-          label: 'Total Welds',
-          icon: Icons.local_fire_department_outlined,
-          color: const Color(0xFF1565C0),
-          stream: db.weldsDao.watchAll().map((list) => list.length.toString()),
-        )),
-        const SizedBox(width: 10),
-        Expanded(child: _StreamStatCard(
-          label: 'Machines',
-          icon: Icons.precision_manufacturing_outlined,
-          color: const Color(0xFF2E7D32),
-          stream: db.machinesDao.watchAll().map((list) => list.length.toString()),
-        )),
-      ],
-    );
-  }
-}
+// ── Stat card ───────────────────────────────────────────────────────────────────
 
 class _StreamStatCard extends StatelessWidget {
   const _StreamStatCard({
@@ -217,37 +231,7 @@ class _StreamStatCard extends StatelessWidget {
   }
 }
 
-// ── Quick actions ──────────────────────────────────────────────────────────────
-
-class _QuickActions extends StatelessWidget {
-  @override
-  Widget build(BuildContext context) {
-    return Row(
-      children: [
-        Expanded(child: _ActionButton(
-          label: 'New Project',
-          icon: Icons.add_circle_outline,
-          color: AppColors.sertecRed,
-          onTap: () => context.push('/projects/new'),
-        )),
-        const SizedBox(width: 10),
-        Expanded(child: _ActionButton(
-          label: 'New Weld',
-          icon: Icons.local_fire_department_outlined,
-          color: const Color(0xFF1565C0),
-          onTap: () => context.push('/weld/setup'),
-        )),
-        const SizedBox(width: 10),
-        Expanded(child: _ActionButton(
-          label: 'Add Machine',
-          icon: Icons.precision_manufacturing_outlined,
-          color: const Color(0xFF2E7D32),
-          onTap: () => context.push('/machines/new'),
-        )),
-      ],
-    );
-  }
-}
+// ── Action button ───────────────────────────────────────────────────────────────
 
 class _ActionButton extends StatelessWidget {
   const _ActionButton({
@@ -293,7 +277,7 @@ class _ActionButton extends StatelessWidget {
   }
 }
 
-// ── Recent welds ───────────────────────────────────────────────────────────────
+// ── Recent welds ────────────────────────────────────────────────────────────────
 
 class _RecentWeldsList extends StatelessWidget {
   const _RecentWeldsList({required this.db});
@@ -301,17 +285,16 @@ class _RecentWeldsList extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final l10n = AppLocalizations.of(context);
     return StreamBuilder<List<WeldRecord>>(
       stream: db.weldsDao.watchAll(),
       builder: (context, snapshot) {
         final welds = (snapshot.data ?? []).take(5).toList();
         if (welds.isEmpty) {
-          return const _EmptyCard(message: 'No welds recorded yet.');
+          return _EmptyCard(message: l10n.t('No welds recorded yet.'));
         }
         return Column(
-          children: welds
-              .map((w) => _WeldListTile(weld: w, db: db))
-              .toList(),
+          children: welds.map((w) => _WeldListTile(weld: w, db: db)).toList(),
         );
       },
     );
@@ -325,6 +308,7 @@ class _WeldListTile extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final l10n = AppLocalizations.of(context);
     final fmt = DateFormat('dd/MM/yy HH:mm');
     final isCompleted = weld.status == 'completed';
     final statusColor = isCompleted
@@ -332,6 +316,13 @@ class _WeldListTile extends StatelessWidget {
         : weld.status == 'in_progress'
             ? AppColors.sertecRed
             : AppColors.neutralGray;
+
+    final statusLabel = switch (weld.status) {
+      'completed'  => l10n.t('Completed'),
+      'in_progress' => l10n.t('In Progress'),
+      'cancelled'  => l10n.t('Cancelled'),
+      _            => weld.status.toUpperCase().replaceAll('_', ' '),
+    };
 
     return GestureDetector(
       onTap: () => context.push('/welds/${weld.id}'),
@@ -376,7 +367,7 @@ class _WeldListTile extends StatelessWidget {
                 borderRadius: BorderRadius.circular(6),
               ),
               child: Text(
-                weld.status.toUpperCase().replaceAll('_', ' '),
+                statusLabel,
                 style: TextStyle(
                   fontSize: 9,
                   fontWeight: FontWeight.w700,
@@ -391,7 +382,7 @@ class _WeldListTile extends StatelessWidget {
   }
 }
 
-// ── Helpers ────────────────────────────────────────────────────────────────────
+// ── Helpers ─────────────────────────────────────────────────────────────────────
 
 class _SectionHeader extends StatelessWidget {
   const _SectionHeader({required this.title});

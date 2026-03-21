@@ -3,6 +3,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:intl/intl.dart';
 
+import '../../core/l10n/app_localizations.dart';
 import '../../core/theme/app_colors.dart';
 import '../../data/local/database/app_database.dart';
 import '../../di/providers.dart';
@@ -15,33 +16,34 @@ class WeldsScreen extends ConsumerStatefulWidget {
 }
 
 class _WeldsScreenState extends ConsumerState<WeldsScreen> {
-  String _filter = 'all'; // all, completed, in_progress, failed
+  String _filter = 'all';
 
   @override
   Widget build(BuildContext context) {
-    final db = ref.watch(databaseProvider);
+    final db   = ref.watch(databaseProvider);
+    final l10n = AppLocalizations.of(context);
 
     return Scaffold(
       backgroundColor: AppColors.lightGray,
       appBar: AppBar(
-        title: const Text('Welds'),
+        title: Text(l10n.t('Welds')),
         actions: [
           IconButton(
             icon: const Icon(Icons.add),
-            tooltip: 'New Weld',
+            tooltip: l10n.t('New Weld'),
             onPressed: () => context.push('/weld/setup'),
           ),
         ],
       ),
       body: Column(
         children: [
-          // ── Filter chips ──────────────────────────────────────────────
+          // ── Filter chips ────────────────────────────────────────────────
           _FilterBar(
             selected: _filter,
             onChanged: (v) => setState(() => _filter = v),
           ),
 
-          // ── List ──────────────────────────────────────────────────────
+          // ── List ────────────────────────────────────────────────────────
           Expanded(
             child: StreamBuilder<List<WeldRecord>>(
               stream: db.weldsDao.watchAll(),
@@ -82,14 +84,14 @@ class _WeldsScreenState extends ConsumerState<WeldsScreen> {
         backgroundColor: AppColors.sertecRed,
         foregroundColor: Colors.white,
         icon: const Icon(Icons.local_fire_department),
-        label: const Text('New Weld'),
+        label: Text(l10n.t('New Weld')),
         onPressed: () => context.push('/weld/setup'),
       ),
     );
   }
 }
 
-// ── Filter bar ─────────────────────────────────────────────────────────────────
+// ── Filter bar ──────────────────────────────────────────────────────────────────
 
 class _FilterBar extends StatelessWidget {
   const _FilterBar({required this.selected, required this.onChanged});
@@ -98,11 +100,12 @@ class _FilterBar extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final l10n = AppLocalizations.of(context);
     final filters = [
-      ('all', 'All'),
-      ('completed', 'Completed'),
-      ('in_progress', 'In Progress'),
-      ('failed', 'Failed'),
+      ('all',         l10n.t('All')),
+      ('completed',   l10n.t('Completed')),
+      ('in_progress', l10n.t('In Progress')),
+      ('failed',      l10n.t('Failed')),
     ];
     return Container(
       color: Colors.white,
@@ -135,7 +138,7 @@ class _FilterBar extends StatelessWidget {
   }
 }
 
-// ── Weld card ──────────────────────────────────────────────────────────────────
+// ── Weld card ───────────────────────────────────────────────────────────────────
 
 class _WeldCard extends StatelessWidget {
   const _WeldCard({required this.weld, required this.db, required this.onTap});
@@ -145,7 +148,8 @@ class _WeldCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final fmt = DateFormat('dd MMM yyyy • HH:mm');
+    final l10n       = AppLocalizations.of(context);
+    final fmt        = DateFormat('dd MMM yyyy • HH:mm');
     final statusColor = _statusColor(weld.status);
 
     return GestureDetector(
@@ -198,11 +202,11 @@ class _WeldCard extends StatelessWidget {
                   _InfoPill(icon: Icons.calendar_today_outlined, text: fmt.format(weld.startedAt.toLocal())),
                   const Spacer(),
                   if (weld.traceSignature != null)
-                    const _InfoPill(icon: Icons.verified_outlined, text: 'Certified'),
+                    _InfoPill(icon: Icons.verified_outlined, text: l10n.t('Certified')),
                   if (weld.jointId != null)
-                    Padding(
-                      padding: const EdgeInsets.only(left: 8),
-                      child: const Icon(Icons.qr_code, size: 16, color: AppColors.neutralGray),
+                    const Padding(
+                      padding: EdgeInsets.only(left: 8),
+                      child: Icon(Icons.qr_code, size: 16, color: AppColors.neutralGray),
                     ),
                 ],
               ),
@@ -214,10 +218,10 @@ class _WeldCard extends StatelessWidget {
   }
 
   Color _statusColor(String status) => switch (status) {
-        'completed' => const Color(0xFF2E7D32),
+        'completed'   => const Color(0xFF2E7D32),
         'in_progress' => AppColors.sertecRed,
-        'failed' => Colors.orange,
-        _ => AppColors.neutralGray,
+        'failed'      => Colors.orange,
+        _             => AppColors.neutralGray,
       };
 }
 
@@ -227,17 +231,27 @@ class _StatusChip extends StatelessWidget {
   final Color color;
 
   @override
-  Widget build(BuildContext context) => Container(
-        padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
-        decoration: BoxDecoration(
-          color: color.withValues(alpha: 0.1),
-          borderRadius: BorderRadius.circular(6),
-        ),
-        child: Text(
-          status.toUpperCase().replaceAll('_', ' '),
-          style: TextStyle(fontSize: 9, fontWeight: FontWeight.w700, color: color),
-        ),
-      );
+  Widget build(BuildContext context) {
+    final l10n = AppLocalizations.of(context);
+    final label = switch (status) {
+      'completed'   => l10n.t('Completed'),
+      'in_progress' => l10n.t('In Progress'),
+      'failed'      => l10n.t('Failed'),
+      'cancelled'   => l10n.t('Cancelled'),
+      _             => status.toUpperCase().replaceAll('_', ' '),
+    };
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+      decoration: BoxDecoration(
+        color: color.withValues(alpha: 0.1),
+        borderRadius: BorderRadius.circular(6),
+      ),
+      child: Text(
+        label,
+        style: TextStyle(fontSize: 9, fontWeight: FontWeight.w700, color: color),
+      ),
+    );
+  }
 }
 
 class _InfoPill extends StatelessWidget {
@@ -256,7 +270,7 @@ class _InfoPill extends StatelessWidget {
       );
 }
 
-// ── Empty state ────────────────────────────────────────────────────────────────
+// ── Empty state ─────────────────────────────────────────────────────────────────
 
 class _EmptyState extends StatelessWidget {
   const _EmptyState({required this.filter, required this.onNew});
@@ -264,33 +278,40 @@ class _EmptyState extends StatelessWidget {
   final VoidCallback onNew;
 
   @override
-  Widget build(BuildContext context) => Center(
-        child: Column(
-          mainAxisAlignment: MainAxisAlignment.center,
-          children: [
-            Container(
-              width: 80, height: 80,
-              decoration: BoxDecoration(
-                color: AppColors.sertecRed.withValues(alpha: 0.07), shape: BoxShape.circle),
-              child: const Icon(Icons.local_fire_department_outlined, size: 36, color: AppColors.sertecRed),
+  Widget build(BuildContext context) {
+    final l10n = AppLocalizations.of(context);
+    final msg = switch (filter) {
+      'completed'   => l10n.t('No completed welds.'),
+      'in_progress' => l10n.t('No welds in progress.'),
+      'failed'      => l10n.t('No failed welds.'),
+      _             => l10n.t('No welds yet.'),
+    };
+
+    return Center(
+      child: Column(
+        mainAxisAlignment: MainAxisAlignment.center,
+        children: [
+          Container(
+            width: 80, height: 80,
+            decoration: BoxDecoration(
+              color: AppColors.sertecRed.withValues(alpha: 0.07), shape: BoxShape.circle),
+            child: const Icon(Icons.local_fire_department_outlined, size: 36, color: AppColors.sertecRed),
+          ),
+          const SizedBox(height: 16),
+          Text(msg, style: const TextStyle(fontSize: 16, fontWeight: FontWeight.w600)),
+          const SizedBox(height: 8),
+          Text(l10n.t('Start by selecting a project and machine.'),
+              style: const TextStyle(fontSize: 13, color: AppColors.neutralGray)),
+          const SizedBox(height: 20),
+          if (filter == 'all')
+            FilledButton.icon(
+              onPressed: onNew,
+              style: FilledButton.styleFrom(backgroundColor: AppColors.sertecRed),
+              icon: const Icon(Icons.add),
+              label: Text(l10n.t('Start Weld')),
             ),
-            const SizedBox(height: 16),
-            Text(
-              filter == 'all' ? 'No welds yet.' : 'No $filter welds.',
-              style: const TextStyle(fontSize: 16, fontWeight: FontWeight.w600),
-            ),
-            const SizedBox(height: 8),
-            const Text('Start by selecting a project and machine.',
-                style: TextStyle(fontSize: 13, color: AppColors.neutralGray)),
-            const SizedBox(height: 20),
-            if (filter == 'all')
-              FilledButton.icon(
-                onPressed: onNew,
-                style: FilledButton.styleFrom(backgroundColor: AppColors.sertecRed),
-                icon: const Icon(Icons.add),
-                label: const Text('Start Weld'),
-              ),
-          ],
-        ),
-      );
+        ],
+      ),
+    );
+  }
 }

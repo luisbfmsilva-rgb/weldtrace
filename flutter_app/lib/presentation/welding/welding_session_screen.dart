@@ -579,20 +579,6 @@ class _WeldingSessionScreenState extends ConsumerState<WeldingSessionScreen> {
     );
   }
 
-  /// [TEST ONLY] — skip changeover → buildup → cooling in one tap.
-  Future<void> _testSkipChangeoverToCooling() async {
-    setState(() { _changeoverMinPressure = 0.0; });
-    _onChangeoverPressureUpdate(3.0);            // triggers changeover completion
-    await Future.delayed(const Duration(milliseconds: 150));
-    if (!mounted) return;
-    await _startNextPhase();                     // start buildup
-    await Future.delayed(const Duration(milliseconds: 150));
-    if (!mounted) return;
-    _phaseTimer?.cancel();
-    setState(() => _isAutoAdvancing = false);
-    await _completePhase();                      // buildup → fusion → cooling
-  }
-
   void _startPhaseTimer() {
     _phaseTimer?.cancel();
     _phaseStartTime = DateTime.now();
@@ -767,25 +753,28 @@ class _WeldingSessionScreenState extends ConsumerState<WeldingSessionScreen> {
   // ── Cooling early-finish dialog ────────────────────────────────────────────
 
   Future<void> _showCoolingEarlyFinishDialog() async {
+    final l10n = AppLocalizations.of(context);
     final ok = await showDialog<bool>(
       context: context,
       builder: (ctx) => AlertDialog(
-        title: const Text('Encerrar Resfriamento?'),
-        content: const Text(
-          'O tempo de resfriamento nominal ainda não terminou.\n\n'
-          'Encerrar antes do tempo recomendado pode comprometer a qualidade '
-          'da junta. O relatório PDF incluirá um aviso.',
+        title: Text(l10n.t('End Cooling Early?')),
+        content: Text(
+          l10n.t(
+            'Nominal cooling time has not finished yet.\n\n'
+            'Ending early may compromise joint quality. '
+            'The PDF report will include a warning.',
+          ),
         ),
         actions: [
           TextButton(
             onPressed: () => Navigator.of(ctx).pop(false),
-            child: const Text('Continuar Resfriamento'),
+            child: Text(l10n.t('Continue Cooling')),
           ),
           TextButton(
             style: TextButton.styleFrom(
                 foregroundColor: Theme.of(ctx).colorScheme.error),
             onPressed: () => Navigator.of(ctx).pop(true),
-            child: const Text('Encerrar Agora'),
+            child: Text(l10n.t('End Now')),
           ),
         ],
       ),
@@ -800,18 +789,21 @@ class _WeldingSessionScreenState extends ConsumerState<WeldingSessionScreen> {
   // ── Leave-weld dialog (weld stays in_progress) ────────────────────────────
 
   void _showLeaveWeldDialog() {
+    final l10n = AppLocalizations.of(context);
     showDialog(
       context: context,
       builder: (ctx) => AlertDialog(
-        title: const Text('Deixar a Solda?'),
-        content: const Text(
-          'A solda continuará em progresso.\n'
-          'Pode retomá-la mais tarde na lista do projecto.',
+        title: Text(l10n.t('Leave Weld?')),
+        content: Text(
+          l10n.t(
+            'The weld will remain in progress.\n'
+            'You can resume it later from the project list.',
+          ),
         ),
         actions: [
           TextButton(
             onPressed: () => Navigator.of(ctx).pop(),
-            child: const Text('Continuar'),
+            child: Text(l10n.t('Continue')),
           ),
           TextButton(
             style: TextButton.styleFrom(
@@ -820,7 +812,7 @@ class _WeldingSessionScreenState extends ConsumerState<WeldingSessionScreen> {
               Navigator.of(ctx).pop();
               context.go('/projects');
             },
-            child: const Text('Deixar'),
+            child: Text(l10n.t('Leave')),
           ),
         ],
       ),
@@ -830,25 +822,28 @@ class _WeldingSessionScreenState extends ConsumerState<WeldingSessionScreen> {
   // ── Cancel-weld dialog ────────────────────────────────────────────────────
 
   void _showCancelDialog() {
+    final l10n = AppLocalizations.of(context);
     showDialog(
       context: context,
       builder: (ctx) {
         final reasonController = TextEditingController();
         return AlertDialog(
-          title: const Text('Cancelar Solda?'),
+          title: Text(l10n.t('Cancel Weld?')),
           content: Column(
             mainAxisSize: MainAxisSize.min,
             children: [
-              const Text(
-                'Isto cancela definitivamente a solda. '
-                'Um relatório de cancelamento é gerado para rastreabilidade.',
+              Text(
+                l10n.t(
+                  'This permanently cancels the weld. '
+                  'A cancellation report is generated for traceability.',
+                ),
               ),
               const SizedBox(height: 16),
               TextField(
                 controller: reasonController,
-                decoration: const InputDecoration(
-                  labelText: 'Motivo do cancelamento',
-                  hintText: 'ex.: Falha de equipamento, erro de operador…',
+                decoration: InputDecoration(
+                  labelText: l10n.t('Cancellation reason'),
+                  hintText: l10n.t('e.g. Equipment failure, operator error…'),
                 ),
                 maxLines: 2,
               ),
@@ -857,7 +852,7 @@ class _WeldingSessionScreenState extends ConsumerState<WeldingSessionScreen> {
           actions: [
             TextButton(
               onPressed: () => Navigator.of(ctx).pop(),
-              child: const Text('Continuar a Soldar'),
+              child: Text(l10n.t('Continue Welding')),
             ),
             TextButton(
               style: TextButton.styleFrom(
@@ -866,9 +861,9 @@ class _WeldingSessionScreenState extends ConsumerState<WeldingSessionScreen> {
                 final reason = reasonController.text.trim();
                 Navigator.of(ctx).pop();
                 await _cancelWeld(
-                    reason.isEmpty ? 'Sem motivo indicado' : reason);
+                    reason.isEmpty ? l10n.t('No reason given') : reason);
               },
-              child: const Text('Cancelar Solda'),
+              child: Text(l10n.t('Cancel Weld')),
             ),
           ],
         );
@@ -943,23 +938,26 @@ class _WeldingSessionScreenState extends ConsumerState<WeldingSessionScreen> {
 
           // ── Cooling incomplete warning ─────────────────────────────────────
           if (_coolingIncomplete)
-            Container(
-              color: const Color(0xFFF57C00),
-              padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 6),
-              child: const Row(children: [
-                Icon(Icons.warning_amber, color: Colors.white, size: 16),
-                SizedBox(width: 8),
-                Expanded(
-                  child: Text(
-                    'Resfriamento encerrado antes do tempo nominal',
-                    style: TextStyle(
-                        color: Colors.white,
-                        fontSize: 12,
-                        fontWeight: FontWeight.w600),
+            Builder(builder: (ctx) {
+              final l = AppLocalizations.of(ctx);
+              return Container(
+                color: const Color(0xFFF57C00),
+                padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 6),
+                child: Row(children: [
+                  const Icon(Icons.warning_amber, color: Colors.white, size: 16),
+                  const SizedBox(width: 8),
+                  Expanded(
+                    child: Text(
+                      l.t('Cooling ended before nominal time'),
+                      style: const TextStyle(
+                          color: Colors.white,
+                          fontSize: 12,
+                          fontWeight: FontWeight.w600),
+                    ),
                   ),
-                ),
-              ]),
-            ),
+                ]),
+              );
+            }),
           // ── Sensor status bar ────────────────────────────────────────────
           _SensorStatusBar(state: _sensorState),
 
@@ -1250,7 +1248,7 @@ class _WeldingSessionScreenState extends ConsumerState<WeldingSessionScreen> {
               if (lastTen) ...[
                 const SizedBox(height: 6),
                 Text(
-                  'Aguardar fim dos 10s para retirar placa',
+                  l10n.t('Wait for the last 10 s to end before removing plate'),
                   style: TextStyle(
                     fontSize: 12,
                     color: Colors.orange.shade700,
@@ -1286,26 +1284,14 @@ class _WeldingSessionScreenState extends ConsumerState<WeldingSessionScreen> {
                   borderRadius: BorderRadius.circular(10),
                   border: Border.all(color: Colors.orange.shade300),
                 ),
-                child: const Text(
-                  'Remove the heater plate and close the machine.\n'
-                  'Changeover (t4) starts automatically when pressure rises.',
-                  style: TextStyle(fontSize: 13),
+                child: Text(
+                  l10n.t('Remove the heater plate and close the machine.\n'
+                  'Changeover (t4) starts automatically when pressure rises.'),
+                  style: const TextStyle(fontSize: 13),
                   textAlign: TextAlign.center,
                 ),
               ),
               const SizedBox(height: 10),
-              ElevatedButton(
-                style: ElevatedButton.styleFrom(
-                  backgroundColor: Colors.grey.shade600,
-                  minimumSize: const Size(double.infinity, 44),
-                ),
-                onPressed: _testSkipChangeoverToCooling,
-                child: const Text(
-                  '[TEST] Done — skip to Cooling',
-                  style: TextStyle(color: Colors.white, fontSize: 13),
-                ),
-              ),
-              const SizedBox(height: 6),
               OutlinedButton.icon(
                 icon: const Icon(Icons.cancel_outlined),
                 label: Text(l10n.t('Cancel Weld')),

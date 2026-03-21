@@ -106,7 +106,64 @@ class WeldReportGenerator {
     // ── V1.5 — Observations / notes & nominal (theoretical) curve ─────────
     String notes              = '',
     List<WeldTracePoint> nominalCurve = const [],
+    // ── V1.6 — Report language ────────────────────────────────────────────
+    /// 'pt' (default) or 'en'.  Translates section titles and row labels.
+    String lang               = 'pt',
   }) async {
+    // ── Inline translation helper ─────────────────────────────────────────
+    final _ptLabels = const <String, String>{
+      // Section titles
+      'Certified Welding Report': 'Relatório de Soldagem Certificado',
+      'Project':               'Projeto',
+      'Joint Identification':  'Identificação da Junta',
+      'Machine':               'Máquina',
+      'Pipe':                  'Tubo',
+      'Welding Standard':      'Norma de Soldagem',
+      'Weld Parameters':       'Parâmetros de Soldagem',
+      'Trace Quality':         'Qualidade do Rastreamento',
+      'Curve Statistics':      'Estatísticas da Curva',
+      'Signature (SHA-256)':   'Assinatura (SHA-256)',
+      'Certificate':           'Certificado',
+      'Public Verification':   'Verificação Pública',
+      'QR Verification':       'Verificação QR',
+      'Assessment':            'Avaliação',
+      // Row labels
+      'Project Name':          'Nome do Projeto',
+      'Date':                  'Data',
+      'Operator':              'Soldador',
+      'Operator ID':           'ID do Soldador',
+      'Location (GPS)':        'Localização (GPS)',
+      'Joint ID':              'ID da Junta',
+      'Serial Number':         'Número de Série',
+      'Machine ID':            'ID da Máquina',
+      'Hydraulic Cylinder Area': 'Área do Cilindro Hidráulico',
+      'Material':              'Material',
+      'Diameter':              'Diâmetro',
+      'SDR':                   'SDR',
+      'Wall Thickness':        'Espessura de Parede',
+      'Standard':              'Norma',
+      'Fusion Pressure':       'Pressão de Fusão',
+      'Heating Time':          'Tempo de Aquecimento',
+      'Cooling Time':          'Tempo de Resfriamento',
+      'Bead Height':           'Altura do Cordão',
+      'Quality':               'Qualidade',
+      'Samples':               'Amostras',
+      'Duration':              'Duração',
+      'Max Pressure':          'Pressão Máxima',
+      'Average Pressure':      'Pressão Média',
+      // Assessment messages
+      'Welding completed successfully.':
+          'Soldagem concluída com sucesso.',
+      'Welding completed but cooling phase was ended early. '
+          'The joint must be assessed before entering service.':
+          'Soldagem concluída, mas o resfriamento foi encerrado antes do tempo. '
+          'A junta deve ser avaliada antes de entrar em operação.',
+      'Weld cancelled — no reason recorded.':
+          'Solda cancelada — nenhum motivo registrado.',
+    };
+    String t(String key) =>
+        lang == 'pt' ? (_ptLabels[key] ?? key) : key;
+
     final pdf = pw.Document(
       author:  'Sertec FusionCertify',
       title:   'Sertec FusionCertify — Certified Welding Report — $projectName',
@@ -147,27 +204,28 @@ class WeldReportGenerator {
         header: (context) => _buildHeader(
           headerColour,
           accentColour,
-          sertecLogoBytes:  sertecLogoBytes,
-          companyLogoBytes: companyLogoBytes,
-          weldNumber:       weldNumber,
+          sertecLogoBytes:   sertecLogoBytes,
+          companyLogoBytes:  companyLogoBytes,
+          weldNumber:        weldNumber,
+          reportTitle:       t('Certified Welding Report'),
         ),
         footer: (context) => _buildFooter(context, accentColour),
         build: (context) => [
           pw.SizedBox(height: 12),
 
           // ── 1. Project ────────────────────────────────────────────────────
-          _sectionTitle('Project', accentColour),
+          _sectionTitle(t('Project'), accentColour),
           pw.SizedBox(height: 6),
           _infoTable(
             rows: [
               if (weldNumber > 0) ['Solda n°', '$weldNumber'],
-              ['Project Name', projectName.isEmpty ? 'N/A' : projectName],
+              [t('Project Name'), projectName.isEmpty ? 'N/A' : projectName],
               if (projectLocation.isNotEmpty) ['Localização', projectLocation],
-              ['Date',         dateStr],
-              if (operatorName.isNotEmpty) ['Operator', operatorName],
-              if (operatorId.isNotEmpty)   ['Operator ID', operatorId],
+              [t('Date'),         dateStr],
+              if (operatorName.isNotEmpty) [t('Operator'), operatorName],
+              if (operatorId.isNotEmpty)   [t('Operator ID'), operatorId],
               if (gpsLat != null && gpsLng != null)
-                ['Location (GPS)',
+                [t('Location (GPS)'),
                  '${gpsLat.toStringAsFixed(6)}, ${gpsLng.toStringAsFixed(6)}'],
             ],
             altColour: rowAltColour,
@@ -175,18 +233,18 @@ class WeldReportGenerator {
           pw.SizedBox(height: 16),
 
           // ── 2. Joint Identification ───────────────────────────────────────
-          _sectionTitle('Joint Identification', accentColour),
+          _sectionTitle(t('Joint Identification'), accentColour),
           pw.SizedBox(height: 6),
           _infoTable(
             rows: [
-              ['Joint ID', jointId.isEmpty ? 'N/A' : jointId],
+              [t('Joint ID'), jointId.isEmpty ? 'N/A' : jointId],
             ],
             altColour: rowAltColour,
           ),
           pw.SizedBox(height: 16),
 
           // ── 3. Machine ────────────────────────────────────────────────────
-          _sectionTitle('Machine', accentColour),
+          _sectionTitle(t('Machine'), accentColour),
           pw.SizedBox(height: 6),
           _infoTable(
             rows: [
@@ -196,11 +254,11 @@ class WeldReportGenerator {
                 if (machineName.isNotEmpty)  return machineName;
                 return 'N/A';
               }()],
-              ['Serial Number',
+              [t('Serial Number'),
                 machineSerialNumber.isNotEmpty ? machineSerialNumber
                     : (machineId.isNotEmpty ? machineId : 'N/A')],
-              ['Machine ID', machineId.isEmpty ? 'N/A' : machineId],
-              ['Hydraulic Cylinder Area',
+              [t('Machine ID'), machineId.isEmpty ? 'N/A' : machineId],
+              [t('Hydraulic Cylinder Area'),
                 hydraulicCylinderAreaMm2 > 0
                     ? '${hydraulicCylinderAreaMm2.toStringAsFixed(1)} mm²'
                     : 'N/A'],
@@ -214,48 +272,48 @@ class WeldReportGenerator {
           pw.SizedBox(height: 16),
 
           // ── 4. Pipe ───────────────────────────────────────────────────────
-          _sectionTitle('Pipe', accentColour),
+          _sectionTitle(t('Pipe'), accentColour),
           pw.SizedBox(height: 6),
           _infoTable(
             rows: [
-              ['Material',       material.isEmpty ? 'N/A' : material],
-              ['Diameter',       '${diameter.toStringAsFixed(1)} mm'],
-              ['SDR',            sdr.isEmpty ? 'N/A' : sdr],
-              ['Wall Thickness', wallThicknessStr.isEmpty ? 'N/A' : wallThicknessStr],
+              [t('Material'),       material.isEmpty ? 'N/A' : material],
+              [t('Diameter'),       '${diameter.toStringAsFixed(1)} mm'],
+              [t('SDR'),            sdr.isEmpty ? 'N/A' : sdr],
+              [t('Wall Thickness'), wallThicknessStr.isEmpty ? 'N/A' : wallThicknessStr],
             ],
             altColour: rowAltColour,
           ),
           pw.SizedBox(height: 16),
 
           // ── 5. Welding Standard ───────────────────────────────────────────
-          _sectionTitle('Welding Standard', accentColour),
+          _sectionTitle(t('Welding Standard'), accentColour),
           pw.SizedBox(height: 6),
           _infoTable(
             rows: [
-              ['Standard', standardUsed.isEmpty ? 'N/A' : standardUsed],
+              [t('Standard'), standardUsed.isEmpty ? 'N/A' : standardUsed],
             ],
             altColour: rowAltColour,
           ),
           pw.SizedBox(height: 16),
 
           // ── 6. Weld Parameters ────────────────────────────────────────────
-          _sectionTitle('Weld Parameters', accentColour),
+          _sectionTitle(t('Weld Parameters'), accentColour),
           pw.SizedBox(height: 6),
           _infoTable(
             rows: [
-              ['Fusion Pressure',
+              [t('Fusion Pressure'),
                 fusionPressureBar > 0
                     ? '${fusionPressureBar.toStringAsFixed(3)} bar'
                     : 'N/A'],
-              ['Heating Time',
+              [t('Heating Time'),
                 heatingTimeSec > 0
                     ? '${heatingTimeSec.toStringAsFixed(0)} s'
                     : 'N/A'],
-              ['Cooling Time',
+              [t('Cooling Time'),
                 coolingTimeSec > 0
                     ? '${(coolingTimeSec / 60).toStringAsFixed(1)} min'
                     : 'N/A'],
-              ['Bead Height',
+              [t('Bead Height'),
                 beadHeightMm > 0
                     ? '${beadHeightMm.toStringAsFixed(1)} mm'
                     : 'N/A'],
@@ -265,25 +323,25 @@ class WeldReportGenerator {
           pw.SizedBox(height: 16),
 
           // ── 7. Trace Quality ──────────────────────────────────────────────
-          _sectionTitle('Trace Quality', accentColour),
+          _sectionTitle(t('Trace Quality'), accentColour),
           pw.SizedBox(height: 6),
           _infoTable(
             rows: [
-              ['Quality', _traceQualityLabel(traceQuality)],
-              ['Samples', '${curve.length}'],
+              [t('Quality'), _traceQualityLabel(traceQuality)],
+              [t('Samples'), '${curve.length}'],
             ],
             altColour: rowAltColour,
           ),
           pw.SizedBox(height: 16),
 
           // ── 8. Curve Statistics ───────────────────────────────────────────
-          _sectionTitle('Curve Statistics', accentColour),
+          _sectionTitle(t('Curve Statistics'), accentColour),
           pw.SizedBox(height: 6),
           _infoTable(
             rows: [
-              ['Duration',         '${duration.toStringAsFixed(1)} s'],
-              ['Max Pressure',     '${maxPressure.toStringAsFixed(3)} bar'],
-              ['Average Pressure', '${avgPressure.toStringAsFixed(3)} bar'],
+              [t('Duration'),         '${duration.toStringAsFixed(1)} s'],
+              [t('Max Pressure'),     '${maxPressure.toStringAsFixed(3)} bar'],
+              [t('Average Pressure'), '${avgPressure.toStringAsFixed(3)} bar'],
             ],
             altColour: rowAltColour,
           ),
@@ -296,35 +354,35 @@ class WeldReportGenerator {
           pw.SizedBox(height: 16),
 
           // ── 10. Signature ──────────────────────────────────────────────────
-          _sectionTitle('Signature (SHA-256)', accentColour),
+          _sectionTitle(t('Signature (SHA-256)'), accentColour),
           pw.SizedBox(height: 6),
           _signatureBlock(weldSignature, rowAltColour, accentColour),
           pw.SizedBox(height: 16),
 
           // ── 11. Certificate ────────────────────────────────────────────────
-          _sectionTitle('Certificate', accentColour),
+          _sectionTitle(t('Certificate'), accentColour),
           pw.SizedBox(height: 6),
           _certificationBlock(
             effectiveJointId, weldSignature, rowAltColour, accentColour),
           pw.SizedBox(height: 16),
 
           // ── 12. Public Verification ────────────────────────────────────────
-          _sectionTitle('Public Verification', accentColour),
+          _sectionTitle(t('Public Verification'), accentColour),
           pw.SizedBox(height: 6),
           _publicVerificationBlock(
             effectiveJointId, weldSignature, rowAltColour, accentColour),
           pw.SizedBox(height: 16),
 
           // ── 13. QR Verification ────────────────────────────────────────────
-          _sectionTitle('QR Verification', accentColour),
+          _sectionTitle(t('QR Verification'), accentColour),
           pw.SizedBox(height: 6),
           _verificationBlock(weldSignature, qrPayload, rowAltColour, accentColour),
           pw.SizedBox(height: 16),
 
           // ── 14. Assessment ─────────────────────────────────────────────────
-          _sectionTitle('Assessment', accentColour),
+          _sectionTitle(t('Assessment'), accentColour),
           pw.SizedBox(height: 6),
-          _assessmentBlock(completionStatus, cancelReason),
+          _assessmentBlock(completionStatus, cancelReason, t),
           pw.SizedBox(height: 8),
 
           // ── 14b. Observations / notes (optional) ───────────────────────────
@@ -422,10 +480,14 @@ class WeldReportGenerator {
 
   // ── Assessment block ─────────────────────────────────────────────────────
 
-  static pw.Widget _assessmentBlock(String status, String cancelReason) {
-    const successColour  = PdfColor.fromInt(0xFF1B5E20);  // dark green
-    const warningColour  = PdfColor.fromInt(0xFFE65100);  // deep orange
-    const errorColour    = PdfColor.fromInt(0xFFB71C1C);  // dark red
+  static pw.Widget _assessmentBlock(
+    String status,
+    String cancelReason,
+    String Function(String) t,
+  ) {
+    const successColour  = PdfColor.fromInt(0xFF1B5E20);
+    const warningColour  = PdfColor.fromInt(0xFFE65100);
+    const errorColour    = PdfColor.fromInt(0xFFB71C1C);
 
     final colour = switch (status) {
       'completed'          => successColour,
@@ -439,12 +501,14 @@ class WeldReportGenerator {
     };
 
     final message = switch (status) {
-      'completed'          => 'Welding completed successfully.',
-      'cooling_incomplete' =>
+      'completed'          => t('Welding completed successfully.'),
+      'cooling_incomplete' => t(
           'Welding completed but cooling phase was ended early. '
           'The joint must be assessed before entering service.',
-      _                   =>
-          cancelReason.isNotEmpty ? cancelReason : 'Weld cancelled — no reason recorded.',
+        ),
+      _                   => cancelReason.isNotEmpty
+          ? cancelReason
+          : t('Weld cancelled — no reason recorded.'),
     };
 
     return pw.Container(
@@ -482,11 +546,12 @@ class WeldReportGenerator {
     PdfColor accentColour, {
     Uint8List? sertecLogoBytes,
     Uint8List? companyLogoBytes,
-    int weldNumber = 0,
+    int weldNumber    = 0,
+    String reportTitle = 'Certified Welding Report',
   }) {
     final subtitle = weldNumber > 0
-        ? 'Certified Welding Report — Solda n° $weldNumber'
-        : 'Certified Welding Report';
+        ? '$reportTitle — Solda n° $weldNumber'
+        : reportTitle;
 
     // Left side: logo image (if provided) + fallback text brand
     final leftContent = sertecLogoBytes != null

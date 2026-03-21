@@ -50,6 +50,7 @@ class AppLocalizations {
     'New Project': 'Novo projeto',
     'Create Project': 'Criar projeto',
     'Project deleted': 'Projeto excluído',
+    'Delete Project?': 'Excluir projeto?',
     'Create your first project to start recording welds.':
         'Crie seu primeiro projeto antes de começar a registrar soldas.',
     'No projects yet.': 'Nenhum projeto cadastrado.',
@@ -77,6 +78,11 @@ class AppLocalizations {
         'Registre suas máquinas de solda antes de iniciar uma solda.',
     'No machines registered.': 'Nenhuma máquina registrada.',
     'Delete Machine?': 'Excluir máquina?',
+    'This will permanently delete this machine. This action cannot be undone.':
+        'Isso excluirá permanentemente esta máquina. Esta ação não pode ser desfeita.',
+    'Approved': 'Aprovada',
+    'Cylinder': 'Cilindro',
+    'Cal. due': 'Cal. prevista',
     'Hydraulic Cylinder Area': 'Área útil do cilindro [mm²]',
     'Hydraulic Cylinder Area (mm²)': 'Área útil do cilindro (mm²)',
     'Ambient Temperature (°C)': 'Temperatura ambiente (°C)',
@@ -202,14 +208,42 @@ class AppLocalizations {
     'Complete Cooling': 'Concluir resfriamento',
     'End Cooling Early': 'Encerrar resfriamento antes do tempo',
     'Cooling Remaining': 'Resfriamento restante',
+    'Cooling ended before nominal time':
+        'Resfriamento encerrado antes do tempo nominal',
+    'Wait for the last 10 s to end before removing plate':
+        'Aguarde o fim dos últimos 10 s para retirar a placa',
+    'Remove the heater plate and close the machine.\n'
+        'Changeover (t4) starts automatically when pressure rises.':
+        'Remova a placa de aquecimento e feche a máquina.\n'
+        'A reposição de pressão (t4) inicia automaticamente quando a pressão subir.',
     'Sensor not connected — pressure will be recorded as 0':
         'Sensor desconectado - a pressão será registrada como 0',
     'Cancel Weld': 'Cancelar solda',
-    '[TEST] Done — skip to Cooling': '[TESTE] Pronto - avançar para Resfriamento',
     'Cancel Weld?': 'Cancelar solda?',
     'End Cooling?': 'Finalizar resfriamento?',
+    'End Cooling Early?': 'Encerrar resfriamento antes do tempo?',
+    'Nominal cooling time has not finished yet.\n\n'
+        'Ending early may compromise joint quality. '
+        'The PDF report will include a warning.':
+        'O tempo de resfriamento nominal ainda não terminou.\n\n'
+        'Encerrar antes do tempo pode comprometer a qualidade da junta. '
+        'O relatório PDF incluirá um aviso.',
     'End Now': 'Finalizar agora',
     'Continue Cooling': 'Continuar resfriamento',
+    'Leave Weld?': 'Deixar a solda?',
+    'The weld will remain in progress.\n'
+        'You can resume it later from the project list.':
+        'A solda continuará em progresso.\n'
+        'Pode retomá-la mais tarde na lista do projeto.',
+    'This permanently cancels the weld. '
+        'A cancellation report is generated for traceability.':
+        'Isto cancela definitivamente a solda. '
+        'Um relatório de cancelamento é gerado para rastreabilidade.',
+    'Cancellation reason': 'Motivo do cancelamento',
+    'e.g. Equipment failure, operator error…':
+        'ex.: Falha de equipamento, erro de operador…',
+    'Continue Welding': 'Continuar a soldar',
+    'No reason given': 'Sem motivo indicado',
     'Weld cancelled — record saved': 'Solda cancelada - relatório salvo',
     'Weld completed and certified!': 'Solda completa e certificada!',
     'Share Certificate PDF': 'Compartilhar o relatório em PDF',
@@ -229,10 +263,21 @@ class AppLocalizations {
     'Complete welds to generate certificates and reports.':
         'Complete soldas para gerar relatórios certificados',
     'No completed welds yet.': 'Nenhuma solda completa até o momento',
+    'No welds yet.': 'Nenhuma solda ainda.',
+    'No completed welds.': 'Nenhuma solda completa.',
+    'No welds in progress.': 'Nenhuma solda em andamento.',
+    'No failed welds.': 'Nenhuma solda com falha.',
+    'No welds recorded yet.': 'Nenhuma solda registrada ainda.',
+    'Start by selecting a project and machine.':
+        'Selecione um projeto e uma máquina para começar.',
+    'Certified': 'Certificada',
+    'In Progress': 'Em andamento',
+    'Cancelled': 'Cancelada',
     'All': 'Todas',
     'Completed': 'Completas',
     'Pending': 'Em andamento',
     'Failed': 'Falhas',
+    'Sync': 'Sincronizar',
     'Date': 'Data',
     'Operator': 'Soldador',
     'Operator ID': 'ID do Soldador',
