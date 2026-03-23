@@ -1,5 +1,5 @@
 import 'dart:async';
-import 'dart:typed_data';
+import 'dart:convert';
 
 import 'package:flutter_blue_plus/flutter_blue_plus.dart';
 import 'package:logger/logger.dart';
@@ -12,12 +12,22 @@ import '../../data/local/database/app_database.dart';
 import 'package:drift/drift.dart';
 import 'package:uuid/uuid.dart';
 
-/// BLE UUIDs for the WeldTrace pressure + temperature sensor kit.
-/// These match the custom GATT characteristics on the hardware dongle.
+/// BLE UUIDs for the WeldTrace / ESP32 sensor device.
+///
+/// The ESP32 exposes ONE characteristic that sends a UTF-8 JSON string
+/// with all sensor values on every notification:
+///   {"pressure": 1.23, "temp": 45.6, "temp_env": 22.1, "humidity": 60.0}
+///
+/// The app connects to any device whose name starts with [deviceNamePrefix]
+/// (case-insensitive) OR that advertises [serviceUuid] in its advertisement.
 class WeldTraceSensorUUIDs {
-  static const serviceUuid = '12345678-1234-1234-1234-123456789abc';
-  static const pressureCharUuid = 'abcd1234-5678-90ab-cdef-123456789abc';
-  static const temperatureCharUuid = 'abcd1234-5678-90ab-cdef-123456789abc';
+  static const serviceUuid      = '12345678-1234-1234-1234-123456789abc';
+  static const characteristicUuid = 'abcd1234-5678-90ab-cdef-123456789abc';
+
+  // Kept for backward-compat references in calibration/sensor screens.
+  static const pressureCharUuid    = characteristicUuid;
+  static const temperatureCharUuid = characteristicUuid;
+
   static const deviceNamePrefix = 'WELDTRACE';
 }
 
@@ -329,27 +339,54 @@ class SensorService {
       );
     }
 
+    // ── Subscribe to the sensor characteristic ─────────────────────────────
+    // The ESP32 sends UTF-8 encoded JSON on a single characteristic:
+    //   {"pressure": 1.23, "temp": 45.6, "temp_env": 22.1, "humidity": 60.0}
+    // We subscribe once and parse both pressure and temperature from the JSON.
+    bool subscribed = false;
     for (final char in svcList.first.characteristics) {
       if (_uuidMatches(char.uuid, WeldTraceSensorUUIDs.pressureCharUuid)) {
+        if (subscribed) continue; // same UUID appears once — skip duplicate
         await char.setNotifyValue(true);
+        subscribed = true;
+        _logger.i('[SensorService] Subscribed to characteristic ${char.uuid}');
+
         _pressureSub = char.lastValueStream.listen((bytes) {
-          if (bytes.length >= 4) {
-            _latestRawPressure = ByteData.sublistView(
-              Uint8List.fromList(bytes),
-            ).getFloat32(0, Endian.little);
+          if (bytes.isEmpty) return;
+          try {
+            final text   = utf8.decode(bytes);
+            final data   = jsonDecode(text) as Map<String, dynamic>;
+
+            _logger.d('[SensorService] Raw JSON: $text');
+
+            // Map JSON fields → internal raw values
+            // "pressure" is in bar; "temp" is the sensor temperature in °C.
+            // "temp_env" is ambient temperature (logged but not used for welds).
+            _latestRawPressure    = (data['pressure'] as num?)?.toDouble();
+            _latestRawTemperature = (data['temp']      as num?)?.toDouble();
+
+            // Expose ambient temperature for future calibration reference
+            final tempEnv = (data['temp_env'] as num?)?.toDouble();
+            if (tempEnv != null) {
+              _logger.d('[SensorService] Ambient temp: ${tempEnv.toStringAsFixed(1)} °C');
+            }
+          } catch (e) {
+            _logger.w('[SensorService] JSON parse error: $e  '
+                'raw bytes: ${bytes.length} bytes');
           }
         });
       }
-      if (_uuidMatches(char.uuid, WeldTraceSensorUUIDs.temperatureCharUuid)) {
-        await char.setNotifyValue(true);
-        _temperatureSub = char.lastValueStream.listen((bytes) {
-          if (bytes.length >= 4) {
-            _latestRawTemperature = ByteData.sublistView(
-              Uint8List.fromList(bytes),
-            ).getFloat32(0, Endian.little);
-          }
-        });
-      }
+    }
+
+    if (!subscribed) {
+      final chars = svcList.first.characteristics
+          .map((c) => c.uuid.toString())
+          .join(', ');
+      throw SensorException(
+        'Sensor characteristic not found.\n'
+        'Expected: ${WeldTraceSensorUUIDs.pressureCharUuid}\n'
+        'Characteristics on service: $chars',
+      );
     }
 
     _emitState(SensorConnectionState.connected);

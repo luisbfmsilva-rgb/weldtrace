@@ -1,0 +1,173 @@
+The current BLE connection is NOT working. The ESP32 device (WELDTRACE) is confirmed to work correctly (tested with nRF Connect), so the issue is entirely in the app.
+
+Your task is to FULLY FIX the BLE connection flow and replace any existing broken logic.
+
+🎯 OBJECTIVE
+
+Make the app:
+
+Discover BLE devices reliably
+Connect to the ESP32 (WELDTRACE)
+Access the correct service and characteristic
+Subscribe to notifications
+Receive and parse real-time JSON data
+🔑 BLE CONFIGURATION (MANDATORY)
+
+Use EXACTLY:
+
+SERVICE_UUID:
+12345678-1234-1234-1234-123456789abc
+
+CHARACTERISTIC_UUID:
+abcd1234-5678-90ab-cdef-123456789abc
+
+DEVICE NAME PREFIX:
+WELDTRACE
+
+⚠️ CRITICAL FIXES (MUST IMPLEMENT)
+1. REMOVE ALL FILTER-BASED SCANNING
+
+Any code like:
+
+filters: [...]
+
+MUST be removed.
+
+2. USE acceptAllDevices
+
+Replace with:
+
+acceptAllDevices: true
+
+3. INCLUDE optionalServices
+
+This is REQUIRED or the app cannot access the service.
+
+🧠 IMPLEMENTATION
+
+Create or replace BLE logic completely.
+
+File: /src/utils/ble.js
+
+Implement:
+
+export async function connectToSertecBox(onData) {
+
+const SERVICE_UUID = "12345678-1234-1234-1234-123456789abc";
+const CHARACTERISTIC_UUID = "abcd1234-5678-90ab-cdef-123456789abc";
+
+try {
+console.log("🔍 Requesting BLE device...");
+
+const device = await navigator.bluetooth.requestDevice({
+  acceptAllDevices: true,
+  optionalServices: [SERVICE_UUID],
+});
+
+console.log("✅ Selected device:", device.name);
+
+const server = await device.gatt.connect();
+console.log("🔗 GATT connected");
+
+const service = await server.getPrimaryService(SERVICE_UUID);
+console.log("📡 Service found");
+
+const characteristic = await service.getCharacteristic(CHARACTERISTIC_UUID);
+console.log("📥 Characteristic found");
+
+await characteristic.startNotifications();
+console.log("🚀 Notifications started");
+
+characteristic.addEventListener("characteristicvaluechanged", (event) => {
+  try {
+    const value = new TextDecoder().decode(event.target.value);
+
+    console.log("📊 Raw data:", value);
+
+    const parsed = JSON.parse(value);
+
+    onData(parsed);
+
+  } catch (err) {
+    console.error("❌ JSON parse error:", err);
+  }
+});
+
+return device;
+
+} catch (error) {
+console.error("❌ BLE connection failed:", error);
+throw error;
+}
+}
+
+🎛️ INTEGRATE WITH UI
+
+Find the existing "Connect to sensor" button logic.
+
+REMOVE any existing BLE code and replace with:
+
+import { connectToSertecBox } from "../utils/ble";
+
+Replace handler:
+
+const handleConnect = async () => {
+try {
+await connectToSertecBox((data) => {
+console.log("📊 Sensor data:", data);
+
+  setSensorData(data);
+});
+
+} catch (err) {
+console.error("Connection error:", err);
+}
+};
+
+📊 STATE MANAGEMENT
+
+Ensure there is state:
+
+const [sensorData, setSensorData] = useState({
+temp: 0,
+temp_env: 0,
+humidity: 0,
+pressure: 0,
+});
+
+🔍 DEBUGGING (IMPORTANT)
+
+Add console logs at every step:
+
+device selection
+GATT connection
+service discovery
+characteristic access
+incoming data
+⚠️ SAFETY HANDLING
+Do not crash if JSON is invalid
+Log errors clearly
+Allow reconnection attempts
+🚀 TEST FLOW
+Click "Connect to sensor"
+Device list opens
+Select "WELDTRACE"
+App connects
+Console shows:
+
+🔗 GATT connected
+📡 Service found
+📥 Characteristic found
+🚀 Notifications started
+
+Data starts streaming
+🎯 FINAL GOAL
+
+The BLE connection must be:
+
+Reliable
+Fully functional
+Compatible with ESP32 firmware
+Debuggable via logs
+
+Replace any broken BLE logic completely.
