@@ -268,8 +268,6 @@ class AppLocalizations {
     'No welds in progress.': 'Nenhuma solda em andamento.',
     'No failed welds.': 'Nenhuma solda com falha.',
     'No welds recorded yet.': 'Nenhuma solda registrada ainda.',
-    'Start by selecting a project and machine.':
-        'Selecione um projeto e uma máquina para começar.',
     'Certified': 'Certificada',
     'In Progress': 'Em andamento',
     'Cancelled': 'Cancelada',
