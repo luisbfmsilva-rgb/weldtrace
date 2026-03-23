@@ -173,10 +173,9 @@ class SensorService {
 
       if (targetDevice == null) {
         throw const SensorException(
-          'No WeldTrace / ESP32 device found.\n'
-          'Check that the device is powered on, within range, and that '
-          'the device name starts with "WELDTRACE" or it advertises the '
-          'correct service UUID.',
+          'Nenhum dispositivo SertecBox encontrado.\n'
+          'Verifique que o dispositivo está ligado, dentro do alcance, e que '
+          'o nome começa com "SertecBox" ou que anuncia o Service UUID correcto.',
         );
       }
 
