@@ -12,23 +12,25 @@ import '../../data/local/database/app_database.dart';
 import 'package:drift/drift.dart';
 import 'package:uuid/uuid.dart';
 
-/// BLE UUIDs for the WeldTrace / ESP32 sensor device.
+/// BLE UUIDs for the SertecBox ESP32 sensor device.
 ///
 /// The ESP32 exposes ONE characteristic that sends a UTF-8 JSON string
 /// with all sensor values on every notification:
 ///   {"pressure": 1.23, "temp": 45.6, "temp_env": 22.1, "humidity": 60.0}
 ///
 /// The app connects to any device whose name starts with [deviceNamePrefix]
-/// (case-insensitive) OR that advertises [serviceUuid] in its advertisement.
+/// (case-insensitive) — e.g. "SertecBox-001", "SertecBox-002" — OR that
+/// advertises [serviceUuid] in its BLE advertisement packet.
 class WeldTraceSensorUUIDs {
-  static const serviceUuid      = '12345678-1234-1234-1234-123456789abc';
-  static const characteristicUuid = 'abcd1234-5678-90ab-cdef-123456789abc';
+  static const serviceUuid         = '12345678-1234-1234-1234-123456789abc';
+  static const characteristicUuid  = 'abcd1234-5678-90ab-cdef-123456789abc';
 
   // Kept for backward-compat references in calibration/sensor screens.
   static const pressureCharUuid    = characteristicUuid;
   static const temperatureCharUuid = characteristicUuid;
 
-  static const deviceNamePrefix = 'WELDTRACE';
+  /// Name prefix — matches SertecBox-001, SertecBox-002, etc. (case-insensitive)
+  static const deviceNamePrefix = 'SertecBox';
 }
 
 /// Connection state of the BLE sensor kit.
