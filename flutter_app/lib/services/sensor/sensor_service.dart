@@ -89,40 +89,86 @@ class SensorService {
 
   // ── Public API ──────────────────────────────────────────────────────────────
 
+  // ── Scan results broadcast (for diagnostic UI) ─────────────────────────────
+  final _scanResultsController =
+      StreamController<List<ScanResult>>.broadcast();
+  Stream<List<ScanResult>> get scanResultsStream =>
+      _scanResultsController.stream;
+
   /// Scan for and connect to the first WeldTrace sensor device found.
+  ///
+  /// Scan is unfiltered so that **any** BLE device is visible in the
+  /// diagnostic stream (see [scanResultsStream]). Matching is done by:
+  ///   1. Device name starting with [WeldTraceSensorUUIDs.deviceNamePrefix], OR
+  ///   2. Advertising the service UUID [WeldTraceSensorUUIDs.serviceUuid].
   Future<void> connect() async {
     if (_state == SensorConnectionState.connected) return;
 
     _emitState(SensorConnectionState.scanning);
-    _logger.i('[SensorService] Starting BLE scan');
+    _logger.i('[SensorService] Starting BLE scan (unfiltered)');
 
     try {
+      // ── Unfiltered scan: no withNames / withServices filter ────────────────
+      // Rationale: withNames requires an EXACT name match in flutter_blue_plus,
+      // which would silently drop devices named "WELDTRACE-01", "ESP32", etc.
+      // We filter ourselves in the stream listener below.
       await FlutterBluePlus.startScan(
         timeout: const Duration(seconds: AppConstants.bleScanTimeoutSeconds),
-        withNames: [WeldTraceSensorUUIDs.deviceNamePrefix],
       );
 
-      final found = await FlutterBluePlus.scanResults
-          .firstWhere(
-            (results) => results.any(
-              (r) => r.device.platformName
-                  .startsWith(WeldTraceSensorUUIDs.deviceNamePrefix),
-            ),
-          )
-          .timeout(
-            const Duration(seconds: AppConstants.bleScanTimeoutSeconds),
-            onTimeout: () =>
-                throw const SensorException('Sensor not found in scan window'),
+      BluetoothDevice? targetDevice;
+
+      // Forward all scan results to the diagnostic stream and pick the first
+      // device that matches our naming convention OR service UUID.
+      await for (final results in FlutterBluePlus.scanResults.timeout(
+        const Duration(seconds: AppConstants.bleScanTimeoutSeconds),
+        onTimeout: (sink) => sink.close(),
+      )) {
+        // Forward to UI for diagnostics
+        if (!_scanResultsController.isClosed) {
+          _scanResultsController.add(results);
+        }
+
+        // Log all visible devices (helps diagnose naming issues)
+        for (final r in results) {
+          _logger.d('[SensorService] Visible BLE device: '
+              '"${r.device.platformName}" id=${r.device.remoteId} '
+              'rssi=${r.rssi} '
+              'serviceUuids=${r.advertisementData.serviceUuids}');
+        }
+
+        // Match by name prefix OR by advertised service UUID (case-insensitive)
+        final match = results.where((r) {
+          final nameMatch = r.device.platformName
+              .toUpperCase()
+              .startsWith(WeldTraceSensorUUIDs.deviceNamePrefix.toUpperCase());
+          final serviceMatch = r.advertisementData.serviceUuids.any(
+            (u) => u.toString().toLowerCase() ==
+                WeldTraceSensorUUIDs.serviceUuid.toLowerCase(),
           );
+          return nameMatch || serviceMatch;
+        });
+
+        if (match.isNotEmpty) {
+          targetDevice = match.first.device;
+          _logger.i('[SensorService] Matched device: '
+              '"${targetDevice.platformName}" — connecting');
+          break;
+        }
+      }
 
       await FlutterBluePlus.stopScan();
 
-      final device = found
-          .firstWhere((r) => r.device.platformName
-              .startsWith(WeldTraceSensorUUIDs.deviceNamePrefix))
-          .device;
+      if (targetDevice == null) {
+        throw const SensorException(
+          'No WeldTrace / ESP32 device found.\n'
+          'Check that the device is powered on, within range, and that '
+          'the device name starts with "WELDTRACE" or it advertises the '
+          'correct service UUID.',
+        );
+      }
 
-      await _connectToDevice(device);
+      await _connectToDevice(targetDevice);
     } catch (e) {
       _logger.e('[SensorService] Connection failed', error: e);
       _emitState(SensorConnectionState.error);
@@ -227,9 +273,16 @@ class SensorService {
     _connectionStateSub?.cancel();
     _readingController.close();
     _stateController.close();
+    _scanResultsController.close();
   }
 
   // ── Private helpers ─────────────────────────────────────────────────────────
+
+  /// Case-insensitive UUID comparison helper.
+  /// BLE stacks (ESP-IDF, iOS CoreBluetooth, Android) may return UUIDs in
+  /// different cases or with/without the standard 128-bit suffix.
+  bool _uuidMatches(dynamic deviceUuid, String targetUuid) =>
+      deviceUuid.toString().toLowerCase() == targetUuid.toLowerCase();
 
   Future<void> _connectToDevice(BluetoothDevice device) async {
     _emitState(SensorConnectionState.connecting);
@@ -252,18 +305,32 @@ class SensorService {
     });
 
     final services = await device.discoverServices();
+
+    // Log all services for debugging (visible in flutter_blue_plus logs)
+    _logger.d('[SensorService] Services on ${device.platformName}:');
+    for (final s in services) {
+      _logger.d('  service: ${s.uuid}');
+      for (final c in s.characteristics) {
+        _logger.d('    char: ${c.uuid}  props: ${c.properties}');
+      }
+    }
+
+    // ── Case-insensitive service UUID match ────────────────────────────────
     final svcList = services.where(
-      (s) => s.uuid.toString() == WeldTraceSensorUUIDs.serviceUuid,
+      (s) => _uuidMatches(s.uuid, WeldTraceSensorUUIDs.serviceUuid),
     );
 
     if (svcList.isEmpty) {
-      throw const SensorException(
-        'WeldTrace service UUID not found on device — wrong device or firmware',
+      final found = services.map((s) => s.uuid.toString()).join(', ');
+      throw SensorException(
+        'Service UUID not found on device.\n'
+        'Expected: ${WeldTraceSensorUUIDs.serviceUuid}\n'
+        'Found on device: $found',
       );
     }
 
     for (final char in svcList.first.characteristics) {
-      if (char.uuid.toString() == WeldTraceSensorUUIDs.pressureCharUuid) {
+      if (_uuidMatches(char.uuid, WeldTraceSensorUUIDs.pressureCharUuid)) {
         await char.setNotifyValue(true);
         _pressureSub = char.lastValueStream.listen((bytes) {
           if (bytes.length >= 4) {
@@ -273,7 +340,7 @@ class SensorService {
           }
         });
       }
-      if (char.uuid.toString() == WeldTraceSensorUUIDs.temperatureCharUuid) {
+      if (_uuidMatches(char.uuid, WeldTraceSensorUUIDs.temperatureCharUuid)) {
         await char.setNotifyValue(true);
         _temperatureSub = char.lastValueStream.listen((bytes) {
           if (bytes.length >= 4) {

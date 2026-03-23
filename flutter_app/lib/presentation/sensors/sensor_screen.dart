@@ -2,6 +2,7 @@ import 'dart:async';
 import 'dart:collection';
 
 import 'package:flutter/material.dart';
+import 'package:flutter_blue_plus/flutter_blue_plus.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
@@ -34,6 +35,9 @@ class _SensorScreenState extends ConsumerState<SensorScreen> {
   final Queue<_Reading> _temperatureHistory = Queue();
   static const _historyMax = 60;
 
+  // Discovered BLE devices during scan (for diagnostics)
+  List<ScanResult> _scanDevices = [];
+
   final List<StreamSubscription> _subs = [];
 
   @override
@@ -42,7 +46,14 @@ class _SensorScreenState extends ConsumerState<SensorScreen> {
     final sensor = ref.read(sensorServiceProvider);
     _state = sensor.state;
     _subs.add(sensor.connectionStateStream.listen((s) {
-      if (mounted) setState(() { _state = s; if (s == SensorConnectionState.error) _error = 'Connection lost'; });
+      if (mounted) {
+        setState(() {
+          _state = s;
+          if (s == SensorConnectionState.error) _error = 'Connection lost';
+          // Clear scan list once connected or on error
+          if (s == SensorConnectionState.connected) _scanDevices = [];
+        });
+      }
     }));
     _subs.add(sensor.readingStream.listen((r) {
       if (!mounted) return;
@@ -59,6 +70,10 @@ class _SensorScreenState extends ConsumerState<SensorScreen> {
           if (_temperatureHistory.length > _historyMax) _temperatureHistory.removeFirst();
         }
       });
+    }));
+    // Diagnostic: show all BLE devices found during scan
+    _subs.add(sensor.scanResultsStream.listen((results) {
+      if (mounted) setState(() => _scanDevices = results);
     }));
   }
 
@@ -221,10 +236,20 @@ class _SensorScreenState extends ConsumerState<SensorScreen> {
 
             const SizedBox(height: 16),
 
+            // ── BLE Diagnostic panel (visible during scan) ────────────────
+            if (_state == SensorConnectionState.scanning &&
+                _scanDevices.isNotEmpty) ...[
+              const SizedBox(height: 16),
+              _BleScanDiagnosticPanel(devices: _scanDevices),
+            ],
+
+            const SizedBox(height: 16),
+
             // ── Instructions ───────────────────────────────────────────────
             Text(
-              'Power on the WeldTrace sensor kit and ensure it is within 5 m. '
-              'It broadcasts via BLE using the WELDTRACE prefix.',
+              'Power on the ESP32 / WeldTrace sensor and ensure it is within '
+              '5 m. The app connects by device name (starts with "WELDTRACE") '
+              'or by matching the service UUID.',
               style: theme.textTheme.bodySmall
                   ?.copyWith(color: Colors.grey.shade500),
               textAlign: TextAlign.center,
@@ -611,4 +636,134 @@ class _CalRow extends StatelessWidget {
           ),
         ],
       );
+}
+
+// ── BLE scan diagnostic panel ─────────────────────────────────────────────────
+
+/// Shows all BLE devices visible during scan so the user can verify
+/// the ESP32's advertised name and service UUIDs.
+class _BleScanDiagnosticPanel extends StatelessWidget {
+  const _BleScanDiagnosticPanel({required this.devices});
+  final List<ScanResult> devices;
+
+  static const _targetPrefix = WeldTraceSensorUUIDs.deviceNamePrefix;
+  static const _targetService = WeldTraceSensorUUIDs.serviceUuid;
+
+  bool _isMatch(ScanResult r) {
+    final nameMatch = r.device.platformName
+        .toUpperCase()
+        .startsWith(_targetPrefix.toUpperCase());
+    final serviceMatch = r.advertisementData.serviceUuids.any(
+      (u) => u.toString().toLowerCase() == _targetService.toLowerCase(),
+    );
+    return nameMatch || serviceMatch;
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      decoration: BoxDecoration(
+        color: Colors.blue.shade50,
+        borderRadius: BorderRadius.circular(12),
+        border: Border.all(color: Colors.blue.shade200),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Padding(
+            padding: const EdgeInsets.fromLTRB(12, 10, 12, 6),
+            child: Row(children: [
+              Icon(Icons.bluetooth_searching,
+                  size: 14, color: Colors.blue.shade700),
+              const SizedBox(width: 6),
+              Text(
+                'Dispositivos BLE visíveis (${devices.length})',
+                style: TextStyle(
+                    fontSize: 12,
+                    fontWeight: FontWeight.w700,
+                    color: Colors.blue.shade800),
+              ),
+            ]),
+          ),
+          const Divider(height: 1),
+          ...devices.map((r) {
+            final matched = _isMatch(r);
+            final name = r.device.platformName.isEmpty
+                ? '(sem nome)'
+                : r.device.platformName;
+            final uuids = r.advertisementData.serviceUuids;
+            return Container(
+              color: matched
+                  ? Colors.green.withValues(alpha: 0.08)
+                  : Colors.transparent,
+              padding:
+                  const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+              child: Row(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Icon(
+                    matched
+                        ? Icons.check_circle
+                        : Icons.radio_button_unchecked,
+                    size: 16,
+                    color: matched
+                        ? const Color(0xFF2E7D32)
+                        : Colors.grey.shade400,
+                  ),
+                  const SizedBox(width: 8),
+                  Expanded(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text(
+                          name,
+                          style: TextStyle(
+                            fontSize: 13,
+                            fontWeight: FontWeight.w600,
+                            color: matched
+                                ? const Color(0xFF2E7D32)
+                                : Colors.black87,
+                          ),
+                        ),
+                        Text(
+                          r.device.remoteId.toString(),
+                          style: TextStyle(
+                              fontSize: 10,
+                              color: Colors.grey.shade600,
+                              fontFamily: 'monospace'),
+                        ),
+                        if (uuids.isNotEmpty)
+                          Text(
+                            'Service: ${uuids.map((u) => u.toString()).join(', ')}',
+                            style: TextStyle(
+                                fontSize: 10,
+                                color: Colors.grey.shade500,
+                                fontFamily: 'monospace'),
+                          ),
+                      ],
+                    ),
+                  ),
+                  Text(
+                    '${r.rssi} dBm',
+                    style: TextStyle(
+                        fontSize: 11, color: Colors.grey.shade500),
+                  ),
+                ],
+              ),
+            );
+          }),
+          Padding(
+            padding: const EdgeInsets.fromLTRB(12, 6, 12, 10),
+            child: Text(
+              'O app conecta automaticamente ao dispositivo com nome '
+              'iniciando em "$_targetPrefix" (maiúsc./minúsc. ignoradas) '
+              'ou com service UUID $_targetService.',
+              style:
+                  TextStyle(fontSize: 10, color: Colors.blue.shade700),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
 }
