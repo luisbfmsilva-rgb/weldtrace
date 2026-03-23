@@ -15,9 +15,9 @@ import 'package:uuid/uuid.dart';
 /// BLE UUIDs for the WeldTrace pressure + temperature sensor kit.
 /// These match the custom GATT characteristics on the hardware dongle.
 class WeldTraceSensorUUIDs {
-  static const serviceUuid = '12345678-1234-5678-1234-56789abcdef0';
-  static const pressureCharUuid = '12345678-1234-5678-1234-56789abcdef1';
-  static const temperatureCharUuid = '12345678-1234-5678-1234-56789abcdef2';
+  static const serviceUuid = '12345678-1234-1234-1234-123456789abc';
+  static const pressureCharUuid = 'abcd1234-5678-90ab-cdef-123456789abc';
+  static const temperatureCharUuid = 'abcd1234-5678-90ab-cdef-123456789abc';
   static const deviceNamePrefix = 'WELDTRACE';
 }
 
