@@ -16,6 +16,7 @@ import 'projects/project_form.dart';
 import 'projects/project_detail_screen.dart';
 import 'qr/qr_scan_screen.dart';
 import 'reports/reports_screen.dart';
+import 'sensors/calibration_screen.dart';
 import 'sensors/sensor_screen.dart';
 import 'settings/settings_screen.dart';
 import 'users/users_screen.dart';
@@ -180,10 +181,16 @@ class FusionCertifyApp extends ConsumerWidget {
           builder: (_, __) => const QRScanScreen(),
         ),
 
-        // ── Sensor screen ─────────────────────────────────────────────
+        // ── Sensor screen + calibration ───────────────────────────────
         GoRoute(
           path: '/sensors',
           builder: (_, __) => const SensorScreen(),
+          routes: [
+            GoRoute(
+              path: 'calibrate',
+              builder: (_, __) => const CalibrationScreen(),
+            ),
+          ],
         ),
       ],
     );

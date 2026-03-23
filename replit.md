@@ -207,6 +207,14 @@ The mobile app stores all data locally in SQLite (Drift) with `sync_status: pend
 ### Sensor Calibrations
 The plug-and-play sensor kit (hydraulic T-connector pressure sensor + PT100 temperature sensor) must be periodically calibrated against an RBC-certified reference gauge. Calibration records include `offset_value` and `slope_value` applied to raw readings, and are stored per `sensor_serial` in `sensor_calibrations`.
 
+**Calibration system architecture (V2.0):**
+- `SensorCalibrationRepository` (`data/repositories/`) — direct Drift table access (no DAO, no build_runner needed for repo changes). Convention: `sensorSerial = 'pressure'` | `'temperature'` to separate the two sensors.
+- `SensorService` now runs a **5 Hz live broadcast timer** (`_liveTimer`) always when connected — UI reads are not gated on active weld sessions. A separate **1 Hz DB write timer** (`_samplingTimer`) writes to SQLite only during capture. `loadAndApplyCalibration(machineId, repo)` loads latest saved coefficients from DB and applies them.
+- `SensorReading` extended with `rawPressureBar` + `rawTemperatureCelsius` fields (uncalibrated values for calibration screen display).
+- `CalibrationScreen` (`presentation/sensors/`) — tabbed UI (Pressure / Temperature). Multi-point collection: 1 point → offset-only (slope=1); ≥2 points → OLS linear regression with R² + RMSE quality indicators. Machine selector, reference device + operator name metadata, zero-point shortcut for pressure. Route: `/sensors/calibrate` (nested under `/sensors`).
+- `SensorScreen` rewritten with rolling 60-point chart (custom `CustomPainter`), calibration summary card, device name display, and `.then()` rebuild on return from calibration.
+- Provider: `sensorCalibrationRepositoryProvider` in `di/providers.dart`.
+
 ### Future: Digital Certification
 The `weld_certificates` and `weld_signatures` tables are reserved for the future digital certification module. They exist in the schema but are not yet fully implemented in the business logic.
 

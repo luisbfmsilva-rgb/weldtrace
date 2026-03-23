@@ -6,6 +6,7 @@ import '../data/local/database/app_database.dart';
 import '../data/remote/auth_remote_data_source.dart';
 import '../data/remote/supabase_sync_data_source.dart';
 import '../data/repositories/auth_repository.dart';
+import '../data/repositories/sensor_calibration_repository.dart';
 import '../data/repositories/sync_repository.dart';
 import '../data/repositories/weld_parameters_repository.dart';
 import '../core/network/api_client.dart';
@@ -55,6 +56,13 @@ final syncServiceProvider = Provider<SyncService>((ref) {
   final service = SyncService(repository: repo);
   ref.onDispose(service.dispose);
   return service;
+});
+
+// ── Sensor calibration repository ──────────────────────────────────────────────
+
+final sensorCalibrationRepositoryProvider =
+    Provider<SensorCalibrationRepository>((ref) {
+  return SensorCalibrationRepository(db: ref.watch(databaseProvider));
 });
 
 // ── Sensor ─────────────────────────────────────────────────────────────────────
